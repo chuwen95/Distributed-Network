@@ -1,0 +1,41 @@
+//
+// Created by root on 9/11/23.
+//
+
+#include "PacketHeartBeat.h"
+
+namespace packetprocess
+{
+
+    std::size_t PacketHeartBeat::packetLength()
+    {
+        return m_protoHeartBeat.ByteSizeLong();
+    }
+
+    int PacketHeartBeat::setTimestamp(const std::uint32_t timestamp)
+    {
+        m_protoHeartBeat.set_timestamp(timestamp);
+
+        return 0;
+    }
+
+    std::uint32_t PacketHeartBeat::getTimestamp()
+    {
+        return m_protoHeartBeat.timestamp();
+    }
+
+    int PacketHeartBeat::encode(char *buffer, const std::size_t length)
+    {
+        m_protoHeartBeat.SerializeToArray(buffer, length);
+
+        return 0;
+    }
+
+    int PacketHeartBeat::decode(const char *buffer, const std::size_t length)
+    {
+        m_protoHeartBeat.ParseFromArray(buffer, length);
+
+        return 0;
+    }
+
+} // packetprocess

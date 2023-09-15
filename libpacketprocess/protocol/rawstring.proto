@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package protocol;
+
+message RawString
+{
+    string content = 1;
+}
+
+message RawStringReply
+{
+    string result = 1;
+}

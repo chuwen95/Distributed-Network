@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package protocol;
+
+enum PacketType
+{
+    PacketType_HeartBeat = 0;
+    PacketType_HeartBeatReply = 1;
+    PacketType_RawString = 2;
+    PacketType_RawStringReply = 3;
+}
+
+message PacketHeader
+{
+    uint32 magic = 1;
+    PacketType type = 2;
+    uint32 payloadLen = 3;
+}
