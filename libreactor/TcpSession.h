@@ -34,8 +34,21 @@ namespace server
 
         components::RingBuffer::Ptr writeBuffer();
 
+        void setClientInfo(const std::string_view id);
+
+        void getClientInfo(std::string& id);
+
     public:
         int m_clientfd{-1};
+
+        struct ClientInfo
+        {
+            ClientInfo() = default;
+            ClientInfo(const std::string_view idParam) : id(idParam) {}
+
+            std::string id;
+        };
+        ClientInfo m_clientInfo;
 
         components::RingBuffer::Ptr m_readBuffer;
         components::RingBuffer::Ptr m_writeBuffer;

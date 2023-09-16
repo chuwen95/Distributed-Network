@@ -33,8 +33,6 @@ namespace server
 
         void registerDisconnectHandler(std::function<void(const int id)> disconnectHandler);
 
-        int sendData(const int id, const char* data, const std::size_t size);
-
     private:
         std::string m_ip;
         unsigned short m_port;

@@ -129,18 +129,4 @@ namespace server
         }
     }
 
-    int SlaveReactorManager::sendData(const int fd, const char *data, const std::size_t size)
-    {
-        std::unique_lock<std::mutex> ulock(x_clientSlaveReactors);
-        auto iter = m_clientSlaveReactors.find(fd);
-        if(m_clientSlaveReactors.end() == iter)
-        {
-            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, "id not found, id: ", fd);
-            return -1;
-        }
-        m_slaveReactors[iter->second]->sendData(fd, data, size);
-
-        return 0;
-    }
-
 } // server

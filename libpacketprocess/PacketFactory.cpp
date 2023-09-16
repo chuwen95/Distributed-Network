@@ -6,6 +6,8 @@
 
 #include "protocol/packet_header.pb.h"
 
+#include "packet/PacketClientInfo.h"
+#include "packet/PacketClientInfoReply.h"
 #include "packet/PacketHeartBeat.h"
 #include "packet/PacketHeartBeatReply.h"
 #include "packet/PacketRawString.h"
@@ -26,6 +28,12 @@ namespace packetprocess
         PacketBase::Ptr packet;
         switch (packetType)
         {
+            case packetprocess::PacketType::PT_ClientInfo:
+                packet = std::make_shared<PacketClientInfo>();
+                break;
+            case packetprocess::PacketType::PT_ClientInfoReply:
+                packet = std::make_shared<PacketClientInfoReply>();
+                break;
             case packetprocess::PacketType::PT_HeartBeat:
                 packet = std::make_shared<PacketHeartBeat>();
                 break;

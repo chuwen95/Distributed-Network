@@ -16,6 +16,8 @@ namespace packetprocess
     {
         PT_None,
 
+        PT_ClientInfo,
+        PT_ClientInfoReply,
         PT_HeartBeat,
         PT_HeartBeatReply,
         PT_RawString,

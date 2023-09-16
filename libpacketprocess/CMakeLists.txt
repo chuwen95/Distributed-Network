@@ -7,7 +7,7 @@ set(module_path ${CMAKE_SOURCE_DIR}/libpacketprocess)
 set(proto_output_path ${CMAKE_CURRENT_BINARY_DIR})
 
 # 填充.proto文件
-set(proto_files protocol/packet_header.proto protocol/heartbeat.proto protocol/rawstring.proto)
+set(proto_files protocol/heartbeat.proto protocol/clientinfo.proto protocol/rawstring.proto)
 # 获取libpacketprocess文件夹的绝对路径
 get_filename_component(module_absolute_path ${module_path} ABSOLUTE)
 # 遍历.proto文件

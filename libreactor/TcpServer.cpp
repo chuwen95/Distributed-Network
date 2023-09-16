@@ -165,9 +165,4 @@ namespace server
         m_slaveReactorManager.registerDisconnectHandler(disconnectHandler);
     }
 
-    int TcpServer::sendData(const int id, const char* data, const std::size_t size)
-    {
-        return m_slaveReactorManager.sendData(id, data,size);
-    }
-
 }

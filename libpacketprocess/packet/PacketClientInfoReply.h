@@ -1,0 +1,38 @@
+//
+// Created by root on 9/16/23.
+//
+
+#ifndef TCPNETWORK_PACKETCLIENTINFOREPLY_H
+#define TCPNETWORK_PACKETCLIENTINFOREPLY_H
+
+#include "PacketBase.h"
+
+#include "protocol/clientinfo.pb.h"
+
+namespace packetprocess
+{
+
+    class PacketClientInfoReply : public PacketBase
+    {
+    public:
+        using Ptr = std::shared_ptr<PacketClientInfoReply>;
+
+        PacketClientInfoReply();
+        ~PacketClientInfoReply() = default;
+
+    public:
+        std::size_t packetLength() override;
+
+        std::uint32_t getResult();
+        int setResult(const std::int32_t result);
+
+        int encode(char* buffer, const std::size_t length) override;
+        int decode(const char* buffer, const std::size_t length) override;
+
+    private:
+        protocol::ClientInfoReply m_protoClientInfoReply;
+    };
+
+} // packetprocess
+
+#endif //TCPNETWORK_PACKETCLIENTINFOREPLY_H

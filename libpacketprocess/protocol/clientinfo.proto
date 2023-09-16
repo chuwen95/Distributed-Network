@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package protocol;
+
+message ClientInfo
+{
+  string id = 1;
+}
+
+message ClientInfoReply
+{
+  uint32 result = 1;
+}
+

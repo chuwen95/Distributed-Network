@@ -33,8 +33,6 @@ namespace server
 
         void registerDisconnectHandler(std::function<void(const int id)> disconnectHandler);
 
-        int sendData(const int fd, const char* data, const std::size_t size);
-
     public:
         // 新上线客户端的信号
         std::mutex x_tcpSessionsQueue;

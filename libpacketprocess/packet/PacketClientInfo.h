@@ -1,0 +1,38 @@
+//
+// Created by root on 9/16/23.
+//
+
+#ifndef TCPNETWORK_PACKETCLIENTINFO_H
+#define TCPNETWORK_PACKETCLIENTINFO_H
+
+#include "PacketBase.h"
+
+#include "protocol/clientinfo.pb.h"
+
+namespace packetprocess
+{
+
+    class PacketClientInfo : public PacketBase
+    {
+    public:
+        using Ptr = std::shared_ptr<PacketClientInfo>;
+
+        PacketClientInfo() = default;
+        ~PacketClientInfo() = default;
+
+    public:
+        std::size_t packetLength() override;
+
+        int setId(const std::string_view id);
+        std::string getId();
+
+        int encode(char* buffer, const std::size_t length) override;
+        int decode(const char* buffer, const std::size_t length) override;
+
+    private:
+        protocol::ClientInfo m_protoClientInfo;
+    };
+
+} // packetprocess
+
+#endif //TCPNETWORK_PACKETCLIENTINFO_H

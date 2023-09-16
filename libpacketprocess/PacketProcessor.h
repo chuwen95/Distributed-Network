@@ -27,7 +27,7 @@ namespace packetprocess
 
         int stop();
 
-        int processData(const int id, const packetprocess::PacketType packetType,
+        int processData(const int fd, const packetprocess::PacketType packetType,
                         std::shared_ptr<std::vector<char>>& payloadData, const std::function<int(const int, const std::vector<char>&)>& writeHandler);
 
     private:

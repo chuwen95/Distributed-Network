@@ -10,6 +10,7 @@
 #include "TcpSession.h"
 #include "ClientAliveChecker.h"
 #include "libpacketprocess/packet/PacketHeader.h"
+#include "libpacketprocess/packet/PacketBase.h"
 
 namespace server
 {
@@ -40,12 +41,14 @@ namespace server
 
         void registerDisconnectHandler(std::function<void(const int id)> disconnectHandler);
 
-        int sendData(const int id, const char* data, const std::size_t size);
+        int sendData(const int fd, const char* data, const std::size_t size);
 
     private:
         void onClientDisconnect(const int fd);
 
         int getPacket(const int fd, components::RingBuffer::Ptr& readBuffer, packetprocess::PacketType& packetType, std::shared_ptr<std::vector<char>>& data);
+
+        int processClientInfoPacket(const int fd, TcpSession::Ptr tcpSession, packetprocess::PacketBase::Ptr packet);
 
     private:
         // SlaveReactor的id
@@ -53,14 +56,14 @@ namespace server
 
         // clientfd => TcpSession
         std::mutex x_clientSessions;
-        std::unordered_map<int, TcpSession::Ptr> m_clientSessions;
+        std::unordered_map<int, TcpSession::Ptr> m_fdSessions;
 
         components::Thread m_thread;
 
         int m_epfd{-1};
 
         // 数据接收回调
-        std::function<void(const int id, const packetprocess::PacketType, std::shared_ptr<std::vector<char>>&,
+        std::function<void(const int fd, const packetprocess::PacketType, std::shared_ptr<std::vector<char>>&,
                 std::function<int(const int, const std::vector<char>&)>)> m_recvHandler;
         // 客户端断开回调
         std::function<void(const int id)> m_disconnectHandler;
@@ -78,9 +81,6 @@ namespace server
 
         // 多个线程同时写入待发送的数据，需要加锁
         std::mutex x_writeBuffer;
-
-        std::unordered_map<int, std::size_t> m_recvPacketNum;
-        std::unordered_map<int, std::size_t> m_sendPacketNum;
     };
 
 }

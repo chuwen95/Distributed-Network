@@ -43,15 +43,15 @@ namespace packetprocess
         return 0;
     }
 
-    int PacketProcessor::processData(const int id, const packetprocess::PacketType packetType,
+    int PacketProcessor::processData(const int fd, const packetprocess::PacketType packetType,
                                      std::shared_ptr<std::vector<char>>& payloadData, const std::function<int(const int, const std::vector<char>&)>& writeHandler)
     {
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
                                                                      "create new task, packet type: ", static_cast<int>(packetType));
-        const auto expression = [id, packetType, payloadData, writeHandler]()
+        const auto expression = [fd, packetType, payloadData, writeHandler]()
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
-                                                                         "task start, packet type: ", static_cast<int>(packetType), ", fd: ", id);
+                                                                         "task start, packet type: ", static_cast<int>(packetType), ", fd: ", fd);
             // 解码包
             PacketBase::Ptr packet = PacketFactory().createPacket(packetType, payloadData);
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO, "create packet successfully");
@@ -63,12 +63,12 @@ namespace packetprocess
                 return ;
             }
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO, "create processor successfully");
-            processor->process(id, packet, writeHandler);
-            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO, "task finish, fd: ", id);
+            processor->process(fd, packet, writeHandler);
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO, "task finish, fd: ", fd);
         };
         m_threadPool.push(expression);
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
-                                                                     " push new task to thread pool successfully, packet type: ", static_cast<int>(packetType), ", fd: ", id);
+                                                                     " push new task to thread pool successfully, packet type: ", static_cast<int>(packetType), ", fd: ", fd);
 
         return 0;
     }

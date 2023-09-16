@@ -56,4 +56,14 @@ namespace server
         return m_writeBuffer;
     }
 
+    void TcpSession::setClientInfo(const std::string_view id)
+    {
+        m_clientInfo.id = id;
+    }
+
+    void TcpSession::getClientInfo(std::string &id)
+    {
+        id = m_clientInfo.id;
+    }
+
 } // server
