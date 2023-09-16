@@ -79,7 +79,7 @@ namespace server
                 if (ev[i].events & EPOLLERR ||         // 文件描述符发生错误
                     ev[i].events & EPOLLHUP)     // 文件描述符被挂断
                 {
-                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                                  "fd error, fd: ", fd);
                     onClientDisconnect(fd);
                     return -1;
@@ -105,34 +105,39 @@ namespace server
                     }
 
                     components::RingBuffer::Ptr writeBuffer = tcpSession->writeBuffer();
-                    assert(0 != writeBuffer->dataLength());
-
-                    // EPOLLOUT事件，调用send发送数据
-                    std::unique_lock<std::mutex> ulock(x_writeBuffer);
-
-                    char *buffer{nullptr};
-                    std::size_t len{0};
-                    int ret = writeBuffer->getContinuousData(buffer, len);
-                    assert(-1 != ret);
-                    int sendLen = send(fd, buffer, len, 0);
-                    if (sendLen == len)
+                    if(0 != writeBuffer->dataLength())
                     {
-                        writeBuffer->decreaseUsedSpace(sendLen);
-                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
-                                                                                     "send data successfully, size: ", sendLen, ", writeBuffer->startOffset(): ", writeBuffer->startOffset(),
-                                                                                     ", writeBuffer->endOffset(): ", writeBuffer->endOffset(), ", fd: ", fd);
-                        return 0;
-                    }
-                    else
-                    {
-                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info,
-                                                                                     FILE_INFO, "socket buffer not enough, sendLen: ", sendLen, ", writeBuffer->startOffset(): ",
-                                                                                     writeBuffer->startOffset(), ", writeBuffer->endOffset(): ", writeBuffer->endOffset(), ", fd: ", fd);
+                        // EPOLLOUT事件，调用send发送数据
+                        std::unique_lock<std::mutex> ulock(x_writeBuffer);
 
-                        // 表明socket发送缓冲区满，需要关注EPOLLOUT事件
-                        if (-1 != sendLen)
+                        char *buffer{nullptr};
+                        std::size_t len{0};
+                        int ret = writeBuffer->getContinuousData(buffer, len);
+                        assert(-1 != ret);
+                        int sendLen = send(fd, buffer, len, 0);
+                        if (sendLen == len)
                         {
                             writeBuffer->decreaseUsedSpace(sendLen);
+                            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
+                                                                                         "send data successfully, size: ", sendLen, ", fd: ", fd);
+                        }
+                        else
+                        {
+                            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
+                                                                                         "socket buffer not enough, sendLen: ", sendLen, ", fd: ", fd);
+
+                            // 表明socket发送缓冲区满
+                            if (-1 != sendLen && (EAGAIN == errno || EWOULDBLOCK == errno))
+                            {
+                                writeBuffer->decreaseUsedSpace(sendLen);
+                            }
+                            else if (ECONNRESET == errno || EPIPE == errno)
+                            {
+                                // 表明对端断开连接
+                                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                                             "onClientDisconnect, fd: ", fd);
+                                onClientDisconnect(fd);
+                            }
                         }
                     }
                 }
@@ -322,29 +327,23 @@ namespace server
                     }
                     else
                     {
-                        // 还有没发出去的数据，或者说没法放到发送缓冲区的数据，需要关注EPOLLOUT事件
-                        if (-1 != sendLen)
+                        if (-1 != sendLen && (EAGAIN == errno || EWOULDBLOCK == errno))
                         {
+                            // 还有没发出去的数据，或者说没法放到发送缓冲区的数据
                             writeBuffer->decreaseUsedSpace(sendLen);
                         }
-
-                        static bool isSetEpollout{false};
-                        if (false == isSetEpollout)
+                        else if(ECONNRESET == errno || EPIPE == errno)
                         {
-                            struct epoll_event ev;
-                            ev.data.fd = fd;
-                            ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
-                            int ret = epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &ev);
-                            if (-1 == ret)
-                            {
-                                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
-                                                                                             "mod epoll events to EPOLLIN | EPOLLOUT | EPOLLET failed, fd: ", fd,", errno: ", errno, ", ", strerror(errno));
-                                return -1;
-                            }
-                            isSetEpollout = true;
+                            // 表明对端断开连接
+                            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                                         "send data error, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
+                            iter = outfds.erase(iter);
+                            onClientDisconnect(fd);
+                            continue;
                         }
                     }
                 }
+                ++iter;
 
                 components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
                                                                              "send data error, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
@@ -400,7 +399,7 @@ namespace server
 
         struct epoll_event ev;
         memset(&ev, 0, sizeof(struct epoll_event));
-        ev.events = EPOLLIN | EPOLLET;
+        ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
         ev.data.fd = fd;
         int ret = epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &ev);
         if(-1 == ret)
@@ -501,6 +500,7 @@ namespace server
 
         epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, nullptr);
         m_infds.erase(fd);
+        m_datafds.erase(fd);
         {
             std::unique_lock<std::mutex> ulock(x_outfds);
             m_outfds.erase(fd);

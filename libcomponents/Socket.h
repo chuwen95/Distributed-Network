@@ -25,6 +25,15 @@ namespace components
         static int bind(const int fd, const std::string_view ip, const unsigned int port);
 
         static int listen(const int fd, const std::size_t conNum);
+
+        /**
+         * @brief 设置socket选项SO_NOSIGPIPE，避免对端断开连接后send因SIGPIPE信号崩溃
+         *              设置为此选项后，若对端断开，send返回-1，errno为EPIPE(Broken pipe)
+         *
+         * @param fd
+         * @return
+         */
+        static int setNoSigPipe(const int fd);
     };
 
 } // componnets

@@ -53,6 +53,9 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    // 忽略SIGPIPE信号，防止向一个已经断开的socket发送数据时操作系统触发SIGPIPE信号退出该应用
+    signal(SIGPIPE, SIG_IGN);
+
     server::TcpServer tcpServer;
     tcpServer.setLogLevel(logLevel);
     tcpServer.init("127.0.0.1", 9999, "/data/server_log.log");

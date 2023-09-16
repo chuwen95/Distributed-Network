@@ -24,11 +24,13 @@
 #include <cassert>
 #include <stdio.h>
 
+#include <unistd.h>
+#include <sys/types.h>
 #include <sys/errno.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
-#include <unistd.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
 
