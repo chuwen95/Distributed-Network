@@ -62,7 +62,12 @@ namespace server
                 onClientDisconnect(fd);
             }
 
-            int nready = epoll_wait(m_epfd, ev, c_maxEvent, 0);
+            int timeout{0};
+            if(true == m_infds.empty() && true == m_outfds.empty() && true == m_datafds.empty())
+            {
+                timeout = 10;
+            }
+            int nready = epoll_wait(m_epfd, ev, c_maxEvent, timeout);
             if(-1 == nready)
             {
                 components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,

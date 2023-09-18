@@ -13,8 +13,10 @@ namespace server
     {
         const auto expression = [this, listenfd = fd]()
         {
-            std::unique_lock<std::mutex> ulock(x_connect);
-            m_connectCv.wait(ulock);
+            {
+                std::unique_lock<std::mutex> ulock(x_connect);
+                m_connectCv.wait(ulock);
+            }
 
             int clientfd{-1};
             do
