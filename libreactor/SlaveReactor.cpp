@@ -120,6 +120,8 @@ namespace server
                         if (sendLen == len)
                         {
                             writeBuffer->decreaseUsedSpace(sendLen);
+                            // 如果数据能够send完成，那么socket发送缓冲区没满，不用关注EPOLLOUT事件
+                            m_outfds[fd] = false;
                             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                          "send data successfully, size: ", sendLen, ", fd: ", fd);
                         }
@@ -132,6 +134,8 @@ namespace server
                             if (-1 != sendLen && (EAGAIN == errno || EWOULDBLOCK == errno))
                             {
                                 writeBuffer->decreaseUsedSpace(sendLen);
+                                // 能进入到EPOLLOUT事件中，上一次调用send肯定是把发送缓冲区塞满了
+                                // 那么m_outfds[fd]是被置为了true的，这里依旧没发完，表示socket发送缓冲区又满了，m_outfds[fd]仍旧让它等于true
                             }
                             else if (ECONNRESET == errno || EPIPE == errno)
                             {
@@ -307,14 +311,20 @@ namespace server
             }
 
             // 处理fd写
-            std::unordered_set<int> outfds;
+            std::unordered_map<int, bool> outfds;
             {
                 std::unique_lock<std::mutex> ulock(x_outfds);
                 outfds = m_outfds;
             }
             for(auto iter = outfds.begin(); iter != outfds.end();)
             {
-                int fd = *iter;
+                if(true == iter->second)
+                {
+                    // 如果fd正在等待EPOLLOUT事件，那么这里直接跳过此fd的send
+                    continue;
+                }
+
+                int fd = iter->first;
 
                 TcpSession::Ptr tcpSession{nullptr};
                 {
@@ -341,6 +351,11 @@ namespace server
                     if (sendLen == length)
                     {
                         writeBuffer->decreaseUsedSpace(sendLen);
+                        if(0 == writeBuffer->dataLength())
+                        {
+                            iter = outfds.erase(iter);
+                            continue;
+                        }
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug,FILE_INFO,
                                                                                      "send data successfully, fd: ", fd, ", sendlen: ", sendLen);
                     }
@@ -350,7 +365,8 @@ namespace server
                         {
                             // 还有没发出去的数据，或者说没法放到发送缓冲区的数据
                             writeBuffer->decreaseUsedSpace(sendLen);
-
+                            // 设置fd正在等待EPOLLOUT事件为true
+                            outfds[fd] = true;
                             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                          "send data error, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
                         }
@@ -492,7 +508,10 @@ namespace server
         {
             // fd有数据发送
             std::unique_lock<std::mutex> ulock(x_outfds);
-            m_outfds.emplace(tcpSession->fd());
+            if(m_outfds.end() == m_outfds.find(tcpSession->fd()))
+            {
+                m_outfds.emplace(tcpSession->fd(), false);
+            }
         }
 
         return 0;

@@ -37,7 +37,7 @@ namespace server
         std::size_t clientSize();
 
         void registerRecvHandler(std::function<void(const int, const packetprocess::PacketType, std::shared_ptr<std::vector<char>>&,
-                                 std::function<int(const int, const std::vector<char>&)>)>);
+                                                    std::function<int(const int, const std::vector<char>&)>)>);
 
         void registerDisconnectHandler(std::function<void(const int id)> disconnectHandler);
 
@@ -64,7 +64,7 @@ namespace server
 
         // 数据接收回调
         std::function<void(const int fd, const packetprocess::PacketType, std::shared_ptr<std::vector<char>>&,
-                std::function<int(const int, const std::vector<char>&)>)> m_recvHandler;
+                           std::function<int(const int, const std::vector<char>&)>)> m_recvHandler;
         // 客户端断开回调
         std::function<void(const int id)> m_disconnectHandler;
 
@@ -72,9 +72,10 @@ namespace server
         std::unordered_set<int> m_infds;
         // 还有事件需要处理
         std::unordered_set<int> m_datafds;
-        // 是否有待发送的数据
+        // 若fd存在于m_outfds中，表明有数据要发送
+        // 若m_outfds[fd] = true，表明正在等待EPOLLOUT事件
         std::mutex x_outfds;
-        std::unordered_set<int> m_outfds;
+        std::unordered_map<int, bool> m_outfds;
 
         // 客户端心跳检测
         ClientAliveChecker m_clientAliveChecker;
