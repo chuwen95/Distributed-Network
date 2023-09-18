@@ -16,7 +16,7 @@ namespace packetprocess
         PacketRawStringProcessor() = default;
         ~PacketRawStringProcessor() = default;
 
-        int process(const int fd, PacketBase::Ptr packet, const std::function<int(const int, const std::vector<char>&)>& writeHandler) override;
+        int process(PacketBase::Ptr packet, PacketReplyBase::Ptr) override;
     };
 
 } // packetprocessor

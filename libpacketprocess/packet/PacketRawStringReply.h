@@ -5,14 +5,14 @@
 #ifndef TCPNETWORK_PACKETRAWSTRINGREPLY_H
 #define TCPNETWORK_PACKETRAWSTRINGREPLY_H
 
-#include "PacketBase.h"
+#include "PacketReplyBase.h"
 
 #include "protocol/rawstring.pb.h"
 
 namespace packetprocess
 {
 
-    class PacketRawStringReply : public PacketBase
+    class PacketRawStringReply : public PacketReplyBase
     {
     public:
         using Ptr = std::shared_ptr<PacketRawStringReply>;

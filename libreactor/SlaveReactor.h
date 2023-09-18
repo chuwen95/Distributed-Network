@@ -39,7 +39,7 @@ namespace server
         void registerRecvHandler(std::function<void(const int, const packetprocess::PacketType, std::shared_ptr<std::vector<char>>&,
                                                     std::function<int(const int, const std::vector<char>&)>)>);
 
-        void registerDisconnectHandler(std::function<void(const int id)> disconnectHandler);
+        void registerDisconnectHandler(std::function<void(const int id, const std::string&)> disconnectHandler);
 
         int sendData(const int fd, const char* data, const std::size_t size);
 
@@ -66,11 +66,11 @@ namespace server
         std::function<void(const int fd, const packetprocess::PacketType, std::shared_ptr<std::vector<char>>&,
                            std::function<int(const int, const std::vector<char>&)>)> m_recvHandler;
         // 客户端断开回调
-        std::function<void(const int id)> m_disconnectHandler;
+        std::function<void(const int id, const std::string&)> m_disconnectHandler;
 
         // 有EpollIn的事件回调
         std::unordered_set<int> m_infds;
-        // 还有事件需要处理
+        // fd收到了数据，需要处理
         std::unordered_set<int> m_datafds;
         // 若fd存在于m_outfds中，表明有数据要发送
         // 若m_outfds[fd] = true，表明正在等待EPOLLOUT事件

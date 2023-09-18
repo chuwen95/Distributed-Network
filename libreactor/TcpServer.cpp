@@ -5,8 +5,7 @@
 #include "TcpServer.h"
 #include "libcomponents/Socket.h"
 #include "libcomponents/Logger.h"
-#include "libpacketprocess/packet/PacketBase.h"
-
+#include "libpacketprocess/PacketFactory.h"
 
 namespace server
 {
@@ -89,10 +88,64 @@ namespace server
             m_slaveReactorManager.addTcpSession(tcpSession);
         });
 
-        m_packetProcessor.init();
+        m_packetProcessThreadPoll.init(8, "packet_proc");
         m_slaveReactorManager.registerRecvHandler([this](const int fd, packetprocess::PacketType packetType,
                                                          std::shared_ptr<std::vector<char>>& payloadData, const std::function<int(const int, const std::vector<char>&)>& writeHandler){
-            m_packetProcessor.processData(fd, packetType, payloadData, writeHandler);
+            const auto expression = [fd, packetType, payloadData, writeHandler, this]()
+            {
+                packetprocess::PacketFactory packetFactory;
+                packetprocess::PacketBase::Ptr reqPacket = packetFactory.createPacket(packetType, payloadData);
+                packetprocess::PacketReplyBase::Ptr replyPacket = packetFactory.createReplyPacket(packetType);
+                if(nullptr != m_packetHander)
+                {
+                    if(-1 == m_packetHander(packetType, reqPacket, replyPacket))
+                    {
+                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "process packet failed");
+                        return -1;
+                    }
+                }
+
+                std::size_t payloadLength = replyPacket->packetLength();
+                std::vector<char> buffer;
+
+                packetprocess::PacketHeader packetHeader;
+                packetHeader.setType(packetprocess::PacketType::PT_RawStringReply);
+                packetHeader.setPayloadLength(payloadLength);
+
+                std::size_t headerLength = packetHeader.headerLength();
+                std::size_t sumLength = headerLength + payloadLength;
+
+                // 编码包
+                buffer.resize(sumLength);
+                packetHeader.encode(buffer.data(), headerLength);
+                replyPacket->encode(buffer.data() + headerLength, payloadLength);
+
+                if(nullptr != writeHandler)
+                {
+                    // 将回应包写入发送缓冲区
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+                                                                                 "try write reply packet to buffer, write size: ", sumLength, ", fd: ", fd);
+                    int ret{0};
+                    while(0 != (ret = writeHandler(fd, buffer)))
+                    {
+                        if(-2 == ret)
+                        {
+                            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+                                                                                         " client offline, fd: ", fd);
+                            break;
+                        }
+                        else if(-1 == ret)
+                        {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                        }
+                    }
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+                                                                                 " write reply packet to buffer successfully, write size: ", sumLength, ", fd: ", fd);
+                }
+
+                return 0;
+            };
+            m_packetProcessThreadPoll.push(expression);
         });
 
         return 0;
@@ -115,7 +168,7 @@ namespace server
             return -1;
         }
 
-        if(-1 == m_packetProcessor.uninit())
+        if(-1 == m_packetProcessThreadPoll.uninit())
         {
             return -1;
         }
@@ -135,7 +188,7 @@ namespace server
     {
         components::Singleton<components::Logger>::instance()->start();
 
-        m_packetProcessor.start();
+        m_packetProcessThreadPoll.start();
         m_slaveReactorManager.start();
         m_acceptor.start();
         m_selectListenner.start();
@@ -148,7 +201,7 @@ namespace server
         m_selectListenner.stop();
         m_acceptor.stop();
         m_slaveReactorManager.stop();
-        m_packetProcessor.stop();
+        m_packetProcessThreadPoll.stop();
 
         components::Singleton<components::Logger>::instance()->stop();
 
@@ -160,9 +213,17 @@ namespace server
         components::Singleton<components::Logger>::instance()->setLogLevel(static_cast<components::LogType>(logLevel));
     }
 
-    void TcpServer::registerDisconnectHandler(std::function<void(const int)> disconnectHandler)
+    void TcpServer::registerPacketHandler(std::function<int(const packetprocess::PacketType, packetprocess::PacketBase::Ptr,
+                               packetprocess::PacketReplyBase::Ptr)> packetHander)
+    {
+        m_packetHander = std::move(packetHander);
+    }
+
+    void TcpServer::registerDisconnectHandler(std::function<void(const int, const std::string&)> disconnectHandler)
     {
         m_slaveReactorManager.registerDisconnectHandler(disconnectHandler);
     }
+
+
 
 }

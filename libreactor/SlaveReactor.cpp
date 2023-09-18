@@ -289,7 +289,7 @@ namespace server
                     else
                     {
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug,FILE_INFO,
-                                                                                     "send packet type and packet payload to processor, fd: ", fd, ", packet type: ", static_cast<int>(packetType));
+                                                                                     "callback packet type and packet payload, fd: ", fd, ", packet type: ", static_cast<int>(packetType));
 
                         std::weak_ptr<SlaveReactor> weakSlaveReactor = shared_from_this();
                         m_recvHandler(fd, packetType, packetPayload,[weakSlaveReactor](const int fd, const std::vector<char> &data) -> int {
@@ -382,6 +382,7 @@ namespace server
                                                                                          "client maybe offline, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
                             iter = outfds.erase(iter);
                             onClientDisconnect(fd);
+
                             continue;
                         }
                     }
@@ -472,7 +473,7 @@ namespace server
         m_recvHandler = std::move(recvHandler);
     }
 
-    void SlaveReactor::registerDisconnectHandler(std::function<void(const int)> disconnectHandler)
+    void SlaveReactor::registerDisconnectHandler(std::function<void(const int, const std::string&)> disconnectHandler)
     {
         m_disconnectHandler = disconnectHandler;
     }
@@ -547,13 +548,16 @@ namespace server
         }
         close(fd);
 
-        if(nullptr != m_disconnectHandler)
-        {
-            m_disconnectHandler(fd);
-        }
-
         {
             std::unique_lock<std::mutex> ulock(x_clientSessions);
+
+            auto iter = m_fdSessions.find(fd);
+            if(nullptr != m_disconnectHandler)
+            {
+                std::string name;
+                iter->second->getClientInfo(name);
+                m_disconnectHandler(fd, name);
+            }
             m_fdSessions.erase(fd);
         }
 
@@ -636,16 +640,15 @@ namespace server
                                                                      "decode ClientInfo packet successfully, fd: ", fd, ", id: ", fd);
 
         // 构造回应包
-        packetprocess::PacketHeader packetHeader;
-        packetHeader.setType(packetprocess::PacketType::PT_ClientInfoReply);
-
         packetprocess::PacketClientInfoReply reply;
         reply.setResult(0);
 
+        packetprocess::PacketHeader packetHeader;
+        packetHeader.setType(packetprocess::PacketType::PT_ClientInfoReply);
+        packetHeader.setPayloadLength(reply.packetLength());
+
         int headerLength = packetHeader.headerLength();
         int payloadLength = reply.packetLength();
-
-        packetHeader.setPayloadLength(reply.packetLength());
 
         std::vector<char> buffer;
         buffer.resize(headerLength + reply.packetLength());
@@ -658,6 +661,10 @@ namespace server
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                          "send ClientInfoReply packet failed", ", fd: ", fd, ", id: ", id);
         }
+
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                     "send ClientInfoReply packet successfully", ", fd: ", fd, ", id: ", id);
+
         return 0;
     }
 

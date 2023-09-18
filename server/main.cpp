@@ -1,7 +1,9 @@
 #include <iostream>
 
-#include "libreactor/TcpServer.h"
 #include <signal.h>
+
+#include "libreactor/TcpServer.h"
+#include "libpacketprocess/PacketProcessor.h"
 
 class ExitHandler
 {
@@ -56,8 +58,13 @@ int main(int argc, char* argv[])
     // 忽略SIGPIPE信号，防止向一个已经断开的socket发送数据时操作系统触发SIGPIPE信号退出该应用
     signal(SIGPIPE, SIG_IGN);
 
+    packetprocess::PacketProcessor packetProcessor;
+
     server::TcpServer tcpServer;
     tcpServer.setLogLevel(logLevel);
+    tcpServer.registerPacketHandler([&packetProcessor](const packetprocess::PacketType packetType, packetprocess::PacketBase::Ptr packet,packetprocess::PacketReplyBase::Ptr replyPacket){
+        return packetProcessor.process(packetType, packet, replyPacket);
+    });
     tcpServer.init("127.0.0.1", 9999, "/data/server_log.log");
     tcpServer.start();
 

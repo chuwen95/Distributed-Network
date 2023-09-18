@@ -121,7 +121,7 @@ namespace server
         }
     }
 
-    void SlaveReactorManager::registerDisconnectHandler(std::function<void(const int)> disconnectHandler)
+    void SlaveReactorManager::registerDisconnectHandler(std::function<void(const int, const std::string&)> disconnectHandler)
     {
         for(auto& slaveReactor : m_slaveReactors)
         {

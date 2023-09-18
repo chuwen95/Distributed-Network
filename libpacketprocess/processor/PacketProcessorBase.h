@@ -6,6 +6,7 @@
 #define TCPNETWORK_PACKETPROCESSORBASE_H
 
 #include "../packet/PacketBase.h"
+#include "../packet/PacketReplyBase.h"
 
 namespace packetprocess
 {
@@ -19,7 +20,7 @@ namespace packetprocess
         virtual ~PacketProcessorBase() = default;
 
     public:
-        virtual int process(const int fd, PacketBase::Ptr packet, const std::function<int(const int, const std::vector<char>&)>& writeHandler) = 0;
+        virtual int process(PacketBase::Ptr packet, PacketReplyBase::Ptr) = 0;
     };
 
 }

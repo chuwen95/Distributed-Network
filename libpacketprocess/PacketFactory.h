@@ -8,6 +8,7 @@
 #include "libcommon/Common.h"
 #include "libcomponents/RingBuffer.h"
 #include "packet/PacketBase.h"
+#include "packet/PacketReplyBase.h"
 
 namespace packetprocess
 {
@@ -20,12 +21,20 @@ namespace packetprocess
 
     public:
         /**
-         * @brief 从环形缓冲区中取数据创建消息包
+         * @brief 创建消息包
          *
-         * @param type 包类型
+         * @param packetType 包类型
          * @return
          */
         PacketBase::Ptr createPacket(const PacketType packetType, const std::shared_ptr<std::vector<char>>& data);
+
+        /**
+         * @brief 根据消息包类型创建回应包
+         *
+         * @param packetType 包类型
+         * @return
+         */
+        PacketReplyBase::Ptr createReplyPacket(const PacketType packetType);
     };
 
 } // packetprocess

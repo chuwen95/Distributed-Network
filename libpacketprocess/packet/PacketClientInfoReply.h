@@ -5,14 +5,14 @@
 #ifndef TCPNETWORK_PACKETCLIENTINFOREPLY_H
 #define TCPNETWORK_PACKETCLIENTINFOREPLY_H
 
-#include "PacketBase.h"
+#include "PacketReplyBase.h"
 
 #include "protocol/clientinfo.pb.h"
 
 namespace packetprocess
 {
 
-    class PacketClientInfoReply : public PacketBase
+    class PacketClientInfoReply : public PacketReplyBase
     {
     public:
         using Ptr = std::shared_ptr<PacketClientInfoReply>;

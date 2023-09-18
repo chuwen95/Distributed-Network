@@ -31,20 +31,11 @@ namespace packetprocess
             case packetprocess::PacketType::PT_ClientInfo:
                 packet = std::make_shared<PacketClientInfo>();
                 break;
-            case packetprocess::PacketType::PT_ClientInfoReply:
-                packet = std::make_shared<PacketClientInfoReply>();
-                break;
             case packetprocess::PacketType::PT_HeartBeat:
                 packet = std::make_shared<PacketHeartBeat>();
                 break;
-            case packetprocess::PacketType::PT_HeartBeatReply:
-                packet = std::make_shared<PacketHeartBeatReply>();
-                break;
             case packetprocess::PacketType::PT_RawString:
                 packet = std::make_shared<PacketRawString>();
-                break;
-            case packetprocess::PacketType::PT_RawStringReply:
-                packet = std::make_shared<PacketRawStringReply>();
                 break;
             default:
                 return nullptr;
@@ -55,6 +46,28 @@ namespace packetprocess
         {
             packet->decode(data->data(), data->size());
         }
+        return packet;
+    }
+
+    PacketReplyBase::Ptr PacketFactory::createReplyPacket(const PacketType packetType)
+    {
+        // 构造消息包
+        PacketReplyBase::Ptr packet;
+        switch (packetType)
+        {
+            case packetprocess::PacketType::PT_ClientInfo:
+                packet = std::make_shared<PacketClientInfoReply>();
+                break;
+            case packetprocess::PacketType::PT_HeartBeat:
+                packet = std::make_shared<PacketHeartBeatReply>();
+                break;
+            case packetprocess::PacketType::PT_RawString:
+                packet = std::make_shared<PacketRawStringReply>();
+                break;
+            default:
+                return nullptr;
+        }
+
         return packet;
     }
 

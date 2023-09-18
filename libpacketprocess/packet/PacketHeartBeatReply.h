@@ -5,14 +5,14 @@
 #ifndef TCPNETWORK_PACKETHEARTBEATREPLY_H
 #define TCPNETWORK_PACKETHEARTBEATREPLY_H
 
-#include "PacketBase.h"
+#include "PacketReplyBase.h"
 
 #include "protocol/heartbeat.pb.h"
 
 namespace packetprocess
 {
 
-    class PacketHeartBeatReply : public PacketBase
+    class PacketHeartBeatReply : public PacketReplyBase
     {
     public:
         using Ptr = std::shared_ptr<PacketHeartBeatReply>;

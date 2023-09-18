@@ -31,7 +31,7 @@ namespace server
         void registerRecvHandler(std::function<void(const int id, const packetprocess::PacketType,
                 std::shared_ptr<std::vector<char>>&, std::function<int(const int, const std::vector<char>&)>)> recvHandler);
 
-        void registerDisconnectHandler(std::function<void(const int id)> disconnectHandler);
+        void registerDisconnectHandler(std::function<void(const int id, const std::string&)> disconnectHandler);
 
     public:
         // 新上线客户端的信号
