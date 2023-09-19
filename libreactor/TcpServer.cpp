@@ -84,7 +84,7 @@ namespace server
         m_selectListenner.registerConnectHandler([&](){ m_acceptor.onConnect(); });
 
         // 完成一个客户端的创建，将客户端分配到从Reactor进行recv/send处理
-        m_acceptor.setNewClientCallback([this](const int fd, TcpSession* tcpSession){
+        m_acceptor.setNewClientCallback([this](const int fd, TcpSession::Ptr tcpSession){
             m_slaveReactorManager.addTcpSession(tcpSession);
         });
 

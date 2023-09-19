@@ -183,6 +183,8 @@ int main(int argc, char **argv)
     };
     std::thread(sendExpression).detach();
 
+    components::CellTimestamp timestamp;
+    timestamp.update();
     int recvNum{0};
     while(recvNum < packetNum)
     {
@@ -224,6 +226,7 @@ int main(int argc, char **argv)
             }
         }
     }
+    std::cout << packetNum / timestamp.getElapsedTimeInMilliSec() << std::endl;
 
     close(fd);
 

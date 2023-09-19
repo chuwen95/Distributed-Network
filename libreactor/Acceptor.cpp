@@ -28,7 +28,7 @@ namespace server
                 if(-1 != clientfd)
                 {
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "client online, fd: ", clientfd);
-                    TcpSession* tcpSession = new TcpSession();
+                    TcpSession::Ptr tcpSession = std::make_shared<TcpSession>();
                     tcpSession->init(clientfd);
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "create TcpSession successfully");
 
@@ -72,7 +72,7 @@ namespace server
         return 0;
     }
 
-    void Acceptor::setNewClientCallback(std::function<void(int, TcpSession*)> newClientCallback)
+    void Acceptor::setNewClientCallback(std::function<void(int, TcpSession::Ptr)> newClientCallback)
     {
         m_newClientCallback = newClientCallback;
     }

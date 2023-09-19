@@ -7,7 +7,6 @@
 
 #include "libcommon/Common.h"
 #include "libcomponents/Thread.h"
-#include "libcomponents/SPSCLockLessQueue.h"
 #include "TcpSession.h"
 
 namespace server
@@ -32,14 +31,14 @@ namespace server
 
         int onConnect();
 
-        void setNewClientCallback(std::function<void(int, TcpSession*)> newClientCallback);
+        void setNewClientCallback(std::function<void(int, TcpSession::Ptr)> newClientCallback);
 
     private:
         std::mutex x_connect;
         std::condition_variable m_connectCv;
 
         // 客户端初始化完成回调
-        std::function<void(int, TcpSession*)> m_newClientCallback;
+        std::function<void(int, TcpSession::Ptr)> m_newClientCallback;
 
         components::Thread m_thread;
     };

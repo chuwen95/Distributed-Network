@@ -5,4 +5,4 @@ project(reactor)
 FILE(GLOB_RECURSE SRC *.cpp)
 
 add_library(libreactor ${SRC})
-target_link_libraries(libreactor PUBLIC libcomponents libpacketprocess)
+target_link_libraries(libreactor PUBLIC libcomponents libpacketprocess readerwriterqueue)

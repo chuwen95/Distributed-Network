@@ -34,8 +34,8 @@ namespace server
             // 一定间隔后刷新拥有最少数量的SlaveReactor
             static std::size_t s_refreshTime{0};
 
-            TcpSession* tcpSession{nullptr};
-            while(true == m_tcpSessionsQueue.dequeue(tcpSession))
+            TcpSession::Ptr tcpSession{nullptr};
+            while(true == m_tcpSessionsQueue.try_dequeue(tcpSession))
             {
                 {
                     // 记录客户端fd所在的SlaveRactor
@@ -105,7 +105,7 @@ namespace server
         return 0;
     }
 
-    int SlaveReactorManager::addTcpSession(TcpSession* tcpSession)
+    int SlaveReactorManager::addTcpSession(TcpSession::Ptr tcpSession)
     {
         m_tcpSessionsQueue.enqueue(tcpSession);
         m_tcpSessionsQueueCv.notify_one();

@@ -281,7 +281,7 @@ namespace server
                     else if(packetprocess::PacketType::PT_HeartBeat == packetType)
                     {
                         // 心跳包，不必放到线程池中处理
-                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
                                                                                      "receive heartbeat packet, fd: ", fd);
                         m_clientAliveChecker.refreshClientLastRecvTime(fd);
                     }
@@ -628,7 +628,7 @@ namespace server
                                                                      "readBuffer->length(): ", readBuffer->dataLength());
         if(readBuffer->dataLength() < headerLength)
         {
-            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                          "buffer data length less than header length, fd: ", fd);
             return -1;
         }

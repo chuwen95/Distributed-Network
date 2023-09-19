@@ -7,7 +7,7 @@
 
 #include "SlaveReactor.h"
 
-#include "libcomponents/SPSCLockLessQueue.h"
+#include <readerwriterqueue.h>
 
 namespace server
 {
@@ -26,7 +26,7 @@ namespace server
 
         int stop();
 
-        int addTcpSession(TcpSession* tcpSession);
+        int addTcpSession(TcpSession::Ptr tcpSession);
 
         std::uint32_t getClientOnlineTimestamp(const int fd);
 
@@ -41,7 +41,7 @@ namespace server
         std::condition_variable m_tcpSessionsQueueCv;
 
         // 新上线的客户端队列，等待分发到各个SlaveReactor
-        components::spsc_queue_t<TcpSession*> m_tcpSessionsQueue;
+        moodycamel::ReaderWriterQueue<TcpSession::Ptr> m_tcpSessionsQueue;
 
         // 所有的子Reactor集合
         std::vector<SlaveReactor::Ptr> m_slaveReactors;

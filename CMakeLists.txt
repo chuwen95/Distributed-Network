@@ -8,11 +8,15 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
             CACHE STRING "Vcpkg toolchain file")
 endif()
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/deps-cmake" CACHE PATH "The path to the deps cmake directory")
+
 project(TcpNetwork)
 
 set(CMAKE_CXX_STANDARD 20)
 
 include_directories(${CMAKE_SOURCE_DIR})
+
+include(ProjectReaderWriterQueue)
 
 add_subdirectory(libcomponents)
 add_subdirectory(libreactor)
