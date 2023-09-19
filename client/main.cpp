@@ -23,7 +23,6 @@ int main(int argc, char **argv)
     struct DataStatus
     {
         int sendLen{0};
-        int dataSize{0};
         std::vector<char> sendBuffer;
 
         int writeLen{0};
@@ -106,34 +105,30 @@ int main(int argc, char **argv)
     std::cout << "dataStatus.dataSize: " << dataStatus.writeLen << std::endl;
 
     // 请求包
-    packetHeader.setType(packetprocess::PacketType::PT_RawString);
-
     packetprocess::PacketRawString rawStringPacket;
     rawStringPacket.setContent("hello");
-
     payloadLength = rawStringPacket.packetLength();
-    int rawStringLength = headerLength + payloadLength;
 
+    packetHeader.setType(packetprocess::PacketType::PT_RawString);
     packetHeader.setPayloadLength(payloadLength);
 
     std::vector<char> rawStringBuffer;
+    int rawStringLength = headerLength + payloadLength;
     rawStringBuffer.resize(rawStringLength);
 
     packetHeader.encode(rawStringBuffer.data(), headerLength);
     rawStringPacket.encode(rawStringBuffer.data() + headerLength, payloadLength);
 
     // 心跳包
-    packetHeader.setType(packetprocess::PacketType::PT_HeartBeat);
-
     packetprocess::PacketHeartBeat heartBeatPacket;
     heartBeatPacket.setTimestamp(0);
-
     payloadLength = heartBeatPacket.packetLength();
-    int heartLength = headerLength + payloadLength;
 
+    packetHeader.setType(packetprocess::PacketType::PT_HeartBeat);
     packetHeader.setPayloadLength(payloadLength);
 
     std::vector<char> heartBeatBuffer;
+    int heartLength = headerLength + payloadLength;
     heartBeatBuffer.resize(heartLength);
 
     packetHeader.encode(heartBeatBuffer.data(), headerLength);
@@ -156,8 +151,8 @@ int main(int argc, char **argv)
 
             if(sendNum < packetNum)
             {
-                memcpy(dataStatus.sendBuffer.data() + dataStatus.dataSize, rawStringBuffer.data(), rawStringLength);
-                dataStatus.dataSize += rawStringLength;
+                memcpy(dataStatus.sendBuffer.data() + dataStatus.sendLen, rawStringBuffer.data(), rawStringLength);
+                dataStatus.sendLen += rawStringLength;
                 ++sendNum;
                 if(sendNum == packetNum)
                 {
@@ -168,21 +163,21 @@ int main(int argc, char **argv)
             if(cellTimestamp.getElapsedTimeInSec() >= 5)
             {
                 std::cout << "add heartbeat packet, length: " << heartLength << std::endl;
-                memcpy(dataStatus.sendBuffer.data() + dataStatus.dataSize, heartBeatBuffer.data(), heartLength);
-                dataStatus.dataSize += heartLength;
+                memcpy(dataStatus.sendBuffer.data() + dataStatus.sendLen, heartBeatBuffer.data(), heartLength);
+                dataStatus.sendLen += heartLength;
                 cellTimestamp.update();
             }
 
-            if(0 == dataStatus.dataSize)
+            if(0 == dataStatus.sendLen)
             {
                 continue;
             }
 
-            int ret = send(fd, dataStatus.sendBuffer.data(), dataStatus.dataSize, 0);
+            int ret = send(fd, dataStatus.sendBuffer.data(), dataStatus.sendLen, 0);
             if (ret > 0)
             {
-                memmove(dataStatus.sendBuffer.data(), dataStatus.sendBuffer.data() + ret, dataStatus.dataSize - ret);
-                dataStatus.dataSize -= ret;
+                memmove(dataStatus.sendBuffer.data(), dataStatus.sendBuffer.data() + ret, dataStatus.sendLen - ret);
+                dataStatus.sendLen -= ret;
             }
         }
     };
@@ -229,6 +224,8 @@ int main(int argc, char **argv)
             }
         }
     }
+
+    close(fd);
 
     return 0;
 }

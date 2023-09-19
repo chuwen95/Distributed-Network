@@ -98,7 +98,17 @@ namespace server
                 {
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
                                                                                  "EPOLLIN event, fd: ", fd);
-                    m_infds.insert(fd);
+                    {
+                        std::unique_lock<std::mutex> ulock(x_clientSessions);
+                        auto iter = m_fdSessions.find(fd);
+                        if(m_fdSessions.end() == iter)
+                        {
+                            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                         "fd not found, fd: ", fd);
+                            continue;
+                        }
+                        m_infds.insert(fd);
+                    }
                 }
                 if(ev[i].events & EPOLLOUT)
                 {
@@ -133,68 +143,71 @@ namespace server
             {
                 int fd = *iter;
 
-                // 更新时间戳
-                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
-                                                                             "refresh last recv time, fd: ", fd);
-
                 TcpSession::Ptr tcpSession;
                 {
                     std::unique_lock<std::mutex> ulock(x_clientSessions);
-                    tcpSession = m_fdSessions[fd];
+                    auto sessionIter = m_fdSessions.find(fd);
+                    if(m_fdSessions.end() == sessionIter)
+                    {
+                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                     "fd not found, fd: ", fd);
+                        iter = m_infds.erase(iter);
+                        continue;
+                    }
+                    tcpSession = sessionIter->second;
                 }
 
                 components::RingBuffer::Ptr readBuffer = tcpSession->readBuffer();
 
-                bool isReadOver{false};
-                while(0 != readBuffer->space()) // 如果缓冲区满了，则无法在接收数据，继续外层for循环，但是由于边缘触发的原因，不能将fd从m_infds中移除
+                // 如果缓冲区满了，则无法在接收数据，继续外层for循环，但是由于边缘触发的原因，不能将fd从m_infds中移除
+                char *data{nullptr};
+                std::size_t length{0};
+                int ret = readBuffer->getBufferAndLengthForWrite(data, length);
+                if(-1 == ret)
                 {
-                    char *data{nullptr};
-                    std::size_t length{0};
-                    int ret = readBuffer->getBufferAndLengthForWrite(data, length);
-                    if(-1 == ret)
-                    {
-                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
-                                                                                     "getBufferAndLengthForWrite failed, fd: ", fd);
-                        // 致命错误，缓冲区使用方法不正确
-                        assert(-1 != ret);
-                    }
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
-                                                                                 "getBufferAndLengthForWrite, length:", length, ", fd: ", fd);
-
-                    int readLen = read(fd, data, length);
-                    if (readLen <= 0)
-                    {
-                        // 没有数据再需要读取，从m_infds中移除
-                        isReadOver = true;
-                        break;
-                    }
-                    // 增加已经使用的空间
-                    ret = readBuffer->increaseUsedSpace(readLen);
-                    if(-1 == ret)
-                    {
-                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
-                                                                                     "increaseUsedSpace failed, space: ", readBuffer->space(), ", readLen: ", readLen, ", fd: ", fd);
-                        // 致命错误，缓冲区使用方法不正确
-                        assert(-1 != ret);
-                    }
-
-                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
-                                                                                 "recv length: ", readLen, ", readBuffer dataLength: ", readBuffer->dataLength(), ", fd: ", fd);
-
-                    m_clientAliveChecker.refreshClientLastRecvTime(fd);
-
-                    // 接收到了数据，需要回调给业务层
-                    m_datafds.insert(fd);
+                                                                                 "getBufferAndLengthForWrite failed, fd: ", fd);
+                    // 致命错误，缓冲区使用方法不正确
+                    assert(-1 != ret);
                 }
+                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
+                                                                             "getBufferAndLengthForWrite, length:", length, ", fd: ", fd);
 
-                if(true == isReadOver)
+                int readLen = recv(fd, data, length, 0);
+                if (readLen < 0)
                 {
+                    // 没有数据再需要读取，从m_infds中移除
                     iter = m_infds.erase(iter);
+                    break;
                 }
-                else
+                else if(0 == readLen)
                 {
-                    ++iter;
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                 "client may be offline, fd: ", fd);
+                    iter = m_infds.erase(iter);
+                    onClientDisconnect(fd, false);
+                    continue;
                 }
+                // 增加已经使用的空间
+                ret = readBuffer->increaseUsedSpace(readLen);
+                if(-1 == ret)
+                {
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
+                                                                                 "increaseUsedSpace failed, space: ", readBuffer->space(), ", readLen: ", readLen, ", fd: ", fd);
+                    // 致命错误，缓冲区使用方法不正确
+                    assert(-1 != ret);
+                }
+
+                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
+                                                                             "refresh last recv time, recv length: ", readLen, ", readBuffer dataLength: ", readBuffer->dataLength(), ", fd: ", fd);
+
+                // 更新时间戳
+                m_clientAliveChecker.refreshClientLastRecvTime(fd);
+
+                // 接收到了数据，需要回调给业务层
+                m_datafds.insert(fd);
+
+                ++iter;
             }
 
             // 接收到了数据，需要回调给业务层
@@ -207,20 +220,30 @@ namespace server
                 TcpSession::Ptr tcpSession{nullptr};
                 {
                     std::unique_lock<std::mutex> ulock(x_clientSessions);
-                    tcpSession = m_fdSessions[fd];
+                    auto sessionIter = m_fdSessions.find(fd);
+                    if(m_fdSessions.end() == sessionIter)
+                    {
+                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                     "fd not found, fd: ", fd);
+                        iter = m_datafds.erase(iter);
+                        continue;
+                    }
+                    tcpSession = sessionIter->second;
                 }
 
-                assert(nullptr != tcpSession);
                 components::RingBuffer::Ptr readBuffer = tcpSession->readBuffer();
-                assert(0 != readBuffer->dataLength());
+                if(0 == readBuffer->dataLength())
+                {
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                 "fd: ", fd);
+                    assert(0 != readBuffer->dataLength());
+                }
 
 #if 0
                 components::CellTimestamp timestamp;
                 timestamp.update();
 #endif
-                bool remainPacket{true};
                 std::size_t epochPacketSum{100};
-
                 std::size_t packetNum{0};
                 for(packetNum = 0; packetNum < epochPacketSum; ++packetNum)
                 {
@@ -235,7 +258,6 @@ namespace server
                         // 缓冲区中的数据已经不够一个包头的长度
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                      "pop packet finish", ", fd: ", fd);
-                        remainPacket = false;
                         break;
                     }
 
@@ -265,7 +287,7 @@ namespace server
                     }
                     else
                     {
-                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug,FILE_INFO,
+                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                      "callback packet type and packet payload, fd: ", fd, ", packet type: ", static_cast<int>(packetType));
 
                         std::weak_ptr<SlaveReactor> weakSlaveReactor = shared_from_this();
@@ -279,8 +301,9 @@ namespace server
                         });
                     }
                 }
-                // 如果还有包，则不从m_datafds中移除
-                if(false == remainPacket)
+                // 1. 如果刚好取出epochPacketNum后缓冲区为空了，packetNum会等于epochPacketSum，需要判断下缓冲区是否还有数据
+                // 2. 如果packetNum < epochPacketSum，那肯定是缓冲区数据不够一个包了，直接从m_datafds中移除
+                if(0 == readBuffer->dataLength() || packetNum < epochPacketSum)
                 {
                     iter = m_datafds.erase(iter);
                 }
@@ -536,7 +559,7 @@ namespace server
         return iter->second->getClientOnlineTimestamp();
     }
 
-    void SlaveReactor::onClientDisconnect(const int fd)
+    void SlaveReactor::onClientDisconnect(const int fd, const bool dealInfds)
     {
         {
             std::unique_lock<std::mutex> ulock(x_clientSessions);
@@ -554,10 +577,13 @@ namespace server
 
         epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, nullptr);
 
-        auto inIter = m_infds.find(fd);
-        if(m_infds.end() != inIter)
+        if(true == dealInfds)
         {
-            m_infds.erase(inIter);
+            auto inIter = m_infds.find(fd);
+            if(m_infds.end() != inIter)
+            {
+                m_infds.erase(inIter);
+            }
         }
 
         auto dataIter = m_datafds.find(fd);
@@ -602,7 +628,7 @@ namespace server
                                                                      "readBuffer->length(): ", readBuffer->dataLength());
         if(readBuffer->dataLength() < headerLength)
         {
-            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                          "buffer data length less than header length, fd: ", fd);
             return -1;
         }
@@ -647,6 +673,9 @@ namespace server
         }
 
         readBuffer->decreaseUsedSpace(headerLength + payloadLength);
+
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
+                                                                     "readBuffer dataLength: ", readBuffer->dataLength()," fd: ", fd);
 
         return 0;
     }

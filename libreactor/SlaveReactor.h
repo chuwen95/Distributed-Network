@@ -46,7 +46,7 @@ namespace server
         std::uint32_t getClientOnlineTimestamp(const int fd);
 
     private:
-        void onClientDisconnect(const int fd);
+        void onClientDisconnect(const int fd, const bool dealInfds = true);
 
         int getPacket(const int fd, components::RingBuffer::Ptr& readBuffer, packetprocess::PacketType& packetType, std::shared_ptr<std::vector<char>>& data);
 
