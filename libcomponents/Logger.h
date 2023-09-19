@@ -55,7 +55,7 @@ namespace components
                 return 0;
             }
 
-            std::string result;
+            std::string result = getLogTypeString(logType);
             mergeToString(result, args...);
 
             {
@@ -95,6 +95,25 @@ namespace components
             if constexpr (sizeof...(args) > 0)
             {
                 mergeToString(result, args...);
+            }
+        }
+
+        std::string getLogTypeString(const LogType type)
+        {
+            switch(type)
+            {
+                case LogType::Log_Trace:
+                    return "[Trace]";
+                case LogType::Log_Debug:
+                    return "[Debug]";
+                case LogType::Log_Info:
+                    return "[Info]";
+                case LogType::Log_Warning:
+                    return "[Warning]";
+                case LogType::Log_Error:
+                    return "[Error]";
+                default:
+                    return "";
             }
         }
 

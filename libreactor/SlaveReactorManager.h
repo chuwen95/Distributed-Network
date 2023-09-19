@@ -28,7 +28,9 @@ namespace server
 
         int addTcpSession(TcpSession* tcpSession);
 
-        void registerRecvHandler(std::function<void(const int id, const packetprocess::PacketType,
+        std::uint32_t getClientOnlineTimestamp(const int fd);
+
+        void registerRecvHandler(std::function<void(const int fd, const packetprocess::PacketType,
                 std::shared_ptr<std::vector<char>>&, std::function<int(const int, const std::vector<char>&)>)> recvHandler);
 
         void registerDisconnectHandler(std::function<void(const int id, const std::string&)> disconnectHandler);
@@ -45,7 +47,7 @@ namespace server
         std::vector<SlaveReactor::Ptr> m_slaveReactors;
 
         // 管理最少fd的SlaveReactor
-        std::atomic_int m_slaveReactorIndexWhichHasLeastFd{0};
+        std::size_t m_slaveReactorIndexWhichHasLeastFd{0};
 
         // clientfd是谁那个SlaveReactor管理的，clientfd=>SlaveReactor index
         std::mutex x_clientSlaveReactors;

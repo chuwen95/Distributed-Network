@@ -43,6 +43,8 @@ namespace server
 
         int sendData(const int fd, const char* data, const std::size_t size);
 
+        std::uint32_t getClientOnlineTimestamp(const int fd);
+
     private:
         void onClientDisconnect(const int fd);
 
@@ -73,9 +75,10 @@ namespace server
         // fd收到了数据，需要处理
         std::unordered_set<int> m_datafds;
         // 若fd存在于m_outfds中，表明有数据要发送
-        // 若m_outfds[fd] = true，表明正在等待EPOLLOUT事件
+        // 若m_outfds[fd].first = true，表明正在等待EPOLLOUT事件
+        // 若m_outfds[fd].second = true，表示EPOLLOUT事件到来
         std::mutex x_outfds;
-        std::unordered_map<int, bool> m_outfds;
+        std::unordered_map<int, std::pair<bool, bool>> m_outfds;
 
         // 客户端心跳检测
         ClientAliveChecker m_clientAliveChecker;

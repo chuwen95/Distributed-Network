@@ -45,7 +45,7 @@ namespace server
 
         int m_fd;
 
-        std::function<int(const packetprocess::PacketType, packetprocess::PacketBase::Ptr, packetprocess::PacketReplyBase::Ptr)> m_packetHander;
+        std::function<int(const packetprocess::PacketType, packetprocess::PacketBase::Ptr, packetprocess::PacketReplyBase::Ptr)> m_packetHandler;
         std::function<void(const int, const std::string&)> m_disconnectHandler;
 
         components::SelectListenner m_selectListenner;

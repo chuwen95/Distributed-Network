@@ -56,14 +56,24 @@ namespace server
         return m_writeBuffer;
     }
 
-    void TcpSession::setClientInfo(const std::string_view id)
+    void TcpSession::setClientId(const std::string_view id)
     {
         m_clientInfo.id = id;
     }
 
-    void TcpSession::getClientInfo(std::string &id)
+    std::string TcpSession::getClientId()
     {
-        id = m_clientInfo.id;
+        return m_clientInfo.id;
+    }
+
+    void TcpSession::setClientOnlineTimestamp(const std::uint32_t timestamp)
+    {
+        m_clientInfo.onlineTimestamp = timestamp;
+    }
+
+    std::uint32_t TcpSession::getClientOnlineTimestamp()
+    {
+        return m_clientInfo.onlineTimestamp;
     }
 
 } // server

@@ -25,9 +25,11 @@ namespace server
 
     int SlaveReactor::init()
     {
-        m_epfd = epoll_create(1);
+        m_epfd = epoll_create1(0);
         if(-1 == m_epfd)
         {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                         "create epoll fd failed, fd: ", m_epfd);
             return -1;
         }
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
@@ -49,8 +51,7 @@ namespace server
 
     int SlaveReactor::start()
     {
-        struct epoll_event ev[c_maxEvent];
-        const auto expression = [this, &ev]()
+        const auto expression = [this]()
         {
             // 移除掉线的客户端
             std::vector<int> offlineClients;
@@ -67,6 +68,7 @@ namespace server
             {
                 timeout = 10;
             }
+            struct epoll_event ev[c_maxEvent];
             int nready = epoll_wait(m_epfd, ev, c_maxEvent, timeout);
             if(-1 == nready)
             {
@@ -100,56 +102,28 @@ namespace server
                 }
                 if(ev[i].events & EPOLLOUT)
                 {
-                    // 获取发送缓冲区
-                    int fd = ev[i].data.fd;
-                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
-                                                                                 "try to decode packet, fd: ", fd);
-
-                    TcpSession::Ptr tcpSession{nullptr};
                     {
                         std::unique_lock<std::mutex> ulock(x_clientSessions);
-                        tcpSession = m_fdSessions[fd];
+                        auto iter = m_fdSessions.find(fd);
+                        if(m_fdSessions.end() == iter)
+                        {
+                            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                         "fd not found, fd: ", fd);
+                            continue;
+                        }
+
+                        if(0 == iter->second->writeBuffer()->dataLength())
+                        {
+                            continue;
+                        }
                     }
 
-                    components::RingBuffer::Ptr writeBuffer = tcpSession->writeBuffer();
-                    if(0 != writeBuffer->dataLength())
+                    std::unique_lock<std::mutex> ulock(x_outfds);
+
+                    auto iter = m_outfds.find(fd);
+                    if(m_outfds.end() != iter)
                     {
-                        // EPOLLOUT事件，调用send发送数据
-                        std::unique_lock<std::mutex> ulock(x_writeBuffer);
-
-                        char *buffer{nullptr};
-                        std::size_t len{0};
-                        int ret = writeBuffer->getContinuousData(buffer, len);
-                        assert(-1 != ret);
-                        int sendLen = send(fd, buffer, len, 0);
-                        if (sendLen == len)
-                        {
-                            writeBuffer->decreaseUsedSpace(sendLen);
-                            // 如果数据能够send完成，那么socket发送缓冲区没满，不用关注EPOLLOUT事件
-                            m_outfds[fd] = false;
-                            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
-                                                                                         "send data successfully, size: ", sendLen, ", fd: ", fd);
-                        }
-                        else
-                        {
-                            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
-                                                                                         "socket buffer not enough, sendLen: ", sendLen, ", fd: ", fd);
-
-                            // 表明socket发送缓冲区满
-                            if (-1 != sendLen && (EAGAIN == errno || EWOULDBLOCK == errno))
-                            {
-                                writeBuffer->decreaseUsedSpace(sendLen);
-                                // 能进入到EPOLLOUT事件中，上一次调用send肯定是把发送缓冲区塞满了
-                                // 那么m_outfds[fd]是被置为了true的，这里依旧没发完，表示socket发送缓冲区又满了，m_outfds[fd]仍旧让它等于true
-                            }
-                            else if (ECONNRESET == errno || EPIPE == errno)
-                            {
-                                // 表明对端断开连接
-                                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
-                                                                                             "onClientDisconnect, fd: ", fd);
-                                onClientDisconnect(fd);
-                            }
-                        }
+                        iter->second.second = true;
                     }
                 }
             }
@@ -172,7 +146,7 @@ namespace server
                 components::RingBuffer::Ptr readBuffer = tcpSession->readBuffer();
 
                 bool isReadOver{false};
-                while(0 != readBuffer->space()) // 如果缓冲区满了，如果满了，则无法在接收数据，继续外层for循环，但是由于边缘触发的原因，不能将fd从m_infds中移除
+                while(0 != readBuffer->space()) // 如果缓冲区满了，则无法在接收数据，继续外层for循环，但是由于边缘触发的原因，不能将fd从m_infds中移除
                 {
                     char *data{nullptr};
                     std::size_t length{0};
@@ -205,7 +179,7 @@ namespace server
                     }
 
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
-                                                                                 "recv length: ", readLen, ", fd: ", fd);
+                                                                                 "recv length: ", readLen, ", readBuffer dataLength: ", readBuffer->dataLength(), ", fd: ", fd);
 
                     m_clientAliveChecker.refreshClientLastRecvTime(fd);
 
@@ -236,6 +210,7 @@ namespace server
                     tcpSession = m_fdSessions[fd];
                 }
 
+                assert(nullptr != tcpSession);
                 components::RingBuffer::Ptr readBuffer = tcpSession->readBuffer();
                 assert(0 != readBuffer->dataLength());
 
@@ -243,9 +218,10 @@ namespace server
                 components::CellTimestamp timestamp;
                 timestamp.update();
 #endif
+                bool remainPacket{true};
+                std::size_t epochPacketSum{100};
 
                 std::size_t packetNum{0};
-                std::size_t epochPacketSum{100};
                 for(packetNum = 0; packetNum < epochPacketSum; ++packetNum)
                 {
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
@@ -256,9 +232,10 @@ namespace server
                     int ret = getPacket(fd, readBuffer, packetType, packetPayload);
                     if(0 != ret)
                     {
+                        // 缓冲区中的数据已经不够一个包头的长度
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                      "pop packet finish", ", fd: ", fd);
-                        iter = m_datafds.erase(iter);
+                        remainPacket = false;
                         break;
                     }
 
@@ -270,7 +247,7 @@ namespace server
                     else if(packetprocess::PacketType::PT_ClientInfo == packetType)
                     {
                         // 表明身份的包，即刻处理，不必放到线程池中
-                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                                      "recv ClientInfo packet, fd: ", fd);
                         packetprocess::PacketBase::Ptr packet = packetprocess::PacketFactory().createPacket(packetType, packetPayload);
                         if(-1 == processClientInfoPacket(fd, tcpSession, packet))
@@ -302,8 +279,12 @@ namespace server
                         });
                     }
                 }
-                // 如果获取了epochPacketSum个包后缓冲区中还有包，则不从m_datafds中移除
-                if(packetNum == epochPacketSum)
+                // 如果还有包，则不从m_datafds中移除
+                if(false == remainPacket)
+                {
+                    iter = m_datafds.erase(iter);
+                }
+                else
                 {
                     ++iter;
                 }
@@ -316,25 +297,36 @@ namespace server
             }
 
             // 处理fd写
-            std::unordered_map<int, bool> outfds;
+            std::unordered_map<int, std::pair<bool, bool>> outfds;
             {
                 std::unique_lock<std::mutex> ulock(x_outfds);
                 outfds = m_outfds;
             }
             for(auto iter = outfds.begin(); iter != outfds.end();)
             {
-                if(true == iter->second)
-                {
-                    // 如果fd正在等待EPOLLOUT事件，那么这里直接跳过此fd的send
-                    continue;
-                }
-
                 int fd = iter->first;
 
                 TcpSession::Ptr tcpSession{nullptr};
                 {
+                    // 这里之所以还要判断一遍是处理这种情况：
+                    // 如果在sendData中写入到缓冲区后加入到m_outfds前客户端离线m_fdSessions中TCPSession被移除
                     std::unique_lock<std::mutex> ulock(x_clientSessions);
-                    tcpSession = m_fdSessions[fd];
+                    auto sessionIter = m_fdSessions.find(fd);
+                    if(m_fdSessions.end() == sessionIter)
+                    {
+                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                     "fd not found, fd: ", fd);
+                        iter = outfds.erase(iter);
+                        continue;
+                    }
+                    tcpSession = sessionIter->second;
+                }
+
+                if(true == iter->second.first && false == iter->second.second)
+                {
+                    // 如果fd正在等待EPOLLOUT事件且EPOLLOUT事件没来
+                    ++iter;
+                    continue;
                 }
 
                 components::RingBuffer::Ptr writeBuffer = tcpSession->writeBuffer();
@@ -356,13 +348,19 @@ namespace server
                     if (sendLen == length)
                     {
                         writeBuffer->decreaseUsedSpace(sendLen);
+                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug,FILE_INFO,
+                                                                                     "send data successfully, fd: ", fd, ", sendlen: ", sendLen);
                         if(0 == writeBuffer->dataLength())
                         {
+                            // 如果发送缓冲区中数据都没有了，直接从outfds中移除fd
                             iter = outfds.erase(iter);
                             continue;
                         }
-                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug,FILE_INFO,
-                                                                                     "send data successfully, fd: ", fd, ", sendlen: ", sendLen);
+                        else
+                        {
+                            // 如果发送缓冲区中还有数据，但数据直接send完，表明无需等待EPOLLOUT事件
+                            iter->second.first = false;
+                        }
                     }
                     else
                     {
@@ -371,7 +369,9 @@ namespace server
                             // 还有没发出去的数据，或者说没法放到发送缓冲区的数据
                             writeBuffer->decreaseUsedSpace(sendLen);
                             // 设置fd正在等待EPOLLOUT事件为true
-                            outfds[fd] = true;
+                            iter->second.first = true;
+                            // 设置EPOLLOUT事件到来为false
+                            iter->second.second = false;
                             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                          "send data error, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
                         }
@@ -380,6 +380,7 @@ namespace server
                             // 表明对端断开连接
                             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                                          "client maybe offline, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
+
                             iter = outfds.erase(iter);
                             onClientDisconnect(fd);
 
@@ -456,7 +457,7 @@ namespace server
         }
 
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "SlaveReactor ", m_id,
-                                                                     " add client ", tcpSession->fd(), " to epoll successfully, events: EPOLLIN and EPOLLET");
+                                                                     " add client ", tcpSession->fd(), " to epoll successfully, events: EPOLLIN and EPOLLET", ", m_epfd: ", m_epfd);
 
         return 0;
     }
@@ -480,6 +481,8 @@ namespace server
 
     int SlaveReactor::sendData(const int fd, const char *data, const std::size_t size)
     {
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
+                                                                     "m_id: ", m_id, ", fd: ", fd);
         //获取对应的writeBuffer
         TcpSession::Ptr tcpSession;
         {
@@ -511,16 +514,26 @@ namespace server
                                                                          FILE_INFO, "write data to buffer successfully, size: ", size, ", fd: ", fd);
         }
 
+        // fd有数据发送
+        std::unique_lock<std::mutex> ulock(x_outfds);
+        if(m_outfds.end() == m_outfds.find(tcpSession->fd()))
         {
-            // fd有数据发送
-            std::unique_lock<std::mutex> ulock(x_outfds);
-            if(m_outfds.end() == m_outfds.find(tcpSession->fd()))
-            {
-                m_outfds.emplace(tcpSession->fd(), false);
-            }
+            m_outfds.emplace(tcpSession->fd(), std::make_pair(false, false));
         }
 
         return 0;
+    }
+
+    std::uint32_t SlaveReactor::getClientOnlineTimestamp(const int fd)
+    {
+        std::unique_lock<std::mutex> ulock(x_clientSessions);
+
+        auto iter = m_fdSessions.find(fd);
+        if(m_fdSessions.end() == iter)
+        {
+            return 0;
+        }
+        return iter->second->getClientOnlineTimestamp();
     }
 
     void SlaveReactor::onClientDisconnect(const int fd)
@@ -540,12 +553,28 @@ namespace server
         m_clientAliveChecker.removeClient(fd);
 
         epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, nullptr);
-        m_infds.erase(fd);
-        m_datafds.erase(fd);
+
+        auto inIter = m_infds.find(fd);
+        if(m_infds.end() != inIter)
+        {
+            m_infds.erase(inIter);
+        }
+
+        auto dataIter = m_datafds.find(fd);
+        if(m_datafds.end() != dataIter)
+        {
+            m_datafds.erase(dataIter);
+        }
+
         {
             std::unique_lock<std::mutex> ulock(x_outfds);
-            m_outfds.erase(fd);
+            auto outIter = m_outfds.find(fd);
+            if(m_outfds.end() != outIter)
+            {
+                m_outfds.erase(outIter);
+            }
         }
+
         close(fd);
 
         {
@@ -554,9 +583,8 @@ namespace server
             auto iter = m_fdSessions.find(fd);
             if(nullptr != m_disconnectHandler)
             {
-                std::string name;
-                iter->second->getClientInfo(name);
-                m_disconnectHandler(fd, name);
+                std::string id = iter->second->getClientId();
+                m_disconnectHandler(fd, id);
             }
             m_fdSessions.erase(fd);
         }
@@ -634,9 +662,10 @@ namespace server
 
         packetprocess::PacketClientInfo::Ptr packetClientInfo = std::dynamic_pointer_cast<packetprocess::PacketClientInfo>(packet);
         std::string id = packetClientInfo->getId();
-        tcpSession->setClientInfo(id);
+        tcpSession->setClientId(id);
+        tcpSession->setClientOnlineTimestamp(components::CellTimestamp::getCurrentTimestamp());
 
-        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                      "decode ClientInfo packet successfully, fd: ", fd, ", id: ", fd);
 
         // 构造回应包

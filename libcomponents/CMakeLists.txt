@@ -5,4 +5,7 @@ project(components)
 FILE(GLOB_RECURSE SRC *.cpp)
 FILE(GLOB_RECURSE HED *.h)
 
+find_package(unofficial-concurrentqueue CONFIG REQUIRED)
+
 add_library(libcomponents ${SRC} ${HED})
+target_link_libraries(libcomponents PRIVATE unofficial::concurrentqueue::concurrentqueue)

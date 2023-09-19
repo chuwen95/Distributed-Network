@@ -53,7 +53,7 @@ namespace packetprocess
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
                                                                      "finish process packet, ret: ", ret);
 
-        return 0;
+        return ret;
     }
 
 }

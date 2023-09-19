@@ -29,17 +29,12 @@ namespace server
                 clientLastRecvTime = m_clientLastRecvTime;
             }
 
-            for(auto iter = clientLastRecvTime.begin(); iter != clientLastRecvTime.end(); )
+            for(auto iter = clientLastRecvTime.begin(); iter != clientLastRecvTime.end(); ++iter)
             {
                 if(iter->second->getElapsedTimeInMilliSec() > c_aliveTimeout)
                 {
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "client offline, fd: ", iter->first);
                     m_offlinefds.emplace_back(iter->first);
-                    iter = clientLastRecvTime.erase(iter);
-                }
-                else
-                {
-                    ++iter;
                 }
             }
 
@@ -78,9 +73,20 @@ namespace server
     {
         std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
 
+        auto iter = m_clientLastRecvTime.find(fd);
+        if(m_clientLastRecvTime.end() != iter)
+        {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                         "client already exist, fd: ", fd);
+            return -1;
+        }
+
         components::CellTimestamp::Ptr cellTimestamp = std::make_shared<components::CellTimestamp>();
         cellTimestamp->update();
         m_clientLastRecvTime.emplace(fd, cellTimestamp);
+
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                     "add client successfully, fd: ", fd);
 
         return 0;
     }
@@ -88,7 +94,17 @@ namespace server
     int ClientAliveChecker::removeClient(const int fd)
     {
         std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
-        m_clientLastRecvTime.erase(fd);
+        auto iter = m_clientLastRecvTime.find(fd);
+        if(m_clientLastRecvTime.end() == iter)
+        {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                         "client not exist, fd: ", fd);
+            return -1;
+        }
+        m_clientLastRecvTime.erase(iter);
+
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                     "client remove successfully, fd: ", fd);
 
         return 0;
     }
@@ -99,6 +115,8 @@ namespace server
         auto iter = m_clientLastRecvTime.find(fd);
         if(m_clientLastRecvTime.end() == iter)
         {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                         "client not exist, fd: ", iter->first);
             return -1;
         }
         iter->second->update();

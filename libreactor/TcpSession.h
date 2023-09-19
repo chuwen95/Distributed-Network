@@ -34,9 +34,11 @@ namespace server
 
         components::RingBuffer::Ptr writeBuffer();
 
-        void setClientInfo(const std::string_view id);
+        void setClientId(const std::string_view id);
+        std::string getClientId();
 
-        void getClientInfo(std::string& id);
+        void setClientOnlineTimestamp(const std::uint32_t timestamp);
+        std::uint32_t getClientOnlineTimestamp();
 
     public:
         int m_clientfd{-1};
@@ -44,9 +46,10 @@ namespace server
         struct ClientInfo
         {
             ClientInfo() = default;
-            ClientInfo(const std::string_view idParam) : id(idParam) {}
+            ClientInfo(const std::string_view idParam, const std::uint32_t ts) : id(idParam), onlineTimestamp(ts) {}
 
             std::string id;
+            std::uint32_t onlineTimestamp;
         };
         ClientInfo m_clientInfo;
 

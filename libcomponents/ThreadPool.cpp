@@ -30,13 +30,6 @@ namespace components
         return 0;
     }
 
-    std::size_t ThreadPool::getTaskNum()
-    {
-        std::unique_lock<std::mutex> ulock(x_tasks);
-
-        return m_tasks.size();
-    }
-
     int ThreadPool::start()
     {
         std::unique_lock<std::mutex> ulock(x_isTerminate);
@@ -49,19 +42,8 @@ namespace components
             while(false == isTerminate())
             {
                 ThreadPoolTask task;
-                bool ret = getTask(task);
-                if(true == ret)
-                {
-                    ++m_runningTaskNum;
-                    task();
-                    --m_runningTaskNum;
-                }
-
-                std::unique_lock<std::mutex> ulock(x_tasks);
-                if(0 == m_runningTaskNum && true == m_tasks.empty())
-                {
-                    m_taskCv.notify_all();
-                }
+                m_tasks.wait_dequeue(task);
+                task();
             }
         };
 
@@ -83,55 +65,13 @@ namespace components
             return 0;
         }
 
-        m_taskCv.notify_all();
-
+        setIsTerminate(true);
         for(auto& thread : m_threads)
         {
             thread->join();
         }
 
-        setIsTerminate(true);
-
         return 0;
-    }
-
-    void ThreadPool::waitForAllDone(const int millseconds)
-    {
-        std::unique_lock<std::mutex> ulock(x_tasks);
-
-        if(true == m_tasks.empty() && 0 == m_runningTaskNum)
-        {
-            return;
-        }
-
-        if(millseconds < 0)
-        {
-            m_taskCv.wait(ulock, [this](){ return true == m_tasks.empty() && 0 == m_runningTaskNum; });
-        }
-        else
-        {
-            m_taskCv.wait_for(ulock, std::chrono::milliseconds(millseconds), [this](){ return true == m_tasks.empty() && 0 == m_runningTaskNum; });
-        }
-    }
-
-    bool ThreadPool::getTask(ThreadPool::ThreadPoolTask& task)
-    {
-        std::unique_lock<std::mutex> ulock(x_tasks);
-
-        if(true == m_tasks.empty())
-        {
-            m_taskCv.wait(ulock, [this](){ return false == m_tasks.empty(); });
-        }
-
-        if(true == isTerminate())
-        {
-            return false;
-        }
-
-        task = std::move(m_tasks.front());
-        m_tasks.pop_front();
-
-        return true;
     }
 
     void ThreadPool::setIsTerminate(const bool isTerminate)

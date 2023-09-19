@@ -91,14 +91,21 @@ namespace server
         m_packetProcessThreadPoll.init(8, "packet_proc");
         m_slaveReactorManager.registerRecvHandler([this](const int fd, packetprocess::PacketType packetType,
                                                          std::shared_ptr<std::vector<char>>& payloadData, const std::function<int(const int, const std::vector<char>&)>& writeHandler){
-            const auto expression = [fd, packetType, payloadData, writeHandler, this]()
+            std::uint32_t curTimestamp = components::CellTimestamp::getCurrentTimestamp();
+            const auto expression = [fd, curTimestamp, packetType, payloadData, writeHandler, this]()
             {
+                std::uint32_t onlineTimestamp = m_slaveReactorManager.getClientOnlineTimestamp(fd);
+                if(0 == onlineTimestamp || curTimestamp < onlineTimestamp)
+                {
+                    return -1;
+                }
+
                 packetprocess::PacketFactory packetFactory;
                 packetprocess::PacketBase::Ptr reqPacket = packetFactory.createPacket(packetType, payloadData);
                 packetprocess::PacketReplyBase::Ptr replyPacket = packetFactory.createReplyPacket(packetType);
-                if(nullptr != m_packetHander)
+                if(nullptr != m_packetHandler)
                 {
-                    if(-1 == m_packetHander(packetType, reqPacket, replyPacket))
+                    if(-1 == m_packetHandler(packetType, reqPacket, replyPacket))
                     {
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "process packet failed");
                         return -1;
@@ -198,10 +205,10 @@ namespace server
 
     int TcpServer::stop()
     {
+        m_packetProcessThreadPoll.stop();
         m_selectListenner.stop();
         m_acceptor.stop();
         m_slaveReactorManager.stop();
-        m_packetProcessThreadPoll.stop();
 
         components::Singleton<components::Logger>::instance()->stop();
 
@@ -214,9 +221,9 @@ namespace server
     }
 
     void TcpServer::registerPacketHandler(std::function<int(const packetprocess::PacketType, packetprocess::PacketBase::Ptr,
-                               packetprocess::PacketReplyBase::Ptr)> packetHander)
+                               packetprocess::PacketReplyBase::Ptr)> packetHandler)
     {
-        m_packetHander = std::move(packetHander);
+        m_packetHandler = std::move(packetHandler);
     }
 
     void TcpServer::registerDisconnectHandler(std::function<void(const int, const std::string&)> disconnectHandler)
