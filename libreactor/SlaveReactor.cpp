@@ -35,7 +35,9 @@ namespace server
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                      "create epoll fd successfully, fd: ", m_epfd);
 
-        m_clientAliveChecker.init();
+        m_clientAliveChecker.init([this](const std::vector<int>& fds){
+            onClientsHeartbeatTimeout(fds);
+        });
 
         return 0;
     }
@@ -53,16 +55,6 @@ namespace server
     {
         const auto expression = [this]()
         {
-            // 移除掉线的客户端
-            std::vector<int> offlineClients;
-            m_clientAliveChecker.getOfflineClient(offlineClients);
-            for(const int fd : offlineClients)
-            {
-                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
-                                                                             "remove offline client: ", fd);
-                onClientDisconnect(fd);
-            }
-
             int timeout{0};
             if(true == m_infds.empty() && true == m_outfds.empty() && true == m_datafds.empty())
             {
@@ -185,7 +177,7 @@ namespace server
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                                  "client may be offline, fd: ", fd);
                     iter = m_infds.erase(iter);
-                    onClientDisconnect(fd, false);
+                    onClientDisconnect(fd);
                     continue;
                 }
                 // 增加已经使用的空间
@@ -559,7 +551,7 @@ namespace server
         return iter->second->getClientOnlineTimestamp();
     }
 
-    void SlaveReactor::onClientDisconnect(const int fd, const bool dealInfds)
+    void SlaveReactor::onClientDisconnect(const int fd)
     {
         {
             std::unique_lock<std::mutex> ulock(x_clientSessions);
@@ -574,9 +566,10 @@ namespace server
 
         // 将客户端从在线监测中移除
         m_clientAliveChecker.removeClient(fd);
-
+        // 将客户端从epoll中移除
         epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, nullptr);
 
+#if 0
         if(true == dealInfds)
         {
             auto inIter = m_infds.find(fd);
@@ -600,7 +593,9 @@ namespace server
                 m_outfds.erase(outIter);
             }
         }
+#endif
 
+        // 关闭客户端fd
         close(fd);
 
         {
@@ -724,6 +719,14 @@ namespace server
                                                                      "send ClientInfoReply packet successfully", ", fd: ", fd, ", id: ", id);
 
         return 0;
+    }
+
+    void SlaveReactor::onClientsHeartbeatTimeout(const std::vector<int> &fds)
+    {
+        for(const int fd : fds)
+        {
+            onClientDisconnect(fd);
+        }
     }
 
 }

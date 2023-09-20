@@ -19,7 +19,7 @@ namespace server
         ~ClientAliveChecker();
 
     public:
-        int init();
+        int init(const std::function<void(const std::vector<int>&)> offlinefdsCallback);
 
         int uninit();
 
@@ -66,8 +66,7 @@ namespace server
 
         components::Thread m_thread;
 
-        std::mutex x_offlinefds;
-        std::vector<int> m_offlinefds;
+        std::function<void(const std::vector<int>&)> m_offlinefdsCallback;
     };
 
 } // server

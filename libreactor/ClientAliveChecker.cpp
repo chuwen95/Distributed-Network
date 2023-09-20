@@ -19,28 +19,27 @@ namespace server
     ClientAliveChecker::~ClientAliveChecker()
     {}
 
-    int ClientAliveChecker::init()
+    int ClientAliveChecker::init(const std::function<void(const std::vector<int>&)> offlinefdsCallback)
     {
+        m_offlinefdsCallback = std::move(offlinefdsCallback);
+
         const auto expression = [this]()
         {
-            std::unordered_map<int, components::CellTimestamp::Ptr> clientLastRecvTime;
-            {
-                std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
-                clientLastRecvTime = m_clientLastRecvTime;
-            }
+            std::vector<int> offlinefds;
 
-            for(auto iter = clientLastRecvTime.begin(); iter != clientLastRecvTime.end(); ++iter)
+            std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
+            for(auto iter = m_clientLastRecvTime.begin(); iter != m_clientLastRecvTime.end(); ++iter)
             {
                 if(iter->second->getElapsedTimeInMilliSec() > c_aliveTimeout)
                 {
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "client offline, fd: ", iter->first);
-                    m_offlinefds.emplace_back(iter->first);
+                    offlinefds.emplace_back(iter->first);
                 }
             }
 
+            if(nullptr != m_offlinefdsCallback)
             {
-                std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
-                m_clientLastRecvTime =  clientLastRecvTime;
+                m_offlinefdsCallback(offlinefds);
             }
         };
         m_thread.init(expression, c_aliveCheckInterval, "cli_check");
@@ -111,7 +110,7 @@ namespace server
 
     int ClientAliveChecker::refreshClientLastRecvTime(const int fd)
     {
-        std::unique_lock<std::mutex> ulock(x_offlinefds);
+        std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
         auto iter = m_clientLastRecvTime.find(fd);
         if(m_clientLastRecvTime.end() == iter)
         {
@@ -120,16 +119,6 @@ namespace server
             return -1;
         }
         iter->second->update();
-        return 0;
-    }
-
-    int ClientAliveChecker::getOfflineClient(std::vector<int> &offlinefds)
-    {
-        offlinefds.clear();
-
-        std::unique_lock<std::mutex> ulock(x_offlinefds);
-        m_offlinefds.swap(offlinefds);
-
         return 0;
     }
 
