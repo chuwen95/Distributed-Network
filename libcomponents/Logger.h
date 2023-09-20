@@ -125,6 +125,7 @@ namespace components
         std::condition_variable m_bufferCv;
         std::vector<char> m_buffer;
 
+        std::atomic_bool m_isTerminate{false};
         components::Thread m_thread;
 
         bool m_consoleOutput{false};

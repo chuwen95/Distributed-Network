@@ -55,6 +55,12 @@ namespace server
     {
         const auto expression = [this]()
         {
+            if(true == m_isTerminate)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                return 0;
+            }
+
             int timeout{0};
             if(true == m_infds.empty() && true == m_outfds.empty() && true == m_datafds.empty())
             {

@@ -38,10 +38,21 @@ namespace components
     {
         const auto expression = [this]()
         {
+            if(true == m_isTerminate)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                return;
+            }
+
             std::vector<char> buffer;
             {
                 std::unique_lock<std::mutex> ulock(x_buffer);
-                m_bufferCv.wait(ulock, [this]() { return false == m_buffer.empty(); });
+                m_bufferCv.wait(ulock, [this]() { return false == m_buffer.empty() || true == m_isTerminate; });
+
+                if(true == m_isTerminate)
+                {
+                    return;
+                }
 
                 m_buffer.swap(buffer);
             }
@@ -56,6 +67,7 @@ namespace components
 
     int Logger::stop()
     {
+        m_isTerminate = true;
         m_bufferCv.notify_one();
         m_thread.stop();
 

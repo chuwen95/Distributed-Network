@@ -38,7 +38,7 @@ namespace components
             // 将监听套接字加入到集合中
             FD_SET(m_listenfd, &readfds);
 
-            timeval tm{3, 0};
+            timeval tm{0, 100 * 1000};
             int ret = select(m_listenfd + 1, &readfds, nullptr, nullptr, &tm);
             if(-1 == ret)
             {

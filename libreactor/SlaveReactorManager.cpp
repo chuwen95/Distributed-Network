@@ -26,9 +26,21 @@ namespace server
 
         const auto expression = [this]()
         {
+            if(true == m_isTerminate)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                return;
+            }
+
             {
                 std::unique_lock<std::mutex> ulock(x_tcpSessionsQueue);
                 m_tcpSessionsQueueCv.wait(ulock);
+            }
+
+            if(true == m_isTerminate)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                return;
             }
 
             // 一定间隔后刷新拥有最少数量的SlaveReactor
@@ -94,6 +106,8 @@ namespace server
 
     int SlaveReactorManager::stop()
     {
+        m_isTerminate = true;
+        m_tcpSessionsQueueCv.notify_one();
         m_thread.stop();
         m_thread.uninit();
 

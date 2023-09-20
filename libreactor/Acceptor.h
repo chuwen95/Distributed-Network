@@ -40,6 +40,7 @@ namespace server
         // 客户端初始化完成回调
         std::function<void(int, TcpSession::Ptr)> m_newClientCallback;
 
+        std::atomic_bool m_isTerminate{false};
         components::Thread m_thread;
     };
 

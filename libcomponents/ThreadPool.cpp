@@ -66,6 +66,12 @@ namespace components
         }
 
         setIsTerminate(true);
+
+        for(int i = 0; i < m_threadNum; ++i)
+        {
+            m_tasks.enqueue([](){});
+        }
+
         for(auto& thread : m_threads)
         {
             thread->join();

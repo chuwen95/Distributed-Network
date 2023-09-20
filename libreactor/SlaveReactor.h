@@ -108,6 +108,7 @@ namespace server
         std::mutex x_clientSessions;
         std::unordered_map<int, TcpSession::Ptr> m_fdSessions;
 
+        std::atomic_bool m_isTerminate{false};
         components::Thread m_thread;
 
         int m_epfd{-1};

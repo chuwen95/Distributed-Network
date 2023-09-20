@@ -13,9 +13,22 @@ namespace server
     {
         const auto expression = [this, listenfd = fd]()
         {
+            if(true == m_isTerminate)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                return;
+            }
+
             {
                 std::unique_lock<std::mutex> ulock(x_connect);
                 m_connectCv.wait(ulock);
+            }
+
+
+            if(true == m_isTerminate)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                return;
             }
 
             int clientfd{-1};
@@ -59,6 +72,8 @@ namespace server
 
     int Acceptor::stop()
     {
+        m_isTerminate = true;
+        m_connectCv.notify_one();
         m_thread.stop();
 
         return 0;

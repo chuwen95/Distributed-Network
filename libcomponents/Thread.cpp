@@ -40,17 +40,14 @@ namespace components
         {
             pthread_setname_np(pthread_self(), m_threadName.c_str());
 
-            std::mutex m;
-            std::condition_variable cv;
-
             while(true == m_isRunning)
             {
                 m_threadFunc();
 
                 if (m_time >= 0)
                 {
-                    std::unique_lock<std::mutex> ulock(m);
-                    cv.wait_for(ulock, std::chrono::milliseconds(m_time), [this](){ return false == m_isRunning; });
+                    std::unique_lock<std::mutex> ulock(x_mutex);
+                    m_cv.wait_for(ulock, std::chrono::milliseconds(m_time), [this](){ return false == m_isRunning; });
                 }
             }
         };
@@ -66,6 +63,7 @@ namespace components
         }
 
         m_isRunning = false;
+        m_cv.notify_one();
         m_thread->join();
     }
 

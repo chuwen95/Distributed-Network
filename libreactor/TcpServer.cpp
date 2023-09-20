@@ -162,29 +162,39 @@ namespace server
     {
         if(-1 == m_slaveReactorManager.uninit())
         {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "uninit SlaveReactorManager failed");
             return -1;
         }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "uninit SlaveReactorManager successfully");
 
         if(-1 == m_acceptor.uninit())
         {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "uninit Acceptor failed");
             return -1;
         }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "uninit Acceptor successfully");
 
         if(-1 == m_selectListenner.uninit())
         {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "uninit SelectListenner failed");
             return -1;
         }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "uninit SelectListenner successfully");
 
         if(-1 == m_packetProcessThreadPoll.uninit())
         {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "uninit PacketProcessThreadPool failed");
             return -1;
         }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "uninit PacketProcessThreadPool successfully");
 
         // 关闭套接字
         if(-1 == components::Socket::close(m_fd))
         {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "close fd failed");
             return -1;
         }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "close socket successfully");
 
         components::Singleton<components::Logger>::instance()->uninit();
 

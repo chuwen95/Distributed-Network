@@ -53,6 +53,7 @@ namespace server
         std::mutex x_clientSlaveReactors;
         std::unordered_map<int, std::size_t> m_clientSlaveReactors;
 
+        std::atomic_bool m_isTerminate{false};
         components::Thread m_thread;
     };
 
