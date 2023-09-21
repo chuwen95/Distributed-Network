@@ -34,7 +34,7 @@ namespace packetprocess
          * @param packetType 包类型
          * @return
          */
-        PacketReplyBase::Ptr createReplyPacket(const PacketType packetType);
+        PacketReplyBase::Ptr createReplyPacket(const PacketType packetType, PacketType& replyPacketType);
     };
 
 } // packetprocess

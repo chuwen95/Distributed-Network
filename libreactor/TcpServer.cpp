@@ -35,7 +35,6 @@ namespace server
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "create socket failed, errno: ", errno, ", ",
                                                                          strerror(errno));
-            components::Socket::close(m_fd);
             return -1;
         }
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "create socket successfully, fd: ", m_fd);
@@ -89,7 +88,7 @@ namespace server
         }
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "select listenner init successfully");
 
-        // 注册连接时间回调
+        // 注册连接回调
         m_selectListenner.registerConnectHandler([&](){ m_acceptor.onConnect(); });
 
         // 完成一个客户端的创建，将客户端分配到从Reactor进行recv/send处理
@@ -111,7 +110,8 @@ namespace server
 
                 packetprocess::PacketFactory packetFactory;
                 packetprocess::PacketBase::Ptr reqPacket = packetFactory.createPacket(packetType, payloadData);
-                packetprocess::PacketReplyBase::Ptr replyPacket = packetFactory.createReplyPacket(packetType);
+                packetprocess::PacketType replyPacketType;
+                packetprocess::PacketReplyBase::Ptr replyPacket = packetFactory.createReplyPacket(packetType, replyPacketType);
                 if(nullptr != m_packetHandler)
                 {
                     if(-1 == m_packetHandler(packetType, reqPacket, replyPacket))
@@ -125,7 +125,7 @@ namespace server
                 std::vector<char> buffer;
 
                 packetprocess::PacketHeader packetHeader;
-                packetHeader.setType(packetprocess::PacketType::PT_RawStringReply);
+                packetHeader.setType(replyPacketType);
                 packetHeader.setPayloadLength(payloadLength);
 
                 std::size_t headerLength = packetHeader.headerLength();
