@@ -4,8 +4,6 @@
 
 #include "PacketFactory.h"
 
-#include "protocol/packet_header.pb.h"
-
 #include "packet/PacketClientInfo.h"
 #include "packet/PacketClientInfoReply.h"
 #include "packet/PacketHeartBeat.h"

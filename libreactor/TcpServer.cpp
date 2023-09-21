@@ -12,13 +12,22 @@ namespace server
 
     constexpr std::size_t c_conQueueSize{500};
 
-    int TcpServer::init(const std::string_view ip, const unsigned short port, const std::string_view logPath)
+    int TcpServer::init(const std::string& config)
     {
-        components::Singleton<components::Logger>::instance()->init(logPath, 4*1024*1024);
-        components::Singleton<components::Logger>::instance()->setConsoleOutput(true);
+        if(-1 == m_serverConfig.init(config))
+        {
+            return -1;
+        }
 
-        m_ip = ip;
-        m_port = port;
+        if(-1 == components::Singleton<components::Logger>::instance()->init(m_serverConfig.enableFileLog(), m_serverConfig.logPath(), 4 * 1024 * 1024))
+        {
+            return -1;
+        }
+        components::Singleton<components::Logger>::instance()->setLogLevel(m_serverConfig.logType());
+        components::Singleton<components::Logger>::instance()->setConsoleOutput(m_serverConfig.consoleOutput());
+
+        m_ip = m_serverConfig.ip();
+        m_port = m_serverConfig.port();
 
         // 创建监听套接字
         m_fd = components::Socket::create();
@@ -40,7 +49,7 @@ namespace server
 #endif
 
         // 绑定监听地址端口
-        if(-1 == components::Socket::bind(m_fd, ip, port))
+        if(-1 == components::Socket::bind(m_fd, m_ip, m_port))
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "bind socket failed, errno: ", errno, ", ",
                                                                          strerror(errno));
@@ -59,7 +68,7 @@ namespace server
         }
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "listen socket successfully");
 
-        if(-1 == m_slaveReactorManager.init())
+        if(-1 == m_slaveReactorManager.init(m_serverConfig.slaveReactorNum(), m_serverConfig.redispatchInterval()))
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "slave reactor manager init failed");
             return -1;
@@ -88,7 +97,7 @@ namespace server
             m_slaveReactorManager.addTcpSession(tcpSession);
         });
 
-        m_packetProcessThreadPoll.init(8, "packet_proc");
+        m_packetProcessThreadPoll.init(m_serverConfig.packetProcessThreadNum(), "packet_proc");
         m_slaveReactorManager.registerRecvHandler([this](const int fd, packetprocess::PacketType packetType,
                                                          std::shared_ptr<std::vector<char>>& payloadData, const std::function<int(const int, const std::vector<char>&)>& writeHandler){
             std::uint32_t curTimestamp = components::CellTimestamp::getCurrentTimestamp();
@@ -223,11 +232,6 @@ namespace server
         components::Singleton<components::Logger>::instance()->stop();
 
         return 0;
-    }
-
-    void TcpServer::setLogLevel(const int logLevel)
-    {
-        components::Singleton<components::Logger>::instance()->setLogLevel(static_cast<components::LogType>(logLevel));
     }
 
     void TcpServer::registerPacketHandler(std::function<int(const packetprocess::PacketType, packetprocess::PacketBase::Ptr,

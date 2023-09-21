@@ -14,17 +14,16 @@ namespace server
     SlaveReactorManager::~SlaveReactorManager()
     {}
 
-    int SlaveReactorManager::init()
+    int SlaveReactorManager::init(const std::size_t slaveReactorNum, const std::size_t redispatchInterval)
     {
-        //for(int i = 0; i < std::thread::hardware_concurrency(); ++i)
-        for(int i = 0; i < 8; ++i)
+        for(int i = 0; i < slaveReactorNum; ++i)
         {
             SlaveReactor::Ptr slaveReactor = std::make_shared<SlaveReactor>(i);
             slaveReactor->init();
             m_slaveReactors.emplace_back(slaveReactor);
         }
 
-        const auto expression = [this]()
+        const auto expression = [this, redispatchInterval]()
         {
             if(true == m_isTerminate)
             {
@@ -60,7 +59,7 @@ namespace server
                 m_slaveReactors[m_slaveReactorIndexWhichHasLeastFd]->addClient(std::shared_ptr<TcpSession>(tcpSession));
 
                 ++s_refreshTime;
-                if(0 == s_refreshTime % 1)
+                if(0 == s_refreshTime % redispatchInterval)
                 {
                     // 寻找管理最少client fd的SlaveReactor的index
                     std::size_t maxSize = std::numeric_limits<std::size_t>::max();

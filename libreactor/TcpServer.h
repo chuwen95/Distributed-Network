@@ -8,8 +8,10 @@
 #include "libcommon/Common.h"
 #include "libcomponents/SelectListenner.h"
 #include "libcomponents/ThreadPool.h"
+#include "ServerConfig.h"
 #include "Acceptor.h"
 #include "SlaveReactorManager.h"
+
 
 #include "libpacketprocess/packet/PacketBase.h"
 #include "libpacketprocess/packet/PacketReplyBase.h"
@@ -24,15 +26,13 @@ namespace server
         ~TcpServer() = default;
 
     public:
-        int init(const std::string_view ip, const unsigned short port, const std::string_view logPath);
+        int init(const std::string& config);
 
         int uninit();
 
         int start();
 
         int stop();
-
-        void setLogLevel(const int logLevel);
 
         void registerPacketHandler(std::function<int(const packetprocess::PacketType, packetprocess::PacketBase::Ptr,
                 packetprocess::PacketReplyBase::Ptr)> packetHander);
@@ -47,6 +47,8 @@ namespace server
 
         std::function<int(const packetprocess::PacketType, packetprocess::PacketBase::Ptr, packetprocess::PacketReplyBase::Ptr)> m_packetHandler;
         std::function<void(const int, const std::string&)> m_disconnectHandler;
+
+        ServerConfig m_serverConfig;
 
         components::SelectListenner m_selectListenner;
         Acceptor m_acceptor;

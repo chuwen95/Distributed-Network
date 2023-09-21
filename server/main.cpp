@@ -24,36 +24,10 @@ int main(int argc, char* argv[])
 {
     if(argc < 2)
     {
-        std::cerr << "usage: ./TcpServer logLevel(trace/debug/info/warning/error)" << std::endl;
-        std::cerr << "eg: ./TcpServer debug" << std::endl;
+        std::cerr << "usage: ./TcpServer config" << std::endl;
+        std::cerr << "eg: ./TcpServer config.ini" << std::endl;
     }
 
-    int logLevel{3};
-    if("trace" == std::string(argv[1]))
-    {
-        logLevel = 0;
-    }
-    else if("debug" == std::string(argv[1]))
-    {
-        logLevel = 1;
-    }
-    else if("info" == std::string(argv[1]))
-    {
-        logLevel = 2;
-    }
-    else if("warning" == std::string(argv[1]))
-    {
-        logLevel = 3;
-    }
-    else if("error" == std::string(argv[1]))
-    {
-        logLevel = 4;
-    }
-    else
-    {
-        std::cout << "param error" << std::endl;
-        return -1;
-    }
 
     // 忽略SIGPIPE信号，防止向一个已经断开的socket发送数据时操作系统触发SIGPIPE信号退出该应用
     signal(SIGPIPE, SIG_IGN);
@@ -61,11 +35,13 @@ int main(int argc, char* argv[])
     packetprocess::PacketProcessor packetProcessor;
 
     server::TcpServer tcpServer;
-    tcpServer.setLogLevel(logLevel);
     tcpServer.registerPacketHandler([&packetProcessor](const packetprocess::PacketType packetType, packetprocess::PacketBase::Ptr packet,packetprocess::PacketReplyBase::Ptr replyPacket){
         return packetProcessor.process(packetType, packet, replyPacket);
     });
-    tcpServer.init("127.0.0.1", 9999, "/data/server_log.log");
+    if(-1 == tcpServer.init(argv[1]))
+    {
+        return -1;
+    }
     tcpServer.start();
 
     ExitHandler exitHandler;

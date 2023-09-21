@@ -35,7 +35,7 @@ namespace components
         ~Logger();
 
     public:
-        int init(const std::string_view path, const std::size_t bufferSize);
+        int init(const bool enableFileLog, const std::string& path, const std::size_t bufferSize);
 
         int uninit();
 
@@ -58,13 +58,14 @@ namespace components
             std::string result = getLogTypeString(logType);
             mergeToString(result, args...);
 
+            if(true == m_enableFileLog)
             {
                 std::unique_lock<std::mutex> ulock(x_buffer);
                 m_buffer.insert(m_buffer.end(), result.begin(), result.end());
                 m_buffer.insert(m_buffer.end(), '\n');
-            }
 
-            m_bufferCv.notify_one();
+                m_bufferCv.notify_one();
+            }
 
             if(true == m_consoleOutput)
             {
@@ -118,7 +119,7 @@ namespace components
         }
 
     private:
-        std::string m_path;
+        bool m_enableFileLog{true};
         std::ofstream m_file;
 
         std::mutex x_buffer;
