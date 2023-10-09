@@ -4,11 +4,19 @@ package protocol;
 
 message ClientInfo
 {
-  string id = 1;
+  uint32 seq = 1;
+  string localHost = 2;
+  string peerHost = 3;
+  string handshakeUuid = 4;
+  string nodeId = 5;
 }
 
 message ClientInfoReply
 {
-  uint32 result = 1;
+  uint32 seq = 1;
+  string peerHost = 2;
+  string handshakeUuid = 3;
+  string nodeId = 4;
+  int32 result = 5;
 }
 

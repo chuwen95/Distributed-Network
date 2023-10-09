@@ -12,6 +12,8 @@
         },
         "protobuf",
         "concurrentqueue",
-        "inipp"
+        "inipp",
+        "jsoncpp",
+        "stduuid"
     ]
 }

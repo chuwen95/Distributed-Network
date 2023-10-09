@@ -12,6 +12,18 @@ namespace packetprocess
         return m_protoHeartBeat.ByteSizeLong();
     }
 
+    int PacketHeartBeat::setId(const std::string &id)
+    {
+        m_protoHeartBeat.set_id(id);
+
+        return 0;
+    }
+
+    std::string PacketHeartBeat::getId()
+    {
+        return m_protoHeartBeat.id();
+    }
+
     int PacketHeartBeat::setTimestamp(const std::uint32_t timestamp)
     {
         m_protoHeartBeat.set_timestamp(timestamp);

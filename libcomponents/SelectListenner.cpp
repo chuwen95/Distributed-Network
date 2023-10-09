@@ -18,16 +18,6 @@ namespace components
     {
         m_listenfd = fd;
 
-        return 0;
-    }
-
-    int SelectListenner::uninit()
-    {
-        return 0;
-    }
-
-    int SelectListenner::start()
-    {
         const auto expression = [this]()
         {
             fd_set readfds;
@@ -59,6 +49,18 @@ namespace components
             return 0;
         };
         m_thread.init(expression, 0, "main_reac");
+
+        return 0;
+    }
+
+    int SelectListenner::uninit()
+    {
+        m_thread.uninit();
+        return 0;
+    }
+
+    int SelectListenner::start()
+    {
         m_thread.start();
 
         return 0;
@@ -67,7 +69,6 @@ namespace components
     int SelectListenner::stop()
     {
         m_thread.stop();
-        m_thread.uninit();
 
         return 0;
     }

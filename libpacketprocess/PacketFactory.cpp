@@ -47,6 +47,33 @@ namespace packetprocess
         return packet;
     }
 
+    PacketReplyBase::Ptr PacketFactory::createReplyPacket(const PacketType packetType, const std::shared_ptr<std::vector<char>>& data)
+    {
+        // 构造消息包
+        PacketReplyBase::Ptr packetReply;
+        switch (packetType)
+        {
+            case packetprocess::PacketType::PT_ClientInfoReply:
+                packetReply = std::make_shared<PacketClientInfoReply>();
+                break;
+            case packetprocess::PacketType::PT_HeartBeatReply:
+                packetReply = std::make_shared<PacketHeartBeatReply>();
+                break;
+            case packetprocess::PacketType::PT_RawStringReply:
+                packetReply = std::make_shared<PacketRawStringReply>();
+                break;
+            default:
+                return nullptr;
+        }
+
+        // 解码消息包
+        if(nullptr != data)
+        {
+            packetReply->decode(data->data(), data->size());
+        }
+        return packetReply;
+    }
+
     PacketReplyBase::Ptr PacketFactory::createReplyPacket(const PacketType packetType, PacketType& replyPacketType)
     {
         // 构造消息包

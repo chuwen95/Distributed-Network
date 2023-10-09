@@ -34,6 +34,8 @@ namespace components
          * @return
          */
         static int setNoSigPipe(const int fd);
+
+        static int connect(const int fd, const std::string& ip, const unsigned short port);
     };
 
 } // componnets

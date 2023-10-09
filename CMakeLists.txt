@@ -19,7 +19,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 include(ProjectReaderWriterQueue)
 
 add_subdirectory(libcomponents)
-add_subdirectory(libreactor)
+add_subdirectory(libservice)
 add_subdirectory(libpacketprocess)
 add_subdirectory(server)
 add_subdirectory(client)

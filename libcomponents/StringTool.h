@@ -18,6 +18,10 @@ namespace components
             {
                 return value;
             }
+            else if constexpr (std::is_same_v<T, bool>)
+            {
+                return "true" == value ? true : false;
+            }
             else
             {
                 T convertedValue;
@@ -26,12 +30,6 @@ namespace components
                 iss >> convertedValue;
                 return convertedValue;
             }
-        }
-
-        template<>
-        bool convertFromString<bool>(const std::string& value)
-        {
-            return "true" == value ? true : false;
         }
 
 #if 0
@@ -59,11 +57,17 @@ namespace components
             {
                 return std::to_string(value);
             }
+            else if constexpr (std::is_same_v<T, unsigned short>)
+            {
+                return std::to_string(value);
+            }
             else
             {
                 return value;
             }
         }
+
+        std::vector<std::string> split(const std::string& origin, const char delimiter);
     }
 }
 

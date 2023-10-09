@@ -2,7 +2,7 @@
 
 #include <signal.h>
 
-#include "libreactor/TcpServer.h"
+#include "libservice/TcpService.h"
 #include "libpacketprocess/PacketProcessor.h"
 
 class ExitHandler
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
 
     packetprocess::PacketProcessor packetProcessor;
 
-    server::TcpServer tcpServer;
+    service::TcpService tcpServer;
     tcpServer.registerPacketHandler([&packetProcessor](const packetprocess::PacketType packetType, packetprocess::PacketBase::Ptr packet,packetprocess::PacketReplyBase::Ptr replyPacket){
         return packetProcessor.process(packetType, packet, replyPacket);
     });

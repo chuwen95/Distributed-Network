@@ -5,7 +5,7 @@
 #include "ClientAliveChecker.h"
 #include "libcomponents/Logger.h"
 
-namespace server
+namespace service
 {
 
     // ClientAliveChecker任务运行间隔，每间隔一段时间运行一次检查

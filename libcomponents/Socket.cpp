@@ -85,4 +85,15 @@ namespace components
         return 0;
     }
 
+    int Socket::connect(const int fd, const std::string &ip, const unsigned short port)
+    {
+        struct sockaddr_in serverAddr;
+        memset(&serverAddr, 0, sizeof(serverAddr));
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_port = htons(port);
+        inet_pton(AF_INET, ip.c_str(), &(serverAddr.sin_addr.s_addr));
+
+        return ::connect(fd, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+    }
+
 } // components

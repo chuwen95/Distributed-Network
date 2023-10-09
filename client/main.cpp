@@ -96,11 +96,8 @@ int main(int argc, char **argv)
         }
 
         clientInfoReply.decode(dataStatus.writeBuffer.data() + headerLength, packetHeader.payloadLength());
-        if(clientInfoReply.getResult() == 0)
-        {
-            dataStatus.writeLen -= (headerLength + packetHeader.payloadLength());
-            break;
-        }
+        dataStatus.writeLen -= (headerLength + packetHeader.payloadLength());
+        break;
     }
     std::cout << "dataStatus.dataSize: " << dataStatus.writeLen << std::endl;
 

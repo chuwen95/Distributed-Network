@@ -23,6 +23,15 @@ namespace packetprocess
     public:
         std::size_t packetLength() override;
 
+        int setId(const std::string& id);
+        std::string getId();
+
+        int setSendTimestamp(const std::uint32_t timestamp);
+        std::uint32_t getSendTimestamp();
+
+        int setRecvTimestamp(const std::uint32_t timestamp);
+        std::uint32_t getRecvTimestamp();
+
         int encode(char* buffer, const std::size_t length) override;
         int decode(const char* buffer, const std::size_t length) override;
 

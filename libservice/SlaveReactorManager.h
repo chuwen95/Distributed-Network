@@ -9,7 +9,7 @@
 
 #include <readerwriterqueue.h>
 
-namespace server
+namespace service
 {
 
     class SlaveReactorManager
@@ -24,7 +24,7 @@ namespace server
          * @param redispatchInterval    多少个客户端后重新查找管理客户端数量最少的SlaveReactor，下一个客户端将会放到最少的这个SlaveReactor中
          * @return
          */
-        int init(const std::size_t slaveReactorNum, const std::size_t redispatchInterval);
+        int init(const std::size_t slaveReactorNum, const std::size_t redispatchInterval, const std::string& id);
 
         int uninit();
 
@@ -32,22 +32,41 @@ namespace server
 
         int stop();
 
-        int addTcpSession(TcpSession::Ptr tcpSession);
+        int addTcpSession(TcpSession::Ptr tcpSession, std::function<void()> callback = nullptr);
 
         std::uint32_t getClientOnlineTimestamp(const int fd);
+
+        int sendData(const int fd, const std::vector<char>& data);
+
+        void registerClientInfoHandler(std::function<int(const HostEndPointInfo& localHostEndPointInfo,
+                const HostEndPointInfo& peerHostEndPointInfo, const int fd, const std::string& id, const std::string& uuid)> clientInfoHandler);
+
+        void registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo& hostEndPointInfo,
+                const int fd, const std::string& id, const std::string& uuid, const int result)> clientInfoReplyHandler);
 
         void registerRecvHandler(std::function<void(const int fd, const packetprocess::PacketType,
                 std::shared_ptr<std::vector<char>>&, std::function<int(const int, const std::vector<char>&)>)> recvHandler);
 
-        void registerDisconnectHandler(std::function<void(const int id, const std::string&)> disconnectHandler);
+        void registerDisconnectHandler(std::function<void(const HostEndPointInfo &hostEndPointInfo, const std::string& id,
+                const std::string& uuid, const int flag)> disconnectHandler);
 
-    public:
+        int disconnectClient(const int fd);
+
+    private:
         // 新上线客户端的信号
         std::mutex x_tcpSessionsQueue;
         std::condition_variable m_tcpSessionsQueueCv;
 
         // 新上线的客户端队列，等待分发到各个SlaveReactor
-        moodycamel::ReaderWriterQueue<TcpSession::Ptr> m_tcpSessionsQueue;
+        struct TcpSessionInfo
+        {
+            using Ptr = std::shared_ptr<TcpSessionInfo>;
+            TcpSessionInfo(TcpSession::Ptr t, std::function<void()> c) : tcpSession(t), callback(c) {}
+
+            TcpSession::Ptr tcpSession;
+            std::function<void()> callback;
+        };
+        moodycamel::ReaderWriterQueue<TcpSessionInfo::Ptr> m_tcpSessionsQueue;
 
         // 所有的子Reactor集合
         std::vector<SlaveReactor::Ptr> m_slaveReactors;

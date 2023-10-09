@@ -6,7 +6,7 @@
 
 #include "libcomponents/Socket.h"
 
-namespace server
+namespace service
 {
 
     TcpSession::TcpSession()
@@ -74,6 +74,26 @@ namespace server
     std::uint32_t TcpSession::getClientOnlineTimestamp()
     {
         return m_clientInfo.onlineTimestamp;
+    }
+
+    void TcpSession::setPeerHostEndPointInfo(const service::HostEndPointInfo &hostEndPointInfo)
+    {
+        m_peerHostEndPointInfo = hostEndPointInfo;
+    }
+
+    const HostEndPointInfo& TcpSession::peerHostEndPointInfo() const
+    {
+        return m_peerHostEndPointInfo;
+    }
+
+    void TcpSession::setHandshakeUuid(const std::string &uuid)
+    {
+        m_handshakeUuid = uuid;
+    }
+
+    std::string TcpSession::handshakeUuid()
+    {
+        return m_handshakeUuid;
     }
 
 } // server

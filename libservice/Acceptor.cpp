@@ -7,8 +7,9 @@
 #include "libcommon/Common.h"
 #include "libcomponents/Logger.h"
 
-namespace server
+namespace service
 {
+
     int Acceptor::init(const int fd)
     {
         const auto expression = [this, listenfd = fd]()

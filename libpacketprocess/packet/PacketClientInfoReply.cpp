@@ -9,7 +9,6 @@ namespace packetprocess
 
     PacketClientInfoReply::PacketClientInfoReply()
     {
-        m_protoClientInfoReply.set_result(-1);
     }
 
     std::size_t PacketClientInfoReply::packetLength()
@@ -17,14 +16,58 @@ namespace packetprocess
         return m_protoClientInfoReply.ByteSizeLong();
     }
 
-    int PacketClientInfoReply::setResult(const std::int32_t result)
+    int PacketClientInfoReply::setSeq(const std::uint32_t seq)
     {
-        m_protoClientInfoReply.set_result(result);
+        m_protoClientInfoReply.set_seq(seq);
+        return 0;
+    }
+
+    std::uint32_t PacketClientInfoReply::seq()
+    {
+        return m_protoClientInfoReply.seq();
+    }
+
+    int PacketClientInfoReply::setPeerHost(const std::string &host)
+    {
+        m_protoClientInfoReply.set_peerhost(host);
+        return 0;
+    }
+
+    std::string PacketClientInfoReply::peerHost()
+    {
+        return m_protoClientInfoReply.peerhost();
+    }
+
+    int PacketClientInfoReply::setHandshakeUuid(const std::string &uuid)
+    {
+        m_protoClientInfoReply.set_handshakeuuid(uuid);
+        return 0;
+    }
+
+    std::string PacketClientInfoReply::handshakeUuid()
+    {
+        return m_protoClientInfoReply.handshakeuuid();
+    }
+
+    int PacketClientInfoReply::setNodeId(const std::string& id)
+    {
+        m_protoClientInfoReply.set_nodeid(std::string(id));
 
         return 0;
     }
 
-    std::uint32_t PacketClientInfoReply::getResult()
+    std::string PacketClientInfoReply::nodeId()
+    {
+        return m_protoClientInfoReply.nodeid();
+    }
+
+    int PacketClientInfoReply::setResult(const std::int32_t result)
+    {
+        m_protoClientInfoReply.set_result(result);
+        return 0;
+    }
+
+    std::int32_t PacketClientInfoReply::result()
     {
         return m_protoClientInfoReply.result();
     }

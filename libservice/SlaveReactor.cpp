@@ -10,12 +10,12 @@
 #include "libpacketprocess/packet/PacketClientInfo.h"
 #include "libpacketprocess/packet/PacketClientInfoReply.h"
 
-namespace server
+namespace service
 {
 
     constexpr std::size_t c_maxEvent{500};
 
-    SlaveReactor::SlaveReactor(const int id) : m_id(id)
+    SlaveReactor::SlaveReactor()
     {
     }
 
@@ -23,8 +23,11 @@ namespace server
     {
     }
 
-    int SlaveReactor::init()
+    int SlaveReactor::init(const int reactorId, const std::string& hostId)
     {
+        m_reactorId = reactorId;
+        m_hostId = hostId;
+
         m_epfd = epoll_create1(0);
         if(-1 == m_epfd)
         {
@@ -86,9 +89,9 @@ namespace server
                 if (ev[i].events & EPOLLERR ||         // 文件描述符发生错误
                     ev[i].events & EPOLLHUP)     // 文件描述符被挂断
                 {
-                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                                  "fd error, fd: ", fd);
-                    onClientDisconnect(fd);
+                    disconnectClient(fd);
                     return -1;
                 }
 
@@ -176,14 +179,14 @@ namespace server
                 {
                     // 没有数据再需要读取，从m_infds中移除
                     iter = m_infds.erase(iter);
-                    break;
+                    continue;
                 }
                 else if(0 == readLen)
                 {
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                                  "client may be offline, fd: ", fd);
                     iter = m_infds.erase(iter);
-                    onClientDisconnect(fd);
+                    disconnectClient(fd);
                     continue;
                 }
                 // 增加已经使用的空间
@@ -266,7 +269,7 @@ namespace server
                     }
                     else if(packetprocess::PacketType::PT_ClientInfo == packetType)
                     {
-                        // 表明身份的包，即刻处理，不必放到线程池中
+                        // 身份包，即刻处理，不必放到线程池中
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                                      "recv ClientInfo packet, fd: ", fd);
                         packetprocess::PacketBase::Ptr packet = packetprocess::PacketFactory().createPacket(packetType, packetPayload);
@@ -274,9 +277,33 @@ namespace server
                         {
                             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                                          "process ClientInfo packet failed, fd: ", fd);
+                            // 将packetNum置为小于epochPacketSum，后续会将fd从m_datafds中移除
+                            packetNum = 0;
+                            // 从m_infds中移除，因为m_infds中的socket如果没有数据可读了或者断开了，再下一次循环中才会发现并移除
+                            m_infds.erase(fd);
                         }
                     }
-                    else if(packetprocess::PacketType::PT_HeartBeat == packetType)
+                    else if(packetprocess::PacketType::PT_ClientInfoReply == packetType)
+                    {
+                        // 身份包，即刻处理，不必放到线程池中
+                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                                     "recv ClientInfoReply packet, fd: ", fd);
+                        packetprocess::PacketReplyBase::Ptr packet = packetprocess::PacketFactory().createReplyPacket(packetType, packetPayload);
+                        int ret = processClientInfoReplyPacket(fd, tcpSession, packet);
+                        if(0 != ret)
+                        {
+                            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                         "process ClientInfoReply packet failed, ret: ", ret, ", fd: ", fd);
+                            if(-1 == ret)
+                            {
+                                // 将packetNum置为小于epochPacketSum，后续会将fd从m_datafds中移除
+                                packetNum = 0;
+                                // 从m_infds中移除，因为m_infds中的socket如果没有数据可读了或者断开了，再下一次循环中才会发现并移除
+                                m_infds.erase(fd);
+                            }
+                        }
+                    }
+                    else if(packetprocess::PacketType::PT_HeartBeat == packetType || packetprocess::PacketType::PT_HeartBeatReply == packetType)
                     {
                         // 心跳包，不必放到线程池中处理
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
@@ -403,7 +430,7 @@ namespace server
                                                                                          "client maybe offline, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
 
                             iter = outfds.erase(iter);
-                            onClientDisconnect(fd);
+                            disconnectClient(fd);
 
                             continue;
                         }
@@ -419,7 +446,7 @@ namespace server
 
             return 0;
         };
-        std::string threadName = "slav_reac_" + std::to_string(m_id);
+        std::string threadName = "slav_reac_" + std::to_string(m_reactorId);
         m_thread.init(expression, 0, threadName.c_str());
         m_thread.start();
 
@@ -443,7 +470,7 @@ namespace server
     int SlaveReactor::addClient(TcpSession::Ptr tcpSession)
     {
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "SlaveReactor ",
-                                                                     m_id, " try to add client ", tcpSession->fd(), " to epoll");
+                                                                     m_reactorId, " try to add client ", tcpSession->fd(), " to epoll");
 
         int fd = tcpSession->fd();
 
@@ -454,7 +481,7 @@ namespace server
 
         m_clientAliveChecker.addClient(fd);
 
-        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "SlaveReactor ", m_id,
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "SlaveReactor ", m_reactorId,
                                                                      " add client ", fd, " to ClientAliveChecker successfully");
 
         struct epoll_event ev;
@@ -477,7 +504,7 @@ namespace server
             return -1;
         }
 
-        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "SlaveReactor ", m_id,
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "SlaveReactor ", m_reactorId,
                                                                      " add client ", tcpSession->fd(), " to epoll successfully, events: EPOLLIN and EPOLLET", ", m_epfd: ", m_epfd);
 
         return 0;
@@ -489,21 +516,34 @@ namespace server
         return m_fdSessions.size();
     }
 
+    void SlaveReactor::registerClientInfoHandler(std::function<int(const HostEndPointInfo&, const HostEndPointInfo&,
+                                                                   const int, const std::string &, const std::string&)> clientInfoHandler)
+    {
+        m_clientInfoHandler = std::move(clientInfoHandler);
+    }
+
+    void SlaveReactor::registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo&, const int, const std::string &,
+                                                                        const std::string&, const int)> clientInfoReplyHandler)
+    {
+        m_clientInfoReplyHandler = std::move(clientInfoReplyHandler);
+    }
+
     void SlaveReactor::registerRecvHandler(std::function<void(const int, const packetprocess::PacketType,
                                                               std::shared_ptr<std::vector<char>>&, std::function<int(const int, const std::vector<char>&)>)> recvHandler)
     {
         m_recvHandler = std::move(recvHandler);
     }
 
-    void SlaveReactor::registerDisconnectHandler(std::function<void(const int, const std::string&)> disconnectHandler)
+    void SlaveReactor::registerDisconnectHandler(std::function<void(const int fd, const HostEndPointInfo& hostEndPointInfo,
+                                                                    const std::string& id, const std::string& uuid, const int flag)> disconnectHandler)
     {
-        m_disconnectHandler = disconnectHandler;
+        m_disconnectHandler = std::move(disconnectHandler);
     }
 
     int SlaveReactor::sendData(const int fd, const char *data, const std::size_t size)
     {
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
-                                                                     "m_id: ", m_id, ", fd: ", fd);
+                                                                     "m_id: ", m_reactorId, ", fd: ", fd);
         //获取对应的writeBuffer
         TcpSession::Ptr tcpSession;
         {
@@ -557,7 +597,7 @@ namespace server
         return iter->second->getClientOnlineTimestamp();
     }
 
-    void SlaveReactor::onClientDisconnect(const int fd)
+    int SlaveReactor::disconnectClient(const int fd, const int flag)
     {
         {
             std::unique_lock<std::mutex> ulock(x_clientSessions);
@@ -566,7 +606,7 @@ namespace server
             {
                 components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                              "client not exist, fd: ", fd);
-                return;
+                return -1;
             }
         }
 
@@ -574,32 +614,6 @@ namespace server
         m_clientAliveChecker.removeClient(fd);
         // 将客户端从epoll中移除
         epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, nullptr);
-
-#if 0
-        if(true == dealInfds)
-        {
-            auto inIter = m_infds.find(fd);
-            if(m_infds.end() != inIter)
-            {
-                m_infds.erase(inIter);
-            }
-        }
-
-        auto dataIter = m_datafds.find(fd);
-        if(m_datafds.end() != dataIter)
-        {
-            m_datafds.erase(dataIter);
-        }
-
-        {
-            std::unique_lock<std::mutex> ulock(x_outfds);
-            auto outIter = m_outfds.find(fd);
-            if(m_outfds.end() != outIter)
-            {
-                m_outfds.erase(outIter);
-            }
-        }
-#endif
 
         // 关闭客户端fd
         close(fd);
@@ -610,14 +624,15 @@ namespace server
             auto iter = m_fdSessions.find(fd);
             if(nullptr != m_disconnectHandler)
             {
-                std::string id = iter->second->getClientId();
-                m_disconnectHandler(fd, id);
+                m_disconnectHandler(fd, iter->second->peerHostEndPointInfo(), iter->second->getClientId(), iter->second->handshakeUuid(), flag);
             }
             m_fdSessions.erase(fd);
         }
 
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                      "client disconnect finish, fd: ", fd);
+
+        return 0;
     }
 
     int SlaveReactor::getPacket(const int fd, components::RingBuffer::Ptr& readBuffer, packetprocess::PacketType &packetType, std::shared_ptr<std::vector<char>>& data)
@@ -691,38 +706,48 @@ namespace server
         }
 
         packetprocess::PacketClientInfo::Ptr packetClientInfo = std::dynamic_pointer_cast<packetprocess::PacketClientInfo>(packet);
-        std::string id = packetClientInfo->getId();
+        tcpSession->setPeerHostEndPointInfo(packetClientInfo->peerHost());
+        std::string id = packetClientInfo->nodeId();
         tcpSession->setClientId(id);
+        tcpSession->setHandshakeUuid(packetClientInfo->handshakeUuid());
         tcpSession->setClientOnlineTimestamp(components::CellTimestamp::getCurrentTimestamp());
 
-        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
-                                                                     "decode ClientInfo packet successfully, fd: ", fd, ", id: ", fd);
-
-        // 构造回应包
-        packetprocess::PacketClientInfoReply reply;
-        reply.setResult(0);
-
-        packetprocess::PacketHeader packetHeader;
-        packetHeader.setType(packetprocess::PacketType::PT_ClientInfoReply);
-        packetHeader.setPayloadLength(reply.packetLength());
-
-        int headerLength = packetHeader.headerLength();
-        int payloadLength = reply.packetLength();
-
-        std::vector<char> buffer;
-        buffer.resize(headerLength + reply.packetLength());
-
-        packetHeader.encode(buffer.data(), headerLength);
-        reply.encode(buffer.data() + headerLength, payloadLength);
-
-        if(-1 == sendData(fd, buffer.data(), buffer.size()))
+        if(nullptr != m_clientInfoHandler)
         {
-            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
-                                                                         "send ClientInfoReply packet failed", ", fd: ", fd, ", id: ", id);
+            int ret = m_clientInfoHandler(packetClientInfo->localHost(), packetClientInfo->peerHost(), fd, id, packetClientInfo->handshakeUuid());
+            if(0 != ret)
+            {
+                // 处理ClientInfoPacket失败
+                disconnectClient(fd);
+                return ret;
+            }
         }
 
-        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
-                                                                     "send ClientInfoReply packet successfully", ", fd: ", fd, ", id: ", id);
+        return 0;
+    }
+
+    int SlaveReactor::processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession, packetprocess::PacketReplyBase::Ptr packetReply)
+    {
+        if(nullptr == packetReply)
+        {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                         "decode ClientInfo packet failed", ", fd: ", fd);
+            return -1;
+        }
+
+        packetprocess::PacketClientInfoReply::Ptr packetClientInfoReply = std::dynamic_pointer_cast<packetprocess::PacketClientInfoReply>(packetReply);
+        tcpSession->setClientId(packetClientInfoReply->nodeId());
+
+        if(nullptr != m_clientInfoReplyHandler)
+        {
+            int ret = m_clientInfoReplyHandler(tcpSession->peerHostEndPointInfo(), fd, packetClientInfoReply->nodeId(),
+                                               packetClientInfoReply->handshakeUuid(), packetClientInfoReply->result());
+            if(0 != ret)
+            {
+                disconnectClient(fd, packetClientInfoReply->result());
+                return -1;
+            }
+        }
 
         return 0;
     }
@@ -731,7 +756,7 @@ namespace server
     {
         for(const int fd : fds)
         {
-            onClientDisconnect(fd);
+            disconnectClient(fd);
         }
     }
 

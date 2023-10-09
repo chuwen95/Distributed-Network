@@ -29,7 +29,15 @@ namespace packetprocess
         PacketBase::Ptr createPacket(const PacketType packetType, const std::shared_ptr<std::vector<char>>& data);
 
         /**
-         * @brief 根据消息包类型创建回应包
+         * @brief 创建回应包
+         *
+         * @param packetType 包类型
+         * @return
+         */
+        PacketReplyBase::Ptr createReplyPacket(const PacketType packetType, const std::shared_ptr<std::vector<char>>& data);
+
+        /**
+         * @brief 根据消息包类型创建空回应包
          *
          * @param packetType 包类型
          * @return

@@ -9,7 +9,7 @@
 #include "libcomponents/Thread.h"
 #include "TcpSession.h"
 
-namespace server
+namespace service
 {
 
     class Acceptor

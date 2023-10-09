@@ -7,8 +7,9 @@
 
 #include "libcommon/Common.h"
 #include "libcomponents/RingBuffer.h"
+#include "HostEndPointInfo.h"
 
-namespace server
+namespace service
 {
 
     class TcpSession
@@ -31,7 +32,6 @@ namespace server
         int fd();
 
         components::RingBuffer::Ptr readBuffer();
-
         components::RingBuffer::Ptr writeBuffer();
 
         void setClientId(const std::string_view id);
@@ -39,6 +39,17 @@ namespace server
 
         void setClientOnlineTimestamp(const std::uint32_t timestamp);
         std::uint32_t getClientOnlineTimestamp();
+
+        template<typename... Args>
+        void setPeerEndPointInfo(Args... args)
+        {
+            m_peerHostEndPointInfo = std::move(HostEndPointInfo(std::forward<Args>(args)...));
+        }
+        void setPeerHostEndPointInfo(const HostEndPointInfo& hostEndPointInfo);
+        const HostEndPointInfo& peerHostEndPointInfo() const;
+
+        void setHandshakeUuid(const std::string& uuid);
+        std::string handshakeUuid();
 
     public:
         int m_clientfd{-1};
@@ -55,6 +66,9 @@ namespace server
 
         components::RingBuffer::Ptr m_readBuffer;
         components::RingBuffer::Ptr m_writeBuffer;
+
+        HostEndPointInfo m_peerHostEndPointInfo;
+        std::string m_handshakeUuid;
     };
 
 } // server

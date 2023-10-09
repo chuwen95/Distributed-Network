@@ -2,13 +2,13 @@
 // Created by root on 9/20/23.
 //
 
-#include "ServerConfig.h"
+#include "ServiceConfig.h"
 #include "libcomponents/StringTool.h"
 
-namespace server
+namespace service
 {
 
-    int ServerConfig::init(const std::string &configFile)
+    int ServiceConfig::init(const std::string &configFile)
     {
         inipp::Ini<char> ini;
         std::ifstream file(configFile);
@@ -19,6 +19,8 @@ namespace server
         }
         ini.parse(file);
 
+        parseInfoConfig(ini);
+        parseFeatureConfig(ini);
         parseNetworkConfig(ini);
         parseReactorConfig(ini);
         parsePacketProcessConfig(ini);
@@ -27,52 +29,67 @@ namespace server
         return 0;
     }
 
-    int ServerConfig::uninit()
+    int ServiceConfig::uninit()
     {
         return 0;
     }
 
-    std::string ServerConfig::ip()
+    std::string ServiceConfig::id()
+    {
+        return m_id;
+    }
+
+    bool ServiceConfig::startAsClient()
+    {
+        return m_startAsClient;
+    }
+
+    std::string ServiceConfig::ip()
     {
         return m_ip;
     }
 
-    unsigned short ServerConfig::port()
+    unsigned short ServiceConfig::port()
     {
         return m_port;
     }
 
-    std::size_t ServerConfig::slaveReactorNum()
+    std::string ServiceConfig::nodesFile()
+    {
+        return m_nodesFile;
+    }
+
+    std::size_t ServiceConfig::slaveReactorNum()
     {
         return m_slaveReactorNum;
     }
 
-    std::size_t ServerConfig::redispatchInterval()
+    std::size_t ServiceConfig::redispatchInterval()
     {
         return m_redispatchInterval;
     }
 
-    std::size_t ServerConfig::packetProcessThreadNum()
+    std::size_t ServiceConfig::packetProcessThreadNum()
     {
         return m_packetProcessThreadNum;
     }
 
-    bool ServerConfig::enableFileLog()
+    bool ServiceConfig::enableFileLog()
     {
         return m_enableFileLog;
     }
 
-    bool ServerConfig::consoleOutput()
+    bool ServiceConfig::consoleOutput()
     {
         return m_consoleOutput;
     }
 
-    components::LogType ServerConfig::logType()
+    components::LogType ServiceConfig::logType()
     {
         return m_logType;
     }
 
-    std::string ServerConfig::logPath()
+    std::string ServiceConfig::logPath()
     {
         return m_logPath;
     }
@@ -97,15 +114,30 @@ namespace server
         }
     }
 
-    int ServerConfig::parseNetworkConfig(inipp::Ini<char>& ini)
+    int ServiceConfig::parseInfoConfig(inipp::Ini<char> &ini)
     {
-        m_ip = getValue(ini, "network", "ip", m_ip);
-        m_port = getValue(ini, "network", "port", m_port);
+        m_id = getValue(ini, "info", "id", m_id);
 
         return 0;
     }
 
-    int ServerConfig::parseReactorConfig(inipp::Ini<char>& ini)
+    int ServiceConfig::parseFeatureConfig(inipp::Ini<char> &ini)
+    {
+        m_startAsClient = getValue(ini, "feature", "start_as_client", m_startAsClient);
+
+        return 0;
+    }
+
+    int ServiceConfig::parseNetworkConfig(inipp::Ini<char>& ini)
+    {
+        m_ip = getValue(ini, "network", "ip", m_ip);
+        m_port = getValue(ini, "network", "port", m_port);
+        m_nodesFile = getValue(ini, "network", "nodes_file", m_nodesFile);
+
+        return 0;
+    }
+
+    int ServiceConfig::parseReactorConfig(inipp::Ini<char>& ini)
     {
         m_slaveReactorNum = getValue(ini, "reactor", "slave_reactor", m_slaveReactorNum);
         m_redispatchInterval = getValue(ini, "reactor", "redispatch_interval", m_redispatchInterval);
@@ -113,14 +145,14 @@ namespace server
         return 0;
     }
 
-    int ServerConfig::parsePacketProcessConfig(inipp::Ini<char>& ini)
+    int ServiceConfig::parsePacketProcessConfig(inipp::Ini<char>& ini)
     {
         m_packetProcessThreadNum = getValue(ini, "packet_process", "thread_pool_thread_num", m_packetProcessThreadNum);
 
         return 0;
     }
 
-    int ServerConfig::parseLogConfig(inipp::Ini<char>& ini)
+    int ServiceConfig::parseLogConfig(inipp::Ini<char>& ini)
     {
         m_enableFileLog = getValue(ini, "logger", "enable_file_log", m_enableFileLog);
         m_consoleOutput = getValue(ini, "logger", "console_output", m_consoleOutput);

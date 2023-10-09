@@ -4,12 +4,14 @@ package protocol;
 
 message HeartBeat
 {
-    uint32 timestamp = 1;
+    string id = 1;
+    uint32 timestamp = 2;
 }
 
 message HeartBeatReply
 {
-    uint32 sendTimestamp = 1;
-    uint32 recvTimestamp = 2;
+    string id = 1;
+    uint32 sendTimestamp = 2;
+    uint32 recvTimestamp = 3;
 }
 

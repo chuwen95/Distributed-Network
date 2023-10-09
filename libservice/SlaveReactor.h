@@ -11,8 +11,9 @@
 #include "ClientAliveChecker.h"
 #include "libpacketprocess/packet/PacketHeader.h"
 #include "libpacketprocess/packet/PacketBase.h"
+#include "libpacketprocess/packet/PacketReplyBase.h"
 
-namespace server
+namespace service
 {
 
     class SlaveReactor : public std::enable_shared_from_this<SlaveReactor>
@@ -24,11 +25,11 @@ namespace server
          * @brief 参数主要是用于设置线程名
          * @param id
          */
-        SlaveReactor(const int id);
+        SlaveReactor();
         ~SlaveReactor();
 
     public:
-        int init();
+        int init(const int reactorId, const std::string& hostId);
 
         int uninit();
 
@@ -52,6 +53,23 @@ namespace server
         std::size_t clientSize();
 
         /**
+         * @brief 注册ClientInfo包回调，收到客户端的ClientInfo解析出id后，将id和fd回调出去，存储id和fd的对应关系
+         *
+         * @param clientInfoHandler
+         */
+        void registerClientInfoHandler(std::function<int(const HostEndPointInfo& localHostEndPointInfo,
+                const HostEndPointInfo& peerHostEndPointInfo, const int fd, const std::string& id, const std::string& uuid)> clientInfoHandler);
+
+        /**
+         * @brief 注册ClientInfoReply包回调
+         *              三个参数信息：ip, port, id
+         *
+         * @param clientInfoReplyHandler
+         */
+        void registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo& hostEndPointInfo, const int fd, const std::string& id,
+                const std::string& uuid, const int result)> clientInfoReplyHandler);
+
+        /**
          * @brief 客户端有包需要处理的回调，回调包类型和包负载
          *
          * @param recvHandler
@@ -64,7 +82,8 @@ namespace server
          *
          * @param disconnectHandler
          */
-        void registerDisconnectHandler(std::function<void(const int id, const std::string&)> disconnectHandler);
+        void registerDisconnectHandler(std::function<void(const int fd, const HostEndPointInfo& hostEndPointInfo, const std::string& id,
+                const std::string& uuid, const int flag)> disconnectHandler);
 
         /**
          * @brief 写入待发送的数据到writeBuffer，如果writeBuffer的可用空间小于要写入的数据大小，则返回-1，客户端需重新尝试写入
@@ -87,22 +106,32 @@ namespace server
          */
         std::uint32_t getClientOnlineTimestamp(const int fd);
 
-    private:
-        // 客户端离线处理
-        void onClientDisconnect(const int fd);
+        /**
+         * @brief 断开某fd的连接
+         *
+         * @param fd
+         * @param flag SlaveReactor内部使用
+         * @return
+         */
+        int disconnectClient(const int fd, const int flag = 0);
 
+    private:
         // 从readBuffer中获取包类型和包负载，如果缓冲区的数据不够包长度，则返回-1
         int getPacket(const int fd, components::RingBuffer::Ptr& readBuffer, packetprocess::PacketType& packetType, std::shared_ptr<std::vector<char>>& data);
 
         // 处理客户端ClientInfo包
         int processClientInfoPacket(const int fd, TcpSession::Ptr tcpSession, packetprocess::PacketBase::Ptr packet);
+        // 处理客户端ClientInfo包
+        int processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession, packetprocess::PacketReplyBase::Ptr packetReply);
 
         // ClientAliveChecker调用，超时未收到心跳
         void onClientsHeartbeatTimeout(const std::vector<int>& fds);
 
     private:
         // SlaveReactor的id
-        int m_id;
+        int m_reactorId;
+        // host id
+        std::string m_hostId;
 
         // clientfd => TcpSession
         std::mutex x_clientSessions;
@@ -113,11 +142,18 @@ namespace server
 
         int m_epfd{-1};
 
+        // ClientInfo包回调
+        std::function<int(const HostEndPointInfo& localHostEndPointInfo, const HostEndPointInfo& peerHostEndPointInfo,
+                const int fd, const std::string& id, const std::string& uuid)> m_clientInfoHandler;
+        // ClientInfoReply包回调
+        std::function<int(const HostEndPointInfo& hostEndPointInfo, const int fd, const std::string& id,
+                const std::string& uuid, const int result)> m_clientInfoReplyHandler;
+
         // 数据接收回调
         std::function<void(const int fd, const packetprocess::PacketType, std::shared_ptr<std::vector<char>>&,
                            std::function<int(const int, const std::vector<char>&)>)> m_recvHandler;
         // 客户端断开回调
-        std::function<void(const int id, const std::string&)> m_disconnectHandler;
+        std::function<void(const int fd, const HostEndPointInfo& hostEndPointInfo, const std::string& id, const std::string& uuid, const int flag)> m_disconnectHandler;
 
         // 有EpollIn的事件回调
         std::unordered_set<int> m_infds;

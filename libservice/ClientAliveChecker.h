@@ -9,7 +9,7 @@
 #include "libcomponents/Thread.h"
 #include "libcomponents/CellTimestamp.h"
 
-namespace server
+namespace service
 {
 
     class ClientAliveChecker

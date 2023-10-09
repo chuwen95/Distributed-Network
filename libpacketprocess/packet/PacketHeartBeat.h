@@ -23,6 +23,9 @@ namespace packetprocess
     public:
         std::size_t packetLength() override;
 
+        int setId(const std::string& id);
+        std::string getId();
+
         int setTimestamp(const std::uint32_t timestamp);
         std::uint32_t getTimestamp();
 

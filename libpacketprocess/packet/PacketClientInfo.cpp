@@ -12,16 +12,60 @@ namespace packetprocess
         return m_protoClientInfo.ByteSizeLong();
     }
 
-    int PacketClientInfo::setId(const std::string_view id)
+    int PacketClientInfo::setSeq(const std::uint32_t seq)
     {
-        m_protoClientInfo.set_id(std::string(id));
+        m_protoClientInfo.set_seq(seq);
+        return 0;
+    }
+
+    std::uint32_t PacketClientInfo::seq()
+    {
+        return m_protoClientInfo.seq();
+    }
+
+    int PacketClientInfo::setLocalHost(const std::string &host)
+    {
+        m_protoClientInfo.set_localhost(host);
+        return 0;
+    }
+
+    std::string PacketClientInfo::localHost()
+    {
+        return m_protoClientInfo.localhost();
+    }
+
+    int PacketClientInfo::setPeerHost(const std::string &host)
+    {
+        m_protoClientInfo.set_peerhost(host);
+        return 0;
+    }
+
+    std::string PacketClientInfo::peerHost()
+    {
+        return m_protoClientInfo.peerhost();
+    }
+
+    int PacketClientInfo::setHandshakeUuid(const std::string &uuid)
+    {
+        m_protoClientInfo.set_handshakeuuid(uuid);
+        return 0;
+    }
+
+    std::string PacketClientInfo::handshakeUuid()
+    {
+        return m_protoClientInfo.handshakeuuid();
+    }
+
+    int PacketClientInfo::setNodeId(const std::string& nodeId)
+    {
+        m_protoClientInfo.set_nodeid(std::string(nodeId));
 
         return 0;
     }
 
-    std::string PacketClientInfo::getId()
+    std::string PacketClientInfo::nodeId()
     {
-        return m_protoClientInfo.id();
+        return m_protoClientInfo.nodeid();
     }
 
     int PacketClientInfo::encode(char *buffer, const std::size_t length)
