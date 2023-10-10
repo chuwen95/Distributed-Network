@@ -491,7 +491,7 @@ namespace service
             std::string anotherConnectionUuid;
             if(true == m_hostsInfoManager->isHostIdExist(id, anotherConnectionFd, anotherConnectionUuid))
             {
-                if(anotherConnectionUuid <= uuid)
+                if(anotherConnectionUuid < uuid)
                 {
                     // 构造回应包
                     packetprocess::PacketClientInfoReply reply;
@@ -522,9 +522,40 @@ namespace service
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                                  "send ClientInfoReply packet successfully", ", fd: ", fd, ", id: ", id);
                 }
-                else
+                else if(anotherConnectionUuid > uuid)
                 {
                     return -1;
+                }
+                else
+                {
+                    // 构造回应包
+                    packetprocess::PacketClientInfoReply reply;
+                    reply.setHandshakeUuid(anotherConnectionUuid);
+                    reply.setNodeId(m_serviceConfig.id());
+                    reply.setResult(-1);
+
+                    packetprocess::PacketHeader packetHeader;
+                    packetHeader.setType(packetprocess::PacketType::PT_ClientInfoReply);
+                    packetHeader.setPayloadLength(reply.packetLength());
+
+                    int headerLength = packetHeader.headerLength();
+                    int payloadLength = reply.packetLength();
+
+                    std::vector<char> buffer;
+                    buffer.resize(headerLength + reply.packetLength());
+
+                    packetHeader.encode(buffer.data(), headerLength);
+                    reply.encode(buffer.data() + headerLength, payloadLength);
+
+                    if(-1 == m_slaveReactorManager.sendData(anotherConnectionFd, buffer))
+                    {
+                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                     "send ClientInfoReply packet failed", ", fd: ", fd, ", id: ", id);
+                        return -1;
+                    }
+
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                                 "send ClientInfoReply packet successfully", ", fd: ", fd, ", id: ", id);
                 }
             }
             else
