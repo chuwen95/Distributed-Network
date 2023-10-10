@@ -67,7 +67,7 @@ namespace service
          * @param clientInfoReplyHandler
          */
         void registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo& hostEndPointInfo, const int fd, const std::string& id,
-                const std::string& uuid, const int result)> clientInfoReplyHandler);
+                const std::string& uuid, const int result, int& anotherFd)> clientInfoReplyHandler);
 
         /**
          * @brief 客户端有包需要处理的回调，回调包类型和包负载
@@ -147,7 +147,7 @@ namespace service
                 const int fd, const std::string& id, const std::string& uuid)> m_clientInfoHandler;
         // ClientInfoReply包回调
         std::function<int(const HostEndPointInfo& hostEndPointInfo, const int fd, const std::string& id,
-                const std::string& uuid, const int result)> m_clientInfoReplyHandler;
+                const std::string& uuid, const int result, int& anotherFd)> m_clientInfoReplyHandler;
 
         // 数据接收回调
         std::function<void(const int fd, const packetprocess::PacketType, std::shared_ptr<std::vector<char>>&,

@@ -523,7 +523,7 @@ namespace service
     }
 
     void SlaveReactor::registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo&, const int, const std::string &,
-                                                                        const std::string&, const int)> clientInfoReplyHandler)
+                                                                        const std::string&, const int, int&)> clientInfoReplyHandler)
     {
         m_clientInfoReplyHandler = std::move(clientInfoReplyHandler);
     }
@@ -706,7 +706,6 @@ namespace service
         }
 
         packetprocess::PacketClientInfo::Ptr packetClientInfo = std::dynamic_pointer_cast<packetprocess::PacketClientInfo>(packet);
-        tcpSession->setPeerHostEndPointInfo(packetClientInfo->peerHost());
         std::string id = packetClientInfo->nodeId();
         tcpSession->setClientId(id);
         tcpSession->setHandshakeUuid(packetClientInfo->handshakeUuid());
@@ -740,10 +739,23 @@ namespace service
 
         if(nullptr != m_clientInfoReplyHandler)
         {
+            int anotherConnectionFd{-1};
             int ret = m_clientInfoReplyHandler(tcpSession->peerHostEndPointInfo(), fd, packetClientInfoReply->nodeId(),
-                                               packetClientInfoReply->handshakeUuid(), packetClientInfoReply->result());
+                                               packetClientInfoReply->handshakeUuid(), packetClientInfoReply->result(), anotherConnectionFd);
             if(0 != ret)
             {
+                if(-3 == packetClientInfoReply->result())
+                {
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                 "another connection fd: ", anotherConnectionFd, ", peer host: ", packetClientInfoReply->peerHost());
+                    assert(-1 != anotherConnectionFd);
+                    std::unique_lock<std::mutex> ulock(x_clientSessions);
+                    auto iter = m_fdSessions.find(anotherConnectionFd);
+                    assert(m_fdSessions.end() != iter);
+                    iter->second->setPeerHostEndPointInfo(packetClientInfoReply->peerHost());
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                 "another connection fd: ", anotherConnectionFd, ", peer host: ", iter->second->peerHostEndPointInfo().host());
+                }
                 disconnectClient(fd, packetClientInfoReply->result());
                 return -1;
             }

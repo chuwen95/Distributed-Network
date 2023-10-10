@@ -178,8 +178,8 @@ namespace service
         }
     }
 
-    void SlaveReactorManager::registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo& hostEndPointInfo, const int fd,
-                                                                                const std::string &id, const std::string& uuid, const int result)> clientInfoReplyHandler)
+    void SlaveReactorManager::registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo&, const int ,
+                                                                                const std::string &, const std::string&, const int, int&)> clientInfoReplyHandler)
     {
         for(auto& slaveReactor : m_slaveReactors)
         {

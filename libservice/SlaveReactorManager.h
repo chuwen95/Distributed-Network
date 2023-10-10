@@ -42,7 +42,7 @@ namespace service
                 const HostEndPointInfo& peerHostEndPointInfo, const int fd, const std::string& id, const std::string& uuid)> clientInfoHandler);
 
         void registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo& hostEndPointInfo,
-                const int fd, const std::string& id, const std::string& uuid, const int result)> clientInfoReplyHandler);
+                const int fd, const std::string& id, const std::string& uuid, const int result, int& anotherConnectionFd)> clientInfoReplyHandler);
 
         void registerRecvHandler(std::function<void(const int fd, const packetprocess::PacketType,
                 std::shared_ptr<std::vector<char>>&, std::function<int(const int, const std::vector<char>&)>)> recvHandler);

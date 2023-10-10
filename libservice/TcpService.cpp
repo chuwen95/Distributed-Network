@@ -379,11 +379,11 @@ namespace service
         });
 
         // 客户端发送ClientInfo包表明自己的身份后，将id与fd绑定，一方面供判定重复连接使用，一方面发送数据的时候通过id查找fd
-        m_slaveReactorManager.registerClientInfoHandler([this](const HostEndPointInfo& localHostEndPointInfo,
-                                                               const HostEndPointInfo& peerHostEndPointInfo, const int fd, const std::string& id, const std::string& uuid) -> int {
+        m_slaveReactorManager.registerClientInfoHandler([this](const HostEndPointInfo& localHostEndPointInfo,const HostEndPointInfo& peerHostEndPointInfo,
+                const int fd, const std::string& id, const std::string& uuid) -> int {
             // 收到ClientInfo包，是别人连自己的情况
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
-                                                                         "recv ClientInfo, fd: ", fd, ", id: ", id);
+                                                                         "recv ClientInfo, fd: ", fd, ", id: ", id, ", localhost: ", localHostEndPointInfo.host(), ", peerHost: ", peerHostEndPointInfo.host());
 
             /*
              * -1: CommonError
@@ -453,7 +453,7 @@ namespace service
 
         // 收到ClientInfoReply包
         m_slaveReactorManager.registerClientInfoReplyHandler([this](const HostEndPointInfo& hostEndPointInfo, const int fd, const std::string& id,
-                const std::string& uuid, const int result) -> int {
+                const std::string& uuid, const int result, int& anotherConnectionFd) -> int {
 
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                          "recv ClientInfoReply, host: ", hostEndPointInfo.host(), ", result: ", result);
@@ -483,11 +483,16 @@ namespace service
             {
                 components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                              "ClientInfoReply result: ", result);
+                if(-3 == result)
+                {
+                    anotherConnectionFd = m_hostsInfoManager->getHostFdById(id);
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                 "get another connection fd: ", anotherConnectionFd);
+                }
                 return -1;
             }
 
             // 可能是双方互相进行连接，但是对方已经发来了ClientInfo包，断开对方连自己的连接，仅保留自己连对方的连接
-            int anotherConnectionFd;
             std::string anotherConnectionUuid;
             if(true == m_hostsInfoManager->isHostIdExist(id, anotherConnectionFd, anotherConnectionUuid))
             {
@@ -515,12 +520,12 @@ namespace service
                     if(-1 == m_slaveReactorManager.sendData(anotherConnectionFd, buffer))
                     {
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
-                                                                                     "send ClientInfoReply packet failed", ", fd: ", fd, ", id: ", id);
+                                                                                     "send ClientInfoReply packet failed", ", fd: ", anotherConnectionFd, ", id: ", id);
                         return -1;
                     }
 
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
-                                                                                 "send ClientInfoReply packet successfully", ", fd: ", fd, ", id: ", id);
+                                                                                 "send ClientInfoReply packet successfully", ", fd: ", anotherConnectionFd, ", id: ", id);
                 }
                 else if(anotherConnectionUuid > uuid)
                 {
@@ -550,12 +555,12 @@ namespace service
                     if(-1 == m_slaveReactorManager.sendData(anotherConnectionFd, buffer))
                     {
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
-                                                                                     "send ClientInfoReply packet failed", ", fd: ", fd, ", id: ", id);
+                                                                                     "send ClientInfoReply packet failed", ", fd: ", anotherConnectionFd, ", id: ", id);
                         return -1;
                     }
 
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
-                                                                                 "send ClientInfoReply packet successfully", ", fd: ", fd, ", id: ", id);
+                                                                                 "send ClientInfoReply packet successfully", ", fd: ", anotherConnectionFd, ", id: ", id);
                 }
             }
             else
@@ -647,7 +652,7 @@ namespace service
     int TcpService::onClientDisconnect(const HostEndPointInfo &hostEndPointInfo, const std::string& id, const std::string& uuid, const int flag)
     {
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
-                                                                     "id: ", id, ", flag: ", flag);
+                                                                     "id: ", id, ", flag: ", flag, ", hostEndPointInfo: ", hostEndPointInfo.host());
         if(0 == flag || -1 == flag)
         {
             if(-1 == m_hostsInfoManager->removeHostIdInfo(id, uuid))
@@ -680,7 +685,9 @@ namespace service
         else if(-2 == flag)
         {}
         else if(-3 == flag)
-        {}
+        {
+
+        }
 
         return 0;
     }
