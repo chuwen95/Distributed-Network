@@ -1,9 +1,6 @@
 #include <iostream>
 
-#include <signal.h>
-
-#include "libservice/TcpService.h"
-#include "libpacketprocess/PacketProcessor.h"
+#include "libinitializer/Initializer.h"
 
 class ExitHandler
 {
@@ -28,21 +25,19 @@ int main(int argc, char* argv[])
         std::cerr << "eg: ./TcpServer config.ini" << std::endl;
     }
 
-
-    // 忽略SIGPIPE信号，防止向一个已经断开的socket发送数据时操作系统触发SIGPIPE信号退出该应用
-    signal(SIGPIPE, SIG_IGN);
-
-    packetprocess::PacketProcessor packetProcessor;
-
-    service::TcpService tcpServer;
-    tcpServer.registerPacketHandler([&packetProcessor](const packetprocess::PacketType packetType, packetprocess::PacketBase::Ptr packet,packetprocess::PacketReplyBase::Ptr replyPacket){
-        return packetProcessor.process(packetType, packet, replyPacket);
-    });
-    if(-1 == tcpServer.init(argv[1]))
+    initializer::Initializer initializer;
+    if(-1 == initializer.initConfig(argv[1]))
     {
         return -1;
     }
-    tcpServer.start();
+    if(-1 == initializer.init())
+    {
+        return -1;
+    }
+    if(-1 == initializer.start())
+    {
+        return -1;
+    }
 
     ExitHandler exitHandler;
     signal(SIGTERM, &ExitHandler::exitHandler);
@@ -54,8 +49,8 @@ int main(int argc, char* argv[])
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    tcpServer.stop();
-    tcpServer.uninit();
+    initializer.stop();
+    initializer.uninit();
 
     return 0;
 }

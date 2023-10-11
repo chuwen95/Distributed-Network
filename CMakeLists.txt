@@ -21,6 +21,8 @@ include(ProjectReaderWriterQueue)
 add_subdirectory(libcomponents)
 add_subdirectory(libservice)
 add_subdirectory(libpacketprocess)
+add_subdirectory(libtools)
+add_subdirectory(libinitializer)
 add_subdirectory(server)
 add_subdirectory(client)
 

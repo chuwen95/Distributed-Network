@@ -15,6 +15,8 @@ namespace service
     class ClientAliveChecker
     {
     public:
+        using Ptr = std::shared_ptr<ClientAliveChecker>;
+
         ClientAliveChecker();
         ~ClientAliveChecker();
 

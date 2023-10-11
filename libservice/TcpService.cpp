@@ -15,26 +15,13 @@ namespace service
 
     constexpr std::size_t c_conQueueSize{500};
 
-    int TcpService::init(const std::string& config)
+    TcpService::TcpService(ServiceConfig::Ptr serviceConfig) : m_serviceConfig(std::move(serviceConfig))
+    {}
+
+    int TcpService::init()
     {
-        // 初始化服务配置
-        if(-1 == m_serviceConfig.init(config))
-        {
-            return -1;
-        }
-
-        // 设置Logger
-        if(-1 == components::Singleton<components::Logger>::instance()->init(m_serviceConfig.enableFileLog(), m_serviceConfig.logPath(), 4 * 1024 * 1024))
-        {
-            return -1;
-        }
-        components::Singleton<components::Logger>::instance()->setLogLevel(m_serviceConfig.logType());
-        components::Singleton<components::Logger>::instance()->setConsoleOutput(m_serviceConfig.consoleOutput());
-
-        // 是否作为客户端启动
-        m_startAsClient = m_serviceConfig.startAsClient();
-
-        if(-1 == m_slaveReactorManager.init(m_serviceConfig.slaveReactorNum(), m_serviceConfig.redispatchInterval(), m_serviceConfig.id()))
+        if(-1 == m_slaveReactorManager.init(m_serviceConfig->nodeConfig()->slaveReactorNum(), m_serviceConfig->nodeConfig()->redispatchInterval(),
+                                            m_serviceConfig->nodeConfig()->id()))
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "slave reactor manager init failed");
             components::Socket::close(m_fd);
@@ -43,7 +30,7 @@ namespace service
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "slave reactor manager init successfully");
 
         // 初始化包处理线程池
-        m_packetProcessThreadPoll.init(m_serviceConfig.packetProcessThreadNum(), "packet_proc");
+        m_packetProcessThreadPoll.init(m_serviceConfig->nodeConfig()->packetProcessThreadNum(), "packet_proc");
         // 注册数据接收回调，SlaveReactor回调包类型和包负载二进制数据
         m_slaveReactorManager.registerRecvHandler([this](const int fd, packetprocess::PacketType packetType,
                                                          std::shared_ptr<std::vector<char>>& payloadData, const std::function<int(const int, const std::vector<char>&)>& writeHandler){
@@ -169,21 +156,17 @@ namespace service
         }
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "uninit client successfully");
 
-        components::Singleton<components::Logger>::instance()->uninit();
-
         return 0;
     }
 
     int TcpService::start()
     {
-        components::Singleton<components::Logger>::instance()->start();
-
         // 包处理线程池
         m_packetProcessThreadPoll.start();
         // 从reactor管理器
         m_slaveReactorManager.start();
         // 如果还启动服务端
-        if(false == m_startAsClient)
+        if(false == m_serviceConfig->nodeConfig()->startAsClient())
         {
             // 启动主reactor的acceptor
             m_acceptor.start();
@@ -206,14 +189,12 @@ namespace service
         m_hostsHeartbeatService.stop();
         m_hostsConnector.stop();
         m_packetProcessThreadPoll.stop();
-        if(false == m_startAsClient)
+        if(false == m_serviceConfig->nodeConfig()->startAsClient())
         {
             m_selectListenner.stop();
             m_acceptor.stop();
         }
         m_slaveReactorManager.stop();
-
-        components::Singleton<components::Logger>::instance()->stop();
 
         return 0;
     }
@@ -226,13 +207,10 @@ namespace service
 
     int TcpService::initServer()
     {
-        if(true == m_startAsClient)
+        if(true == m_serviceConfig->nodeConfig()->startAsClient())
         {
             return 0;
         }
-
-        m_ip = m_serviceConfig.ip();
-        m_port = m_serviceConfig.port();
 
         // 创建监听套接字
         m_fd = components::Socket::create();
@@ -254,7 +232,7 @@ namespace service
 #endif
 
         // 绑定监听地址端口
-        if (-1 == components::Socket::bind(m_fd, m_ip, m_port))
+        if (-1 == components::Socket::bind(m_fd, m_serviceConfig->nodeConfig()->ip(), m_serviceConfig->nodeConfig()->port()))
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                          "bind socket failed, errno: ", errno, ", ",strerror(errno));
@@ -309,7 +287,7 @@ namespace service
     int TcpService::initClient()
     {
         m_hostsInfoManager = std::make_shared<HostsInfoManager>();
-        if(-1 == m_hostsInfoManager->init(m_serviceConfig.nodesFile()))
+        if(-1 == m_hostsInfoManager->init(m_serviceConfig->nodeConfig()->nodesFile()))
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                          "HostsInfoManager init failed");
@@ -327,7 +305,7 @@ namespace service
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                      "HostsConnector init successfully");
 
-        if(-1 == m_hostsHeartbeatService.init(m_serviceConfig.id(), m_hostsInfoManager))
+        if(-1 == m_hostsHeartbeatService.init(m_serviceConfig->nodeConfig()->id(), m_hostsInfoManager))
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                          "HostsHeartbeatService init failed");
@@ -357,10 +335,10 @@ namespace service
 
             // 发送ClientInfo包
             packetprocess::PacketClientInfo clientInfoPacket;
-            clientInfoPacket.setLocalHost(m_serviceConfig.ip() + ":" + components::string_tools::convertToString(m_serviceConfig.port()));
+            clientInfoPacket.setLocalHost(m_serviceConfig->nodeConfig()->ip() + ":" + components::string_tools::convertToString(m_serviceConfig->nodeConfig()->port()));
             clientInfoPacket.setPeerHost(tcpSession->peerHostEndPointInfo().host());
             clientInfoPacket.setHandshakeUuid(uuid);
-            clientInfoPacket.setNodeId(m_serviceConfig.id());
+            clientInfoPacket.setNodeId(m_serviceConfig->nodeConfig()->id());
             int payloadLength = clientInfoPacket.packetLength();
 
             packetprocess::PacketHeader packetHeader;
@@ -392,7 +370,7 @@ namespace service
              */
             int replyResult{0};
 
-            if(id == m_serviceConfig.id())
+            if(id == m_serviceConfig->nodeConfig()->id())
             {
                 components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                              "connect self, set reply result to -2, then connection initiator will disconnect");
@@ -422,7 +400,7 @@ namespace service
             packetprocess::PacketClientInfoReply reply;
             reply.setPeerHost(peerHostEndPointInfo.host());
             reply.setHandshakeUuid(uuid);
-            reply.setNodeId(m_serviceConfig.id());
+            reply.setNodeId(m_serviceConfig->nodeConfig()->id());
             reply.setResult(replyResult);
 
             packetprocess::PacketHeader packetHeader;
@@ -501,7 +479,7 @@ namespace service
                     // 构造回应包
                     packetprocess::PacketClientInfoReply reply;
                     reply.setHandshakeUuid(anotherConnectionUuid);
-                    reply.setNodeId(m_serviceConfig.id());
+                    reply.setNodeId(m_serviceConfig->nodeConfig()->id());
                     reply.setResult(-3);
 
                     packetprocess::PacketHeader packetHeader;
@@ -536,7 +514,7 @@ namespace service
                     // 构造回应包
                     packetprocess::PacketClientInfoReply reply;
                     reply.setHandshakeUuid(anotherConnectionUuid);
-                    reply.setNodeId(m_serviceConfig.id());
+                    reply.setNodeId(m_serviceConfig->nodeConfig()->id());
                     reply.setResult(-1);
 
                     packetprocess::PacketHeader packetHeader;
@@ -591,7 +569,7 @@ namespace service
 
     int TcpService::uninitServer()
     {
-        if(false == m_startAsClient)
+        if(false == m_serviceConfig->nodeConfig()->startAsClient())
         {
             if (-1 == m_acceptor.uninit())
             {
@@ -666,7 +644,7 @@ namespace service
                                                                              "remove host id info successfully, id: ", id);
             }
 
-            if(id == m_serviceConfig.id())
+            if(id == m_serviceConfig->nodeConfig()->id())
             {
                 return 0;
             }
@@ -685,9 +663,7 @@ namespace service
         else if(-2 == flag)
         {}
         else if(-3 == flag)
-        {
-
-        }
+        {}
 
         return 0;
     }

@@ -6,7 +6,7 @@
 #define TCPNETWORK_HOSTSHEARTBEATSERVICE_H
 
 #include "HostsInfoManager.h"
-#include "SlaveReactorManager.h"
+#include "../service/SlaveReactorManager.h"
 #include "libcomponents/Thread.h"
 
 namespace service
@@ -14,6 +14,9 @@ namespace service
 
     class HostsHeartbeatService
     {
+    public:
+        using Ptr = std::shared_ptr<HostsHeartbeatService>;
+
     public:
         int init(const std::string& hostId, HostsInfoManager::Ptr hostsInfoManager);
 

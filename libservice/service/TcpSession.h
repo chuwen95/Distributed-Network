@@ -7,7 +7,7 @@
 
 #include "libcommon/Common.h"
 #include "libcomponents/RingBuffer.h"
-#include "HostEndPointInfo.h"
+#include "../host/HostEndPointInfo.h"
 
 namespace service
 {
@@ -41,7 +41,7 @@ namespace service
         std::uint32_t getClientOnlineTimestamp();
 
         template<typename... Args>
-        void setPeerEndPointInfo(Args... args)
+        void setPeerHostEndPointInfo(Args... args)
         {
             m_peerHostEndPointInfo = std::move(HostEndPointInfo(std::forward<Args>(args)...));
         }

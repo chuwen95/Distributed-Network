@@ -14,6 +14,8 @@ namespace components
     class SelectListenner
     {
     public:
+        using Ptr = std::shared_ptr<SelectListenner>;
+
         SelectListenner();
         ~SelectListenner();
 

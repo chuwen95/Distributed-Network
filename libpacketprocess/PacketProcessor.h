@@ -16,6 +16,8 @@ namespace packetprocess
     class PacketProcessor
     {
     public:
+        using Ptr = std::shared_ptr<PacketProcessor>;
+
         PacketProcessor();
         ~PacketProcessor();
 

@@ -35,7 +35,7 @@ namespace components
         ~Logger();
 
     public:
-        int init(const bool enableFileLog, const std::string& path, const std::size_t bufferSize);
+        int init(const bool enableFileLog, const std::string& path, const std::size_t bufferSize = 4 * 1024 * 1024);
 
         int uninit();
 

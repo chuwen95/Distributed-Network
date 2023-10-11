@@ -15,6 +15,8 @@ namespace service
     class SlaveReactorManager
     {
     public:
+        using Ptr = std::shared_ptr<SlaveReactorManager>;
+
         SlaveReactorManager();
         ~SlaveReactorManager();
 

@@ -1,22 +1,24 @@
 //
-// Created by root on 9/20/23.
+// Created by root on 10/11/23.
 //
 
-#ifndef TCPNETWORK_SERVICECONFIG_H
-#define TCPNETWORK_SERVICECONFIG_H
+#ifndef TCPNETWORK_NODECONFIG_H
+#define TCPNETWORK_NODECONFIG_H
 
 #include "libcommon/Common.h"
 #include "libcomponents/Logger.h"
 #include "inipp.h"
 
-namespace service
+namespace tool
 {
 
-    class ServiceConfig
+    class NodeConfig
     {
     public:
-        ServiceConfig() = default;
-        ~ServiceConfig() = default;
+        using Ptr = std::shared_ptr<NodeConfig>;
+
+        NodeConfig() = default;
+        ~NodeConfig() = default;
 
     public:
         int init(const std::string& configFile);
@@ -82,6 +84,6 @@ namespace service
         std::string m_logPath{"./server.log"};
     };
 
-} // server
+} // tool
 
-#endif //TCPNETWORK_SERVICECONFIG_H
+#endif //TCPNETWORK_NODECONFIG_H

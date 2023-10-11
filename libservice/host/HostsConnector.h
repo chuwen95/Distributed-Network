@@ -7,7 +7,7 @@
 
 #include "libcommon/Common.h"
 #include "libcomponents/Thread.h"
-#include "TcpSession.h"
+#include "../service/TcpSession.h"
 #include "HostEndPointInfo.h"
 #include "HostsInfoManager.h"
 
@@ -16,6 +16,9 @@ namespace service
 
     class HostsConnector
     {
+    public:
+        using Ptr = std::shared_ptr<HostsConnector>;
+
     public:
         int init(HostsInfoManager::Ptr hostsInfoManager);
 

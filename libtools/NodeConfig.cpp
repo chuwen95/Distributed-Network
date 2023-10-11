@@ -1,14 +1,14 @@
 //
-// Created by root on 9/20/23.
+// Created by root on 10/11/23.
 //
 
-#include "ServiceConfig.h"
+#include "NodeConfig.h"
 #include "libcomponents/StringTool.h"
 
-namespace service
+namespace tool
 {
 
-    int ServiceConfig::init(const std::string &configFile)
+    int NodeConfig::init(const std::string &configFile)
     {
         inipp::Ini<char> ini;
         std::ifstream file(configFile);
@@ -29,67 +29,67 @@ namespace service
         return 0;
     }
 
-    int ServiceConfig::uninit()
+    int NodeConfig::uninit()
     {
         return 0;
     }
 
-    std::string ServiceConfig::id()
+    std::string NodeConfig::id()
     {
         return m_id;
     }
 
-    bool ServiceConfig::startAsClient()
+    bool NodeConfig::startAsClient()
     {
         return m_startAsClient;
     }
 
-    std::string ServiceConfig::ip()
+    std::string NodeConfig::ip()
     {
         return m_ip;
     }
 
-    unsigned short ServiceConfig::port()
+    unsigned short NodeConfig::port()
     {
         return m_port;
     }
 
-    std::string ServiceConfig::nodesFile()
+    std::string NodeConfig::nodesFile()
     {
         return m_nodesFile;
     }
 
-    std::size_t ServiceConfig::slaveReactorNum()
+    std::size_t NodeConfig::slaveReactorNum()
     {
         return m_slaveReactorNum;
     }
 
-    std::size_t ServiceConfig::redispatchInterval()
+    std::size_t NodeConfig::redispatchInterval()
     {
         return m_redispatchInterval;
     }
 
-    std::size_t ServiceConfig::packetProcessThreadNum()
+    std::size_t NodeConfig::packetProcessThreadNum()
     {
         return m_packetProcessThreadNum;
     }
 
-    bool ServiceConfig::enableFileLog()
+    bool NodeConfig::enableFileLog()
     {
         return m_enableFileLog;
     }
 
-    bool ServiceConfig::consoleOutput()
+    bool NodeConfig::consoleOutput()
     {
         return m_consoleOutput;
     }
 
-    components::LogType ServiceConfig::logType()
+    components::LogType NodeConfig::logType()
     {
         return m_logType;
     }
 
-    std::string ServiceConfig::logPath()
+    std::string NodeConfig::logPath()
     {
         return m_logPath;
     }
@@ -114,21 +114,21 @@ namespace service
         }
     }
 
-    int ServiceConfig::parseInfoConfig(inipp::Ini<char> &ini)
+    int NodeConfig::parseInfoConfig(inipp::Ini<char> &ini)
     {
         m_id = getValue(ini, "info", "id", m_id);
 
         return 0;
     }
 
-    int ServiceConfig::parseFeatureConfig(inipp::Ini<char> &ini)
+    int NodeConfig::parseFeatureConfig(inipp::Ini<char> &ini)
     {
         m_startAsClient = getValue(ini, "feature", "start_as_client", m_startAsClient);
 
         return 0;
     }
 
-    int ServiceConfig::parseNetworkConfig(inipp::Ini<char>& ini)
+    int NodeConfig::parseNetworkConfig(inipp::Ini<char>& ini)
     {
         m_ip = getValue(ini, "network", "ip", m_ip);
         m_port = getValue(ini, "network", "port", m_port);
@@ -137,7 +137,7 @@ namespace service
         return 0;
     }
 
-    int ServiceConfig::parseReactorConfig(inipp::Ini<char>& ini)
+    int NodeConfig::parseReactorConfig(inipp::Ini<char>& ini)
     {
         m_slaveReactorNum = getValue(ini, "reactor", "slave_reactor", m_slaveReactorNum);
         m_redispatchInterval = getValue(ini, "reactor", "redispatch_interval", m_redispatchInterval);
@@ -145,14 +145,14 @@ namespace service
         return 0;
     }
 
-    int ServiceConfig::parsePacketProcessConfig(inipp::Ini<char>& ini)
+    int NodeConfig::parsePacketProcessConfig(inipp::Ini<char>& ini)
     {
         m_packetProcessThreadNum = getValue(ini, "packet_process", "thread_pool_thread_num", m_packetProcessThreadNum);
 
         return 0;
     }
 
-    int ServiceConfig::parseLogConfig(inipp::Ini<char>& ini)
+    int NodeConfig::parseLogConfig(inipp::Ini<char>& ini)
     {
         m_enableFileLog = getValue(ini, "logger", "enable_file_log", m_enableFileLog);
         m_consoleOutput = getValue(ini, "logger", "console_output", m_consoleOutput);

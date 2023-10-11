@@ -34,5 +34,6 @@
 #include <netinet/tcp.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
+#include <signal.h>
 
 #endif //TCPSERVER_COMMON_H
