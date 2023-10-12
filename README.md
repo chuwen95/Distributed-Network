@@ -5,5 +5,6 @@
 2. server/client一体，可实现节点互联，节点互联仅保留一条连接
 
 ## 更多文档
-1. [关于处理重复连接的握手协议介绍](resources/two_node_one_connection/关于处理重复连接的握手协议介绍.md)
+1. [网络模块关键点介绍及UML类图](./resources/network_module_instruction/网络模块关键点解析.md)
+2. [关于处理重复连接的握手协议介绍](resources/two_node_one_connection/关于处理重复连接的握手协议介绍.md)
 
