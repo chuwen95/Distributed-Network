@@ -57,15 +57,6 @@ namespace service
         std::function<void(const int, const std::string&)> m_disconnectHandler;
 
         ServiceConfig::Ptr m_serviceConfig;
-
-        components::SelectListenner m_selectListenner;
-        Acceptor m_acceptor;
-        SlaveReactorManager m_slaveReactorManager;
-        components::ThreadPool m_packetProcessThreadPoll;
-
-        HostsInfoManager::Ptr m_hostsInfoManager;
-        HostsConnector m_hostsConnector;
-        HostsHeartbeatService m_hostsHeartbeatService;
     };
 
 }
