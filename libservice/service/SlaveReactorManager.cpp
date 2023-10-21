@@ -133,7 +133,7 @@ namespace service
         return 0;
     }
 
-    std::uint32_t SlaveReactorManager::getClientOnlineTimestamp(const int fd)
+    std::uint64_t SlaveReactorManager::getClientOnlineTimestamp(const int fd)
     {
         SlaveReactor::Ptr slaveReactor;
         {

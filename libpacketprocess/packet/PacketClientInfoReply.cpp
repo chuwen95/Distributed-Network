@@ -11,7 +11,7 @@ namespace packetprocess
     {
     }
 
-    std::size_t PacketClientInfoReply::packetLength()
+    std::size_t PacketClientInfoReply::packetLength() const
     {
         return m_protoClientInfoReply.ByteSizeLong();
     }
@@ -72,7 +72,7 @@ namespace packetprocess
         return m_protoClientInfoReply.result();
     }
 
-    int PacketClientInfoReply::encode(char *buffer, const std::size_t length)
+    int PacketClientInfoReply::encode(char *buffer, const std::size_t length) const
     {
         m_protoClientInfoReply.SerializeToArray(buffer, length);
 

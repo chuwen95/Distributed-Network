@@ -56,7 +56,7 @@ int main(int argc, char **argv)
     packetHeader.setType(packetprocess::PacketType::PT_ClientInfo);
 
     packetprocess::PacketClientInfo clientInfoPacket;
-    clientInfoPacket.setId(argv[1]);
+    clientInfoPacket.setNodeId(argv[1]);
 
     std::size_t payloadLength = clientInfoPacket.packetLength();
     packetHeader.setPayloadLength(payloadLength);

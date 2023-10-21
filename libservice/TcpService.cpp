@@ -34,13 +34,15 @@ namespace service
         // 注册数据接收回调，SlaveReactor回调包类型和包负载二进制数据
         m_serviceConfig->slaveReactorManager()->registerRecvHandler([this](const int fd, packetprocess::PacketType packetType,
                                                                            std::shared_ptr<std::vector<char>>& payloadData, const std::function<int(const int, const std::vector<char>&)>& writeHandler){
-            std::uint32_t curTimestamp = components::CellTimestamp::getCurrentTimestamp();
+            std::uint64_t curTimestamp = components::CellTimestamp::getCurrentTimestamp();
             const auto expression = [fd, curTimestamp, packetType, payloadData, writeHandler, this]()
             {
                 // 若任务时间戳小于客户端上线时间戳，任务直接返回不处理，因为可能是客户端离线后新的客户端被分配的相同的fd
-                std::uint32_t onlineTimestamp = m_serviceConfig->slaveReactorManager()->getClientOnlineTimestamp(fd);
+                std::uint64_t onlineTimestamp = m_serviceConfig->slaveReactorManager()->getClientOnlineTimestamp(fd);
                 if(0 == onlineTimestamp || curTimestamp < onlineTimestamp)
                 {
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                                 "online timestamp: ", onlineTimestamp, ", curTimestamp: ", curTimestamp);
                     return -1;
                 }
 
@@ -54,7 +56,8 @@ namespace service
                 {
                     if(-1 == m_packetHandler(packetType, reqPacket, replyPacket))
                     {
-                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "process packet failed");
+                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                                     "process packet failed, packetType: ", static_cast<int>(packetType));
                         return -1;
                     }
                 }
@@ -232,7 +235,7 @@ namespace service
 #endif
 
         // 绑定监听地址端口
-        if (-1 == components::Socket::bind(m_fd, m_serviceConfig->nodeConfig()->ip(), m_serviceConfig->nodeConfig()->port()))
+        if (-1 == components::Socket::bind(m_fd, m_serviceConfig->nodeConfig()->p2pIp(), m_serviceConfig->nodeConfig()->p2pPort()))
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                          "bind socket failed, errno: ", errno, ", ",strerror(errno));
@@ -334,7 +337,7 @@ namespace service
 
             // 发送ClientInfo包
             packetprocess::PacketClientInfo clientInfoPacket;
-            clientInfoPacket.setLocalHost(m_serviceConfig->nodeConfig()->ip() + ":" + components::string_tools::convertToString(m_serviceConfig->nodeConfig()->port()));
+            clientInfoPacket.setLocalHost(m_serviceConfig->nodeConfig()->p2pIp() + ":" + components::string_tools::convertToString(m_serviceConfig->nodeConfig()->p2pPort()));
             clientInfoPacket.setPeerHost(tcpSession->peerHostEndPointInfo().host());
             clientInfoPacket.setHandshakeUuid(uuid);
             clientInfoPacket.setNodeId(m_serviceConfig->nodeConfig()->id());

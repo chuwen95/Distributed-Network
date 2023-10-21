@@ -104,7 +104,7 @@ namespace service
          * @param fd 客户端fd
          * @return
          */
-        std::uint32_t getClientOnlineTimestamp(const int fd);
+        std::uint64_t getClientOnlineTimestamp(const int fd);
 
         /**
          * @brief 断开某fd的连接

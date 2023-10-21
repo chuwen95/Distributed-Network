@@ -32,9 +32,13 @@ namespace tool
         // [feature]
         bool startAsClient();
 
+        // [rpc]
+        std::string rpcIp();
+        unsigned short rpcPort();
+
         // [network]
-        std::string ip();
-        unsigned short port();
+        std::string p2pIp();
+        unsigned short p2pPort();
         std::string nodesFile();
 
         // [reactor]
@@ -53,6 +57,7 @@ namespace tool
     private:
         int parseInfoConfig(inipp::Ini<char>& ini);
         int parseFeatureConfig(inipp::Ini<char>& ini);
+        int parseRpcConfig(inipp::Ini<char>& ini);
         int parseNetworkConfig(inipp::Ini<char>& ini);
         int parseReactorConfig(inipp::Ini<char>& ini);
         int parsePacketProcessConfig(inipp::Ini<char>& ini);
@@ -65,9 +70,13 @@ namespace tool
         // [feature]
         bool m_startAsClient{false};
 
+        // [rpc]
+        std::string m_rpcIp{"127.0.0.1"};
+        unsigned short m_rpcPort{20200};
+
         // [network]
-        std::string m_ip{"127.0.0.1"};
-        unsigned short m_port{9999};
+        std::string m_p2pIp{"127.0.0.1"};
+        unsigned short m_p2pPort{30200};
         std::string m_nodesFile{"nodes.json"};
 
         // [reactor]

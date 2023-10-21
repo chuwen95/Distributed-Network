@@ -4,3 +4,7 @@ project(client)
 
 add_executable(TcpClient main.cpp)
 target_link_libraries(TcpClient PUBLIC libpacketprocess libcomponents)
+
+find_package(httplib CONFIG REQUIRED)
+add_executable(HttpClient http_client.cpp)
+target_link_libraries(HttpClient PUBLIC httplib::httplib libcomponents)

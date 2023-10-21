@@ -7,6 +7,7 @@
 
 #include "PacketProcessorInitializer.h"
 #include "TcpServiceInitializer.h"
+#include "RpcInitializer.h"
 #include "libtools/NodeConfig.h"
 
 namespace initializer
@@ -34,6 +35,7 @@ namespace initializer
 
         PacketProcessorInitializer::Ptr m_packetProcessInitializer;
         TcpServiceInitializer::Ptr m_tcpServiceInitializer;
+        RpcInitializer::Ptr m_rpcInitializer;
     };
 
 } // initializer

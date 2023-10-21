@@ -208,4 +208,17 @@ namespace service
         return m_nodeIdInfos.size();
     }
 
+    std::vector<std::pair<std::string, int>> HostsInfoManager::getAllOnlineClients()
+    {
+        std::vector<std::pair<std::string, int>> onlineClients;
+
+        std::unique_lock<std::mutex> ulock(x_hosts);
+        for(auto iter = m_nodeIdInfos.begin(); iter != m_nodeIdInfos.end(); ++iter)
+        {
+            onlineClients.emplace_back(iter->first, iter->second.first);
+        }
+
+        return std::move(onlineClients);
+    }
+
 } // service

@@ -20,9 +20,9 @@ namespace packetprocess
         virtual ~PacketReplyBase() = default;
 
     public:
-        virtual std::size_t packetLength() = 0;
+        virtual std::size_t packetLength() const = 0;
 
-        virtual int encode(char* buffer, const std::size_t length) = 0;
+        virtual int encode(char* buffer, const std::size_t length) const = 0;
         virtual int decode(const char* buffer, const std::size_t length) = 0;
     };
 

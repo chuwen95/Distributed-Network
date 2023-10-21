@@ -585,7 +585,7 @@ namespace service
         return 0;
     }
 
-    std::uint32_t SlaveReactor::getClientOnlineTimestamp(const int fd)
+    std::uint64_t SlaveReactor::getClientOnlineTimestamp(const int fd)
     {
         std::unique_lock<std::mutex> ulock(x_clientSessions);
 
@@ -736,6 +736,7 @@ namespace service
 
         packetprocess::PacketClientInfoReply::Ptr packetClientInfoReply = std::dynamic_pointer_cast<packetprocess::PacketClientInfoReply>(packetReply);
         tcpSession->setClientId(packetClientInfoReply->nodeId());
+        tcpSession->setClientOnlineTimestamp(components::CellTimestamp::getCurrentTimestamp());
 
         if(nullptr != m_clientInfoReplyHandler)
         {

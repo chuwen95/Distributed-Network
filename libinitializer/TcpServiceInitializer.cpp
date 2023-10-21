@@ -45,4 +45,9 @@ namespace initializer
         return m_tcpService->stop();
     }
 
+    service::TcpService::Ptr TcpServiceInitializer::tcpService()
+    {
+        return m_tcpService;
+    }
+
 } // initializer

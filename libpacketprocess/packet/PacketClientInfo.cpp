@@ -7,7 +7,7 @@
 namespace packetprocess
 {
 
-    std::size_t PacketClientInfo::packetLength()
+    std::size_t PacketClientInfo::packetLength() const
     {
         return m_protoClientInfo.ByteSizeLong();
     }
@@ -68,7 +68,7 @@ namespace packetprocess
         return m_protoClientInfo.nodeid();
     }
 
-    int PacketClientInfo::encode(char *buffer, const std::size_t length)
+    int PacketClientInfo::encode(char *buffer, const std::size_t length) const
     {
         m_protoClientInfo.SerializeToArray(buffer, length);
 

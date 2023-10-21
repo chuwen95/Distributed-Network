@@ -18,7 +18,7 @@ namespace packetprocess
         PacketRawString::Ptr reqRawStringPacket = std::dynamic_pointer_cast<PacketRawString>(packet);
         PacketRawStringReply::Ptr replyRawStringPacket = std::dynamic_pointer_cast<PacketRawStringReply>(replyPacket);
 
-        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                      "req content: ", reqRawStringPacket->getContent());
 
         replyRawStringPacket->setResult(reqRawStringPacket->getContent());

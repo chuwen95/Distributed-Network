@@ -7,7 +7,7 @@
 namespace packetprocess
 {
 
-    std::size_t PacketHeartBeatReply::packetLength()
+    std::size_t PacketHeartBeatReply::packetLength() const
     {
         return m_protoHeartBeatReply.ByteSizeLong();
     }
@@ -48,7 +48,7 @@ namespace packetprocess
         return m_protoHeartBeatReply.recvtimestamp();
     }
 
-    int PacketHeartBeatReply::encode(char *buffer, const std::size_t length)
+    int PacketHeartBeatReply::encode(char *buffer, const std::size_t length) const
     {
         m_protoHeartBeatReply.SerializeToArray(buffer, length);
 

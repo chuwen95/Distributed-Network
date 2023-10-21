@@ -45,6 +45,8 @@ namespace packetprocess
         PacketProcessorBase::Ptr processor = PacketProcessorFactory().createPacketProcessor(packetType);
         if (nullptr == processor)
         {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                         "create packet processor");
             return -1;
         }
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,

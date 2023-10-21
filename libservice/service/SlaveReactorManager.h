@@ -36,21 +36,21 @@ namespace service
 
         int addTcpSession(TcpSession::Ptr tcpSession, std::function<void()> callback = nullptr);
 
-        std::uint32_t getClientOnlineTimestamp(const int fd);
+        std::uint64_t getClientOnlineTimestamp(const int fd);
 
         int sendData(const int fd, const std::vector<char>& data);
 
         void registerClientInfoHandler(std::function<int(const HostEndPointInfo& localHostEndPointInfo,
-                const HostEndPointInfo& peerHostEndPointInfo, const int fd, const std::string& id, const std::string& uuid)> clientInfoHandler);
+                                                         const HostEndPointInfo& peerHostEndPointInfo, const int fd, const std::string& id, const std::string& uuid)> clientInfoHandler);
 
         void registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo& hostEndPointInfo,
-                const int fd, const std::string& id, const std::string& uuid, const int result, int& anotherConnectionFd)> clientInfoReplyHandler);
+                                                              const int fd, const std::string& id, const std::string& uuid, const int result, int& anotherConnectionFd)> clientInfoReplyHandler);
 
         void registerRecvHandler(std::function<void(const int fd, const packetprocess::PacketType,
-                std::shared_ptr<std::vector<char>>&, std::function<int(const int, const std::vector<char>&)>)> recvHandler);
+                                                    std::shared_ptr<std::vector<char>>&, std::function<int(const int, const std::vector<char>&)>)> recvHandler);
 
         void registerDisconnectHandler(std::function<void(const HostEndPointInfo &hostEndPointInfo, const std::string& id,
-                const std::string& uuid, const int flag)> disconnectHandler);
+                                                          const std::string& uuid, const int flag)> disconnectHandler);
 
         int disconnectClient(const int fd);
 

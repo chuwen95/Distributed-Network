@@ -22,12 +22,12 @@ namespace service
             HostsInfoManager::Hosts hosts = m_hostsInfoManager->getHosts();
             for(auto& host : hosts)
             {
-                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                              "connecting host: ", host.first.host());
                 // 如果id不为空，证明客户端已经连上并发送了ClientInfo包
                 if(false == host.second.first.empty())
                 {
-                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                  "host is connected: ", host.first.host());
                     continue;
                 }
@@ -40,11 +40,11 @@ namespace service
                 }
                 if(true == isConnecting)
                 {
-                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                  "host is connecting or waiting ClientInfo packet: ", host.first.ip());
                     continue;
                 }
-                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                              "start to connect: ", host.first.host());
 
                 // 开始连接
@@ -55,7 +55,7 @@ namespace service
                                                                                  "create socket failed, ready to connect: ", host.first.ip());
                     continue;
                 }
-                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                              "create socket successfully, fd: ", fd);
 
                 // 添加host到正在连接
@@ -63,12 +63,12 @@ namespace service
                     std::unique_lock<std::mutex> ulock(x_connectingHosts);
                     m_connectingHosts.emplace(host.first, std::make_pair(fd, components::CellTimestamp::getCurrentTimestamp()));
                 }
-                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                              "add host to connecting successfully");
 
                 components::Socket::setNonBlock(fd);
 
-                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                              "set socket non block successfully");
 
                 int ret = components::Socket::connect(fd, host.first.ip(), host.first.port());
@@ -76,7 +76,7 @@ namespace service
                 {
                     // 一般情况下这个if不会走到，因为非阻塞io第一次connect不会立即返回0，后续又因为m_connectingHosts的原因不会再connect
 
-                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                  "connect successfully, host: ", host.first.host());
 
                     if(nullptr != m_connectHandler)
@@ -99,11 +99,11 @@ namespace service
                 }
                 else if(-1 == ret)
                 {
-                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                  "errno: ", errno);
                     if(EINPROGRESS == errno)
                     {
-                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                      "connect status: EINPROGRESS");
                         continue;
                     }
@@ -127,13 +127,13 @@ namespace service
             int maxfd{0};
             for(auto& host : m_connectingHosts)
             {
-                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                              "checking ", host.first.host()," connect status");
                 // 将时间戳设置为-1，表示已经连上，不需要再监测超时，
                 // TcpSession已经回调出去，由Reactor管理recv/send，此时正在等待ClientInfoReply包
                 if(-1 == host.second.second)
                 {
-                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                  "socket connect successfully, waiting ClientInfoReply packet");
                     continue;
                 }

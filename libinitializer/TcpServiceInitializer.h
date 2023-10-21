@@ -31,6 +31,8 @@ namespace initializer
 
         int stop();
 
+        service::TcpService::Ptr tcpService();
+
     private:
         service::TcpService::Ptr m_tcpService;
         packetprocess::PacketProcessor::Ptr m_packetProcessor;

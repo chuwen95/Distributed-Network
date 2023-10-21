@@ -21,12 +21,12 @@ namespace packetprocess
         ~PacketRawStringReply() = default;
 
     public:
-        std::size_t packetLength() override;
+        std::size_t packetLength() const override;
 
         std::string getResult();
         int setResult(const std::string& result);
 
-        int encode(char* buffer, const std::size_t length) override;
+        int encode(char* buffer, const std::size_t length) const override;
         int decode(const char* buffer, const std::size_t length) override;
 
     private:

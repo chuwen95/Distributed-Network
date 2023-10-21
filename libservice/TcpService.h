@@ -18,6 +18,22 @@
 #include "libpacketprocess/packet/PacketBase.h"
 #include "libpacketprocess/packet/PacketReplyBase.h"
 
+template<typename T>
+concept PacketPtr = requires(T t, char* data, std::size_t size)
+{
+    t.get();
+    { t.use_count() } -> std::same_as<std::size_t>;
+    { t.unique() } -> std::same_as<bool>;
+
+    { t->encode(data, size) } -> std::same_as<int>;
+};
+
+template<typename T>
+concept Packet = requires(T t, char* data, std::size_t size)
+{
+    { t.encode(data, size) } -> std::same_as<int>;
+};
+
 namespace service
 {
 
@@ -39,7 +55,37 @@ namespace service
         int stop();
 
         void registerPacketHandler(std::function<int(const packetprocess::PacketType, packetprocess::PacketBase::Ptr,
-                packetprocess::PacketReplyBase::Ptr)> packetHander);
+                                                     packetprocess::PacketReplyBase::Ptr)> packetHander);
+
+        int boardcastMessage(const packetprocess::PacketType packetType, Packet auto const& packet)
+        {
+            // 编码包为待发送数据
+            std::vector<char> buffer;
+
+            packetprocess::PacketHeader packetHeader;
+            packetHeader.setType(packetType);
+            packetHeader.setPayloadLength(packet.packetLength());
+
+            buffer.resize(packetHeader.headerLength() + packet.packetLength());
+            packetHeader.encode(buffer.data(), packetHeader.headerLength());
+            packet.encode(buffer.data() + packetHeader.headerLength(), packet.packetLength());
+
+            // 发送给所有在线的节点
+            std::vector<std::pair<std::string, int>> allOnlineClients = m_serviceConfig->hostsInfoManager()->getAllOnlineClients();
+            for(auto& onlineClient : allOnlineClients)
+            {
+                int ret = m_serviceConfig->slaveReactorManager()->sendData(onlineClient.second, buffer);
+                if(0 != ret)
+                {
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                                 "send message to ", onlineClient.second, ", failed, ret: ", ret);
+                }
+                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                             "send message to ", onlineClient.second, ", successfully");
+            }
+
+            return 0;
+        }
 
     private:
         int initServer();
@@ -60,8 +106,5 @@ namespace service
     };
 
 }
-
-
-
 
 #endif //TCPSERVER_TCPSERVER_H

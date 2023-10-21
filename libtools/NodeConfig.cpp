@@ -21,6 +21,7 @@ namespace tool
 
         parseInfoConfig(ini);
         parseFeatureConfig(ini);
+        parseRpcConfig(ini);
         parseNetworkConfig(ini);
         parseReactorConfig(ini);
         parsePacketProcessConfig(ini);
@@ -44,14 +45,24 @@ namespace tool
         return m_startAsClient;
     }
 
-    std::string NodeConfig::ip()
+    std::string NodeConfig::rpcIp()
     {
-        return m_ip;
+        return m_rpcIp;
     }
 
-    unsigned short NodeConfig::port()
+    unsigned short NodeConfig::rpcPort()
     {
-        return m_port;
+        return m_rpcPort;
+    }
+
+    std::string NodeConfig::p2pIp()
+    {
+        return m_p2pIp;
+    }
+
+    unsigned short NodeConfig::p2pPort()
+    {
+        return m_p2pPort;
     }
 
     std::string NodeConfig::nodesFile()
@@ -128,10 +139,18 @@ namespace tool
         return 0;
     }
 
+    int NodeConfig::parseRpcConfig(inipp::Ini<char>& ini)
+    {
+        m_rpcIp = getValue(ini, "rpc", "ip", m_rpcIp);
+        m_rpcPort = getValue(ini, "rpc", "port", m_rpcPort);
+
+        return 0;
+    }
+
     int NodeConfig::parseNetworkConfig(inipp::Ini<char>& ini)
     {
-        m_ip = getValue(ini, "network", "ip", m_ip);
-        m_port = getValue(ini, "network", "port", m_port);
+        m_p2pIp = getValue(ini, "network", "ip", m_p2pIp);
+        m_p2pPort = getValue(ini, "network", "port", m_p2pPort);
         m_nodesFile = getValue(ini, "network", "nodes_file", m_nodesFile);
 
         return 0;

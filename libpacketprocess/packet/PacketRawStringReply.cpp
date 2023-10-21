@@ -7,7 +7,7 @@
 namespace packetprocess
 {
 
-    std::size_t PacketRawStringReply::packetLength()
+    std::size_t PacketRawStringReply::packetLength() const
     {
         return m_protoRawStringReply.ByteSizeLong();
     }
@@ -24,7 +24,7 @@ namespace packetprocess
         return 0;
     }
 
-    int PacketRawStringReply::encode(char *buffer, const std::size_t length)
+    int PacketRawStringReply::encode(char *buffer, const std::size_t length) const
     {
         m_protoRawStringReply.SerializeToArray(buffer, length);
 

@@ -21,7 +21,7 @@ namespace packetprocess
         ~PacketHeartBeatReply() = default;
 
     public:
-        std::size_t packetLength() override;
+        std::size_t packetLength() const override;
 
         int setId(const std::string& id);
         std::string getId();
@@ -32,7 +32,7 @@ namespace packetprocess
         int setRecvTimestamp(const std::uint32_t timestamp);
         std::uint32_t getRecvTimestamp();
 
-        int encode(char* buffer, const std::size_t length) override;
+        int encode(char* buffer, const std::size_t length) const override;
         int decode(const char* buffer, const std::size_t length) override;
 
     private:

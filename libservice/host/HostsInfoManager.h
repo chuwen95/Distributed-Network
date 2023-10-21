@@ -98,7 +98,19 @@ namespace service
          */
         bool isHostIdExist(const std::string id);
 
+        /**
+         * brief 在线客户端数量
+         *
+         * @return
+         */
         std::uint32_t onlineClientSize();
+
+        /**
+         * brief 获取所有在线客户端
+         *
+         * @return
+         */
+        std::vector<std::pair<std::string, int>> getAllOnlineClients();
 
     private:
         // HostEndPointInfo => <Client ID, ClientInfoReply包时间戳>

@@ -47,11 +47,31 @@ namespace initializer
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                      "TcpServiceInitializer init successfully");
 
+        // 初始化Rpc
+        m_rpcInitializer = std::make_shared<RpcInitializer>(m_nodeConfig, m_tcpServiceInitializer->tcpService());
+        if(-1 == m_rpcInitializer->init())
+        {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                         "RpcInitializer init failed");
+            return -1;
+        }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                     "RpcInitializer init successfully");
+
         return 0;
     }
 
     int Initializer::uninit()
     {
+        if(-1 == m_rpcInitializer->uninit())
+        {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                         "RpcInitializer uninit failed");
+            return -1;
+        }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                     "RpcInitializer uninit successfully");
+
         if(-1 == m_tcpServiceInitializer->uninit())
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
@@ -79,11 +99,29 @@ namespace initializer
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                      "TcpServiceInitializer start successfully");
 
+        if(-1 == m_rpcInitializer->start())
+        {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                         "RpcInitializer start failed");
+            return -1;
+        }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                     "RpcInitializer start successfully");
+
         return 0;
     }
 
     int Initializer::stop()
     {
+        if(-1 == m_rpcInitializer->stop())
+        {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                         "RpcInitializer stop failed");
+            return -1;
+        }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                     "RpcInitializer stop successfully");
+
         if(-1 == m_tcpServiceInitializer->stop())
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,

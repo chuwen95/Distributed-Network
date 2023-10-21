@@ -1,0 +1,53 @@
+//
+// Created by root on 10/19/23.
+//
+
+#include "Rpc.h"
+#include "libcomponents/Logger.h"
+#include "libpacketprocess/packet/PacketRawString.h"
+
+namespace rpc
+{
+
+    Rpc::Rpc(RpcConfig::Ptr rpcConfig) : m_rpcConfig(rpcConfig)
+    {
+    }
+
+    int Rpc::init()
+    {
+        m_rpcConfig->httpServer()->Post("/boardcastRawString", [this](const httplib::Request& req, httplib::Response& res){
+
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                         " recv raw string: : ", req.body);
+
+            packetprocess::PacketRawString packetRawString;
+            packetRawString.setContent(req.body);
+
+            m_rpcConfig->tcpService()->boardcastMessage(packetprocess::PacketType::PT_RawString, packetRawString);
+        });
+
+        return 0;
+    }
+
+    int Rpc::uninit()
+    {
+        return 0;
+    }
+
+    int Rpc::start()
+    {
+        std::thread([this](){
+            m_rpcConfig->httpServer()->listen(m_rpcConfig->nodeConfig()->rpcIp(), m_rpcConfig->nodeConfig()->rpcPort());
+        }).detach();
+
+        return 0;
+    }
+
+    int Rpc::stop()
+    {
+        m_rpcConfig->httpServer()->stop();
+
+        return 0;
+    }
+
+} // rpc
