@@ -9,7 +9,7 @@
 #include "libcomponents/Logger.h"
 #include "inipp.h"
 
-namespace tool
+namespace tools
 {
 
     class NodeConfig

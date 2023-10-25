@@ -6,9 +6,6 @@
 
 #include "libcomponents/Socket.h"
 #include "libcomponents/Logger.h"
-#include "libpacketprocess/PacketFactory.h"
-#include "libpacketprocess/packet/PacketClientInfo.h"
-#include "libpacketprocess/packet/PacketClientInfoReply.h"
 
 namespace service
 {
@@ -251,9 +248,10 @@ namespace service
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                  "readBuffer length: ", readBuffer->dataLength(), ", startOffset: ", readBuffer->startOffset(), ", endOffset: ", readBuffer->endOffset(), ", fd: ", fd);
 
-                    packetprocess::PacketType packetType;
+                    PacketType packetType{PacketType::PT_None};
+                    std::int32_t moduleId{-1};
                     std::shared_ptr<std::vector<char>> packetPayload = std::make_shared<std::vector<char>>();
-                    int ret = getPacket(fd, readBuffer, packetType, packetPayload);
+                    int ret = getPacket(fd, readBuffer, packetType, moduleId, packetPayload);
                     if(0 != ret)
                     {
                         // 缓冲区中的数据已经不够一个包头的长度
@@ -262,18 +260,18 @@ namespace service
                         break;
                     }
 
-                    if(packetprocess::PacketType::PT_None == packetType)
+                    if(PacketType::PT_None == packetType)
                     {
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                                      "decode packet failed, fd: ", fd);
                     }
-                    else if(packetprocess::PacketType::PT_ClientInfo == packetType)
+                    else if(PacketType::PT_ClientInfo == packetType)
                     {
                         // 身份包，即刻处理，不必放到线程池中
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                                      "recv ClientInfo packet, fd: ", fd);
-                        packetprocess::PacketBase::Ptr packet = packetprocess::PacketFactory().createPacket(packetType, packetPayload);
-                        if(-1 == processClientInfoPacket(fd, tcpSession, packet))
+                        PacketClientInfo::Ptr clientInfoPacket = std::make_shared<PacketClientInfo>(packetPayload);
+                        if(-1 == processClientInfoPacket(fd, tcpSession, clientInfoPacket))
                         {
                             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                                          "process ClientInfo packet failed, fd: ", fd);
@@ -283,13 +281,13 @@ namespace service
                             m_infds.erase(fd);
                         }
                     }
-                    else if(packetprocess::PacketType::PT_ClientInfoReply == packetType)
+                    else if(PacketType::PT_ClientInfoReply == packetType)
                     {
                         // 身份包，即刻处理，不必放到线程池中
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                                      "recv ClientInfoReply packet, fd: ", fd);
-                        packetprocess::PacketReplyBase::Ptr packet = packetprocess::PacketFactory().createReplyPacket(packetType, packetPayload);
-                        int ret = processClientInfoReplyPacket(fd, tcpSession, packet);
+                        PacketClientInfoReply::Ptr clientInfoReplyPacket = std::make_shared<PacketClientInfoReply>(packetPayload);
+                        int ret = processClientInfoReplyPacket(fd, tcpSession, clientInfoReplyPacket);
                         if(0 != ret)
                         {
                             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
@@ -303,7 +301,7 @@ namespace service
                             }
                         }
                     }
-                    else if(packetprocess::PacketType::PT_HeartBeat == packetType || packetprocess::PacketType::PT_HeartBeatReply == packetType)
+                    else if(PacketType::PT_HeartBeat == packetType || PacketType::PT_HeartBeatReply == packetType)
                     {
                         // 心跳包，不必放到线程池中处理
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
@@ -314,16 +312,10 @@ namespace service
                     {
                         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                                      "callback packet type and packet payload, fd: ", fd, ", packet type: ", static_cast<int>(packetType));
-
-                        std::weak_ptr<SlaveReactor> weakSlaveReactor = shared_from_this();
-                        m_recvHandler(fd, packetType, packetPayload,[weakSlaveReactor](const int fd, const std::vector<char> &data) -> int {
-                            auto slaveReactor = weakSlaveReactor.lock();
-                            if (nullptr != slaveReactor)
-                            {
-                                return slaveReactor->sendData(fd, data.data(), data.size());
-                            }
-                            return 0;
-                        });
+                        if(nullptr != m_moduleMessageHandler)
+                        {
+                            m_moduleMessageHandler(fd, moduleId, packetPayload);
+                        }
                     }
                 }
                 // 1. 如果刚好取出epochPacketNum后缓冲区为空了，packetNum会等于epochPacketSum，需要判断下缓冲区是否还有数据
@@ -528,10 +520,10 @@ namespace service
         m_clientInfoReplyHandler = std::move(clientInfoReplyHandler);
     }
 
-    void SlaveReactor::registerRecvHandler(std::function<void(const int, const packetprocess::PacketType,
-                                                              std::shared_ptr<std::vector<char>>&, std::function<int(const int, const std::vector<char>&)>)> recvHandler)
+    void SlaveReactor::registerModuleMessageHandler(std::function<void(const int, const std::int32_t,
+                                                              std::shared_ptr<std::vector<char>>&)> moduleMessageHandler)
     {
-        m_recvHandler = std::move(recvHandler);
+        m_moduleMessageHandler = std::move(moduleMessageHandler);
     }
 
     void SlaveReactor::registerDisconnectHandler(std::function<void(const int fd, const HostEndPointInfo& hostEndPointInfo,
@@ -635,9 +627,9 @@ namespace service
         return 0;
     }
 
-    int SlaveReactor::getPacket(const int fd, components::RingBuffer::Ptr& readBuffer, packetprocess::PacketType &packetType, std::shared_ptr<std::vector<char>>& data)
+    int SlaveReactor::getPacket(const int fd, components::RingBuffer::Ptr& readBuffer, PacketType &packetType, std::int32_t& moduleId,  std::shared_ptr<std::vector<char>>& data)
     {
-        packetprocess::PacketHeader packetHeader;
+        PacketHeader packetHeader;
         const std::size_t headerLength = packetHeader.headerLength();
 
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
@@ -667,6 +659,7 @@ namespace service
         packetHeader.decode(buffer, headerLength);
         assert(true == packetHeader.isMagicMatch());
         packetType = packetHeader.type();
+        moduleId = packetHeader.moduleId();
 
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                      "decode packet header successfully, packet type: ", static_cast<int>(packetType), ", payload length: ", packetHeader.payloadLength(), ", fd: ", fd);
@@ -696,16 +689,15 @@ namespace service
         return 0;
     }
 
-    int SlaveReactor::processClientInfoPacket(const int fd, TcpSession::Ptr tcpSession, packetprocess::PacketBase::Ptr packet)
+    int SlaveReactor::processClientInfoPacket(const int fd, TcpSession::Ptr tcpSession, PacketClientInfo::Ptr packetClientInfo)
     {
-        if(nullptr == packet)
+        if(nullptr == packetClientInfo)
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                          "decode ClientInfo packet failed", ", fd: ", fd);
             return -1;
         }
 
-        packetprocess::PacketClientInfo::Ptr packetClientInfo = std::dynamic_pointer_cast<packetprocess::PacketClientInfo>(packet);
         std::string id = packetClientInfo->nodeId();
         tcpSession->setClientId(id);
         tcpSession->setHandshakeUuid(packetClientInfo->handshakeUuid());
@@ -725,16 +717,15 @@ namespace service
         return 0;
     }
 
-    int SlaveReactor::processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession, packetprocess::PacketReplyBase::Ptr packetReply)
+    int SlaveReactor::processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession, PacketClientInfoReply::Ptr packetClientInfoReply)
     {
-        if(nullptr == packetReply)
+        if(nullptr == packetClientInfoReply)
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                          "decode ClientInfo packet failed", ", fd: ", fd);
             return -1;
         }
 
-        packetprocess::PacketClientInfoReply::Ptr packetClientInfoReply = std::dynamic_pointer_cast<packetprocess::PacketClientInfoReply>(packetReply);
         tcpSession->setClientId(packetClientInfoReply->nodeId());
         tcpSession->setClientOnlineTimestamp(components::CellTimestamp::getCurrentTimestamp());
 

@@ -7,7 +7,7 @@
 
 #include "libcommon/Common.h"
 
-namespace packetprocess
+namespace service
 {
 
     constexpr std::uint32_t c_magic{0x2cc98f5d};
@@ -16,12 +16,16 @@ namespace packetprocess
     {
         PT_None,
 
+        // handshake
         PT_ClientInfo,
         PT_ClientInfoReply,
+
+        // heartbeat
         PT_HeartBeat,
         PT_HeartBeatReply,
-        PT_RawString,
-        PT_RawStringReply
+
+        // message
+        PT_ModuleMessage
     };
 
     class PacketHeader
@@ -36,10 +40,13 @@ namespace packetprocess
         bool isMagicMatch();
 
         int setType(PacketType type);
-        PacketType type();
+        PacketType type() const;
 
-        int setPayloadLength(std::size_t payloadLength);
-        std::size_t payloadLength();
+        int setPayloadLength(std::uint32_t payloadLength);
+        std::uint32_t payloadLength() const;
+
+        int setModuleId(const std::int32_t moduleId);
+        std::int32_t moduleId() const;
 
         std::size_t headerLength();
 
@@ -49,6 +56,7 @@ namespace packetprocess
     private:
         std::uint32_t m_magic{c_magic};
         std::uint16_t m_packetType;
+        std::int32_t m_moduleId;
         std::uint32_t m_payloadLength;
     };
 

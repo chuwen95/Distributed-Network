@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(packetprocess)
+project(libpacketprocess)
 
 # proto生成c++文件
 set(module_path ${CMAKE_SOURCE_DIR}/libpacketprocess)
 set(proto_output_path ${CMAKE_CURRENT_BINARY_DIR})
 
 # 填充.proto文件
-set(proto_files protocol/heartbeat.proto protocol/clientinfo.proto protocol/rawstring.proto)
+set(proto_files protocol/rawstring.proto)
 # 获取libpacketprocess文件夹的绝对路径
 get_filename_component(module_absolute_path ${module_path} ABSOLUTE)
 # 遍历.proto文件
@@ -31,8 +31,9 @@ endforeach ()
 
 find_package(Protobuf CONFIG REQUIRED)
 
-FILE(GLOB_RECURSE SRC *.cpp)
+FILE(GLOB_RECURSE SRCS *.cpp)
+FILE(GLOB_RECURSE HEDS *.h)
 
-add_library(libpacketprocess ${PROTOBUF_SRCS} ${SRC})
-target_link_libraries(libpacketprocess PUBLIC protobuf::libprotobuf)
-target_include_directories(libpacketprocess SYSTEM BEFORE PUBLIC ${proto_output_path})
+add_library(packetprocess ${PROTOBUF_SRCS} ${SRCS} ${HEDS})
+target_link_libraries(packetprocess PUBLIC protobuf::libprotobuf)
+target_include_directories(packetprocess SYSTEM BEFORE PUBLIC ${proto_output_path})

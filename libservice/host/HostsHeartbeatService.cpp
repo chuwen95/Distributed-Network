@@ -5,7 +5,7 @@
 #include "HostsHeartbeatService.h"
 
 #include "libcomponents/CellTimestamp.h"
-#include "libpacketprocess/packet/PacketHeartBeat.h"
+#include "../protocol/packet/PacketHeartBeat.h"
 
 namespace service
 {
@@ -30,13 +30,13 @@ namespace service
                 std::int64_t curTimestamp = components::CellTimestamp::getCurrentTimestamp();
                 if(curTimestamp - host.second.second >= c_heartbeatInterval)
                 {
-                    packetprocess::PacketHeartBeat packetHeartbeat;
+                    PacketHeartBeat packetHeartbeat;
                     packetHeartbeat.setId(m_hostId);
                     packetHeartbeat.setTimestamp(curTimestamp);
                     int payloadSize = packetHeartbeat.packetLength();
 
-                    packetprocess::PacketHeader packetHeader;
-                    packetHeader.setType(packetprocess::PacketType::PT_HeartBeat);
+                    PacketHeader packetHeader;
+                    packetHeader.setType(PacketType::PT_HeartBeat);
                     packetHeader.setPayloadLength(payloadSize);
                     int headerSize = packetHeader.headerLength();
 
@@ -53,7 +53,7 @@ namespace service
                 }
             }
         };
-        m_thread.init(expression, 200, "host_heartbeat");
+        m_thread.init(expression, c_heartbeatInterval, "host_heartbeat");
 
         return 0;
     }

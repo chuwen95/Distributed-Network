@@ -11,7 +11,7 @@ namespace initializer
 
     int Initializer::initConfig(const std::string &configPath)
     {
-        m_nodeConfig = std::make_shared<tool::NodeConfig>();
+        m_nodeConfig = std::make_shared<tools::NodeConfig>();
         return m_nodeConfig->init(configPath);
     }
 
@@ -25,19 +25,8 @@ namespace initializer
         components::Singleton<components::Logger>::instance()->setLogLevel(m_nodeConfig->logType());
         components::Singleton<components::Logger>::instance()->setConsoleOutput(m_nodeConfig->consoleOutput());
 
-        // 初始化包处理器
-        m_packetProcessInitializer = std::make_shared<PacketProcessorInitializer>();
-        if(-1 == m_packetProcessInitializer->init())
-        {
-            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
-                                                                         "PacketProcessInitializer init failed");
-            return -1;
-        }
-        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
-                                                                     "PacketProcessInitializer init successfully");
-
         // 初始化TcpService
-        m_tcpServiceInitializer = std::make_shared<TcpServiceInitializer>(m_nodeConfig, m_packetProcessInitializer->packetProcessor());
+        m_tcpServiceInitializer = std::make_shared<TcpServiceInitializer>(m_nodeConfig);
         if(-1 == m_tcpServiceInitializer->init())
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,

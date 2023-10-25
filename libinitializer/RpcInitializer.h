@@ -15,7 +15,7 @@ namespace initializer
     public:
         using Ptr = std::shared_ptr<RpcInitializer>;
 
-        RpcInitializer(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService);
+        RpcInitializer(tools::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService);
         ~RpcInitializer() = default;
 
     public:

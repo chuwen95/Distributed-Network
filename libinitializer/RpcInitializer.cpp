@@ -8,7 +8,7 @@
 namespace initializer
 {
 
-    RpcInitializer::RpcInitializer(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService)
+    RpcInitializer::RpcInitializer(tools::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService)
     {
         rpc::RpcFactory rpcFactory(nodeConfig, tcpService);
         m_rpc = rpcFactory.createRpc();

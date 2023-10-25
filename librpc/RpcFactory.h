@@ -15,14 +15,14 @@ namespace rpc
     class RpcFactory
     {
     public:
-        RpcFactory(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService);
+        RpcFactory(tools::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService);
         ~RpcFactory() = default;
 
     public:
         Rpc::Ptr createRpc();
 
     private:
-        tool::NodeConfig::Ptr m_nodeConfig;
+        tools::NodeConfig::Ptr m_nodeConfig;
         service::TcpService::Ptr m_tcpService;
     };
 

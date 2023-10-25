@@ -5,7 +5,7 @@
 #include "NodeConfig.h"
 #include "libcomponents/StringTool.h"
 
-namespace tool
+namespace tools
 {
 
     int NodeConfig::init(const std::string &configFile)

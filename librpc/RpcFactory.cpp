@@ -8,7 +8,7 @@
 namespace rpc
 {
 
-    RpcFactory::RpcFactory(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService) :
+    RpcFactory::RpcFactory(tools::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService) :
             m_nodeConfig(nodeConfig),
             m_tcpService(tcpService)
     {}

@@ -187,12 +187,11 @@ namespace service
         }
     }
 
-    void SlaveReactorManager::registerRecvHandler(std::function<void(const int, const packetprocess::PacketType,
-            std::shared_ptr<std::vector<char>>&, std::function<int(const int, const std::vector<char>&)>)> recvHandler)
+    void SlaveReactorManager::registerModuleMessageHandler(std::function<void(const int, const std::int32_t, std::shared_ptr<std::vector<char>>&)> messageHandler)
     {
         for(auto& slaveReactor : m_slaveReactors)
         {
-            slaveReactor->registerRecvHandler(recvHandler);
+            slaveReactor->registerModuleMessageHandler(messageHandler);
         }
     }
 

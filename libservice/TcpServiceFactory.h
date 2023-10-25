@@ -14,14 +14,14 @@ namespace service
     class TcpServiceFactory
     {
     public:
-        TcpServiceFactory(tool::NodeConfig::Ptr nodeConfig);
+        TcpServiceFactory(tools::NodeConfig::Ptr nodeConfig);
         ~TcpServiceFactory() = default;
 
     public:
         TcpService::Ptr createTcpService();
 
     private:
-        tool::NodeConfig::Ptr m_nodeConfig;
+        tools::NodeConfig::Ptr m_nodeConfig;
     };
 
 } // service

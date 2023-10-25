@@ -4,14 +4,14 @@
 
 #include "TcpServiceInitializer.h"
 
+#include "libcomponents/Logger.h"
 #include "libservice/TcpServiceFactory.h"
-#include "libpacketprocess/PacketProcessor.h"
+#include "libpacketprocess/packet/PacketRawString.h"
 
 namespace initializer
 {
 
-    TcpServiceInitializer::TcpServiceInitializer(tool::NodeConfig::Ptr nodeConfig, packetprocess::PacketProcessor::Ptr packetProcessor)
-        : m_packetProcessor(std::move(packetProcessor))
+    TcpServiceInitializer::TcpServiceInitializer(tools::NodeConfig::Ptr nodeConfig)
     {
         service::TcpServiceFactory tcpServiceFactory(nodeConfig);
         m_tcpService = tcpServiceFactory.createTcpService();
@@ -22,9 +22,14 @@ namespace initializer
         // 忽略SIGPIPE信号，防止向一个已经断开的socket发送数据时操作系统触发SIGPIPE信号退出该应用
         signal(SIGPIPE, SIG_IGN);
 
-        m_tcpService->registerPacketHandler([this](const packetprocess::PacketType packetType,
-                packetprocess::PacketBase::Ptr packet,packetprocess::PacketReplyBase::Ptr replyPacket) {
-            return m_packetProcessor->process(packetType, packet, replyPacket);
+        m_tcpService->registerModulePacketHandler(1, [](std::shared_ptr<std::vector<char>> data) -> int{
+            packetprocess::PacketRawString packetRawString;
+            packetRawString.decode(data->data(), data->size());
+
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                         "content: ", packetRawString.getContent());
+
+            return 0;
         });
 
         return m_tcpService->init();

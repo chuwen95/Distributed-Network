@@ -6,9 +6,9 @@
 #include "libcomponents/Socket.h"
 #include "libcomponents/Logger.h"
 #include "libcomponents/UUIDTool.h"
-#include "libpacketprocess/PacketFactory.h"
-#include "libpacketprocess/packet/PacketClientInfo.h"
-#include "libpacketprocess/packet/PacketClientInfoReply.h"
+#include "protocol/PacketHeader.h"
+#include "protocol/packet/PacketClientInfo.h"
+#include "protocol/packet/PacketClientInfoReply.h"
 
 namespace service
 {
@@ -32,10 +32,10 @@ namespace service
         // 初始化包处理线程池
         m_serviceConfig->packetProcessor()->init(m_serviceConfig->nodeConfig()->packetProcessThreadNum(), "packet_proc");
         // 注册数据接收回调，SlaveReactor回调包类型和包负载二进制数据
-        m_serviceConfig->slaveReactorManager()->registerRecvHandler([this](const int fd, packetprocess::PacketType packetType,
-                                                                           std::shared_ptr<std::vector<char>>& payloadData, const std::function<int(const int, const std::vector<char>&)>& writeHandler){
+        m_serviceConfig->slaveReactorManager()->registerModuleMessageHandler([this](const int fd, const std::int32_t moduleId,
+                                                                           std::shared_ptr<std::vector<char>>& payloadData){
             std::uint64_t curTimestamp = components::CellTimestamp::getCurrentTimestamp();
-            const auto expression = [fd, curTimestamp, packetType, payloadData, writeHandler, this]()
+            const auto expression = [fd, curTimestamp, moduleId, payloadData, this]()
             {
                 // 若任务时间戳小于客户端上线时间戳，任务直接返回不处理，因为可能是客户端离线后新的客户端被分配的相同的fd
                 std::uint64_t onlineTimestamp = m_serviceConfig->slaveReactorManager()->getClientOnlineTimestamp(fd);
@@ -46,38 +46,16 @@ namespace service
                     return -1;
                 }
 
-                // 根据包类型和包负载构建请求包
-                packetprocess::PacketFactory packetFactory;
-                packetprocess::PacketBase::Ptr reqPacket = packetFactory.createPacket(packetType, payloadData);
-                // 根据请求包类型构造回应包
-                packetprocess::PacketType replyPacketType;
-                packetprocess::PacketReplyBase::Ptr replyPacket = packetFactory.createReplyPacket(packetType, replyPacketType);
-                if(nullptr != m_packetHandler)
+                auto iter = m_modulePacketHandler.find(moduleId);
+                if(m_modulePacketHandler.end() == iter)
                 {
-                    if(-1 == m_packetHandler(packetType, reqPacket, replyPacket))
-                    {
-                        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
-                                                                                     "process packet failed, packetType: ", static_cast<int>(packetType));
-                        return -1;
-                    }
+                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+                                                                                 "module handler not found, moduleId: ", moduleId);
+                    return -1;
                 }
+                return iter->second(payloadData);
 
-                // 构造回应包数据
-                std::size_t payloadLength = replyPacket->packetLength();
-                std::vector<char> buffer;
-
-                packetprocess::PacketHeader packetHeader;
-                packetHeader.setType(replyPacketType);
-                packetHeader.setPayloadLength(payloadLength);
-
-                std::size_t headerLength = packetHeader.headerLength();
-                std::size_t sumLength = headerLength + payloadLength;
-
-                // 编码包
-                buffer.resize(sumLength);
-                packetHeader.encode(buffer.data(), headerLength);
-                replyPacket->encode(buffer.data() + headerLength, payloadLength);
-
+#if 0
                 if(nullptr != writeHandler)
                 {
                     // 将回应包写入发送缓冲区
@@ -102,6 +80,7 @@ namespace service
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
                                                                                  " write reply packet to buffer successfully, write size: ", sumLength, ", fd: ", fd);
                 }
+#endif
 
                 return 0;
             };
@@ -202,10 +181,9 @@ namespace service
         return 0;
     }
 
-    void TcpService::registerPacketHandler(std::function<int(const packetprocess::PacketType, packetprocess::PacketBase::Ptr,
-                                                             packetprocess::PacketReplyBase::Ptr)> packetHandler)
+    void TcpService::registerModulePacketHandler(const std::int32_t moduleId,std::function<int(std::shared_ptr<std::vector<char>>)> packetHander)
     {
-        m_packetHandler = std::move(packetHandler);
+        m_modulePacketHandler[moduleId] = packetHander;
     }
 
     int TcpService::initServer()
@@ -336,15 +314,15 @@ namespace service
                                                                          "send ClientInfo packet");
 
             // 发送ClientInfo包
-            packetprocess::PacketClientInfo clientInfoPacket;
+            PacketClientInfo clientInfoPacket;
             clientInfoPacket.setLocalHost(m_serviceConfig->nodeConfig()->p2pIp() + ":" + components::string_tools::convertToString(m_serviceConfig->nodeConfig()->p2pPort()));
             clientInfoPacket.setPeerHost(tcpSession->peerHostEndPointInfo().host());
             clientInfoPacket.setHandshakeUuid(uuid);
             clientInfoPacket.setNodeId(m_serviceConfig->nodeConfig()->id());
             int payloadLength = clientInfoPacket.packetLength();
 
-            packetprocess::PacketHeader packetHeader;
-            packetHeader.setType(packetprocess::PacketType::PT_ClientInfo);
+            PacketHeader packetHeader;
+            packetHeader.setType(PacketType::PT_ClientInfo);
             packetHeader.setPayloadLength(clientInfoPacket.packetLength());
             int headerLength = packetHeader.headerLength();
 
@@ -399,14 +377,14 @@ namespace service
             }
 
             // 构造回应包
-            packetprocess::PacketClientInfoReply reply;
+            PacketClientInfoReply reply;
             reply.setPeerHost(peerHostEndPointInfo.host());
             reply.setHandshakeUuid(uuid);
             reply.setNodeId(m_serviceConfig->nodeConfig()->id());
             reply.setResult(replyResult);
 
-            packetprocess::PacketHeader packetHeader;
-            packetHeader.setType(packetprocess::PacketType::PT_ClientInfoReply);
+            PacketHeader packetHeader;
+            packetHeader.setType(PacketType::PT_ClientInfoReply);
             packetHeader.setPayloadLength(reply.packetLength());
 
             int headerLength = packetHeader.headerLength();
@@ -479,13 +457,13 @@ namespace service
                 if(anotherConnectionUuid < uuid)
                 {
                     // 构造回应包
-                    packetprocess::PacketClientInfoReply reply;
+                    PacketClientInfoReply reply;
                     reply.setHandshakeUuid(anotherConnectionUuid);
                     reply.setNodeId(m_serviceConfig->nodeConfig()->id());
                     reply.setResult(-3);
 
-                    packetprocess::PacketHeader packetHeader;
-                    packetHeader.setType(packetprocess::PacketType::PT_ClientInfoReply);
+                    PacketHeader packetHeader;
+                    packetHeader.setType(PacketType::PT_ClientInfoReply);
                     packetHeader.setPayloadLength(reply.packetLength());
 
                     int headerLength = packetHeader.headerLength();
@@ -514,13 +492,13 @@ namespace service
                 else
                 {
                     // 构造回应包
-                    packetprocess::PacketClientInfoReply reply;
+                    PacketClientInfoReply reply;
                     reply.setHandshakeUuid(anotherConnectionUuid);
                     reply.setNodeId(m_serviceConfig->nodeConfig()->id());
                     reply.setResult(-1);
 
-                    packetprocess::PacketHeader packetHeader;
-                    packetHeader.setType(packetprocess::PacketType::PT_ClientInfoReply);
+                    PacketHeader packetHeader;
+                    packetHeader.setType(PacketType::PT_ClientInfoReply);
                     packetHeader.setPayloadLength(reply.packetLength());
 
                     int headerLength = packetHeader.headerLength();

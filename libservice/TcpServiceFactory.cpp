@@ -9,7 +9,7 @@
 namespace service
 {
 
-    TcpServiceFactory::TcpServiceFactory(tool::NodeConfig::Ptr nodeConfig) :
+    TcpServiceFactory::TcpServiceFactory(tools::NodeConfig::Ptr nodeConfig) :
             m_nodeConfig(std::move(nodeConfig))
     {
     }

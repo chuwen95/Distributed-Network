@@ -27,13 +27,13 @@ namespace service
     public:
         using Ptr = std::shared_ptr<ServiceConfig>;
 
-        ServiceConfig(tool::NodeConfig::Ptr nodeConfig, components::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
+        ServiceConfig(tools::NodeConfig::Ptr nodeConfig, components::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
                       SlaveReactorManager::Ptr slaveReactorManager, components::ThreadPool::Ptr packetProcessor,
                       HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector, HostsHeartbeatService::Ptr hostsHeartbeatService);
         ~ServiceConfig() = default;
 
     public:
-        tool::NodeConfig::Ptr nodeConfig();
+        tools::NodeConfig::Ptr nodeConfig();
 
         components::SelectListenner::Ptr listenner();
         Acceptor::Ptr acceptor();
@@ -45,7 +45,7 @@ namespace service
         HostsHeartbeatService::Ptr hostsHeartbeatService();
 
     private:
-        tool::NodeConfig::Ptr m_nodeConfig;
+        tools::NodeConfig::Ptr m_nodeConfig;
 
         components::SelectListenner::Ptr m_listenner;
         Acceptor::Ptr m_acceptor;

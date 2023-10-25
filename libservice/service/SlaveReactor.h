@@ -9,14 +9,14 @@
 #include "libcomponents/Thread.h"
 #include "TcpSession.h"
 #include "ClientAliveChecker.h"
-#include "libpacketprocess/packet/PacketHeader.h"
-#include "libpacketprocess/packet/PacketBase.h"
-#include "libpacketprocess/packet/PacketReplyBase.h"
+#include "../protocol/PacketHeader.h"
+#include "../protocol/packet/PacketClientInfo.h"
+#include "../protocol/packet/PacketClientInfoReply.h"
 
 namespace service
 {
 
-    class SlaveReactor : public std::enable_shared_from_this<SlaveReactor>
+    class SlaveReactor
     {
     public:
         using Ptr = std::shared_ptr<SlaveReactor>;
@@ -72,10 +72,9 @@ namespace service
         /**
          * @brief 客户端有包需要处理的回调，回调包类型和包负载
          *
-         * @param recvHandler
+         * @param moduleMessageHandler
          */
-        void registerRecvHandler(std::function<void(const int, const packetprocess::PacketType, std::shared_ptr<std::vector<char>>&,
-                                                    std::function<int(const int, const std::vector<char>&)>)> recvHandler);
+        void registerModuleMessageHandler(std::function<void(const int, const std::int32_t, std::shared_ptr<std::vector<char>>&)> moduleMessageHandler);
 
         /**
          * @brief 客户端离线回调
@@ -117,12 +116,12 @@ namespace service
 
     private:
         // 从readBuffer中获取包类型和包负载，如果缓冲区的数据不够包长度，则返回-1
-        int getPacket(const int fd, components::RingBuffer::Ptr& readBuffer, packetprocess::PacketType& packetType, std::shared_ptr<std::vector<char>>& data);
+        int getPacket(const int fd, components::RingBuffer::Ptr& readBuffer, PacketType& packetType, std::int32_t& moduleId, std::shared_ptr<std::vector<char>>& data);
 
         // 处理客户端ClientInfo包
-        int processClientInfoPacket(const int fd, TcpSession::Ptr tcpSession, packetprocess::PacketBase::Ptr packet);
+        int processClientInfoPacket(const int fd, TcpSession::Ptr tcpSession, PacketClientInfo::Ptr packet);
         // 处理客户端ClientInfo包
-        int processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession, packetprocess::PacketReplyBase::Ptr packetReply);
+        int processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession, PacketClientInfoReply::Ptr packetReply);
 
         // ClientAliveChecker调用，超时未收到心跳
         void onClientsHeartbeatTimeout(const std::vector<int>& fds);
@@ -150,8 +149,7 @@ namespace service
                 const std::string& uuid, const int result, int& anotherFd)> m_clientInfoReplyHandler;
 
         // 数据接收回调
-        std::function<void(const int fd, const packetprocess::PacketType, std::shared_ptr<std::vector<char>>&,
-                           std::function<int(const int, const std::vector<char>&)>)> m_recvHandler;
+        std::function<void(const int fd, const std::int32_t moduleId, std::shared_ptr<std::vector<char>>&)> m_moduleMessageHandler;
         // 客户端断开回调
         std::function<void(const int fd, const HostEndPointInfo& hostEndPointInfo, const std::string& id, const std::string& uuid, const int flag)> m_disconnectHandler;
 

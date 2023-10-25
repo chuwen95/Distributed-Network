@@ -4,11 +4,12 @@
 
 #include "PacketClientInfoReply.h"
 
-namespace packetprocess
+namespace service
 {
 
-    PacketClientInfoReply::PacketClientInfoReply()
+    PacketClientInfoReply::PacketClientInfoReply(std::shared_ptr<std::vector<char>> data)
     {
+        decode(data->data(), data->size());
     }
 
     std::size_t PacketClientInfoReply::packetLength() const

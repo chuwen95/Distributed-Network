@@ -4,7 +4,7 @@
 
 #include "PacketHeartBeat.h"
 
-namespace packetprocess
+namespace service
 {
 
     std::size_t PacketHeartBeat::packetLength() const

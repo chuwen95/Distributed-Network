@@ -23,7 +23,11 @@ namespace rpc
             packetprocess::PacketRawString packetRawString;
             packetRawString.setContent(req.body);
 
-            m_rpcConfig->tcpService()->boardcastMessage(packetprocess::PacketType::PT_RawString, packetRawString);
+            std::shared_ptr<std::vector<char>> data = std::make_shared<std::vector<char>>();
+            data->resize(packetRawString.packetLength());
+            packetRawString.encode(data->data(), data->size());
+
+            m_rpcConfig->tcpService()->boardcastModuleMessage(1, data);
         });
 
         return 0;

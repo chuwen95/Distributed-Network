@@ -15,9 +15,6 @@
 #include "host/HostsConnector.h"
 #include "host/HostsHeartbeatService.h"
 
-#include "libpacketprocess/packet/PacketBase.h"
-#include "libpacketprocess/packet/PacketReplyBase.h"
-
 template<typename T>
 concept PacketPtr = requires(T t, char* data, std::size_t size)
 {
@@ -54,21 +51,20 @@ namespace service
 
         int stop();
 
-        void registerPacketHandler(std::function<int(const packetprocess::PacketType, packetprocess::PacketBase::Ptr,
-                                                     packetprocess::PacketReplyBase::Ptr)> packetHander);
+        void registerModulePacketHandler(const std::int32_t moduleId, std::function<int(std::shared_ptr<std::vector<char>>)> packetHander);
 
-        int boardcastMessage(const packetprocess::PacketType packetType, Packet auto const& packet)
+        int boardcastModuleMessage(const std::int32_t moduleId, std::shared_ptr<std::vector<char>> data)
         {
+            PacketHeader packetHeader;
+            packetHeader.setType(PacketType::PT_ModuleMessage);
+            packetHeader.setModuleId(moduleId);
+            packetHeader.setPayloadLength(data->size());
+
             // 编码包为待发送数据
             std::vector<char> buffer;
-
-            packetprocess::PacketHeader packetHeader;
-            packetHeader.setType(packetType);
-            packetHeader.setPayloadLength(packet.packetLength());
-
-            buffer.resize(packetHeader.headerLength() + packet.packetLength());
+            buffer.resize(packetHeader.headerLength() + data->size());
             packetHeader.encode(buffer.data(), packetHeader.headerLength());
-            packet.encode(buffer.data() + packetHeader.headerLength(), packet.packetLength());
+            memcpy(buffer.data() + packetHeader.headerLength(), data->data(), data->size());
 
             // 发送给所有在线的节点
             std::vector<std::pair<std::string, int>> allOnlineClients = m_serviceConfig->hostsInfoManager()->getAllOnlineClients();
@@ -80,7 +76,7 @@ namespace service
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
                                                                                  "send message to ", onlineClient.second, ", failed, ret: ", ret);
                 }
-                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
                                                                              "send message to ", onlineClient.second, ", successfully");
             }
 
@@ -99,7 +95,7 @@ namespace service
     private:
         int m_fd;
 
-        std::function<int(const packetprocess::PacketType, packetprocess::PacketBase::Ptr, packetprocess::PacketReplyBase::Ptr)> m_packetHandler;
+        std::map<std::int32_t, std::function<int(std::shared_ptr<std::vector<char>>)>> m_modulePacketHandler;
         std::function<void(const int, const std::string&)> m_disconnectHandler;
 
         ServiceConfig::Ptr m_serviceConfig;

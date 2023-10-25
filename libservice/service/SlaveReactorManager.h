@@ -46,8 +46,7 @@ namespace service
         void registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo& hostEndPointInfo,
                                                               const int fd, const std::string& id, const std::string& uuid, const int result, int& anotherConnectionFd)> clientInfoReplyHandler);
 
-        void registerRecvHandler(std::function<void(const int fd, const packetprocess::PacketType,
-                                                    std::shared_ptr<std::vector<char>>&, std::function<int(const int, const std::vector<char>&)>)> recvHandler);
+        void registerModuleMessageHandler(std::function<void(const int, const std::int32_t, std::shared_ptr<std::vector<char>>&)> messageHandler);
 
         void registerDisconnectHandler(std::function<void(const HostEndPointInfo &hostEndPointInfo, const std::string& id,
                                                           const std::string& uuid, const int flag)> disconnectHandler);

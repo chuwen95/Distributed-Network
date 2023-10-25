@@ -5,14 +5,12 @@
 #ifndef TCPNETWORK_PACKETHEARTBEAT_H
 #define TCPNETWORK_PACKETHEARTBEAT_H
 
-#include "PacketBase.h"
+#include "protocol/pb/heartbeat.pb.h"
 
-#include "protocol/heartbeat.pb.h"
-
-namespace packetprocess
+namespace service
 {
 
-    class PacketHeartBeat : public PacketBase
+    class PacketHeartBeat
     {
     public:
         using Ptr = std::shared_ptr<PacketHeartBeat>;
@@ -21,7 +19,7 @@ namespace packetprocess
         ~PacketHeartBeat() = default;
 
     public:
-        std::size_t packetLength() const override;
+        std::size_t packetLength() const;
 
         int setId(const std::string& id);
         std::string getId();
@@ -29,8 +27,8 @@ namespace packetprocess
         int setTimestamp(const std::uint32_t timestamp);
         std::uint32_t getTimestamp();
 
-        int encode(char* buffer, const std::size_t length) const override;
-        int decode(const char* buffer, const std::size_t length) override;
+        int encode(char* buffer, const std::size_t length) const;
+        int decode(const char* buffer, const std::size_t length);
 
     private:
         protocol::HeartBeat m_protoHeartBeat;

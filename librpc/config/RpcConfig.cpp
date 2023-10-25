@@ -7,13 +7,13 @@
 namespace rpc
 {
 
-    RpcConfig::RpcConfig(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService, std::shared_ptr<httplib::Server> httpServer) :
+    RpcConfig::RpcConfig(tools::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService, std::shared_ptr<httplib::Server> httpServer) :
             m_nodeConfig(std::move(nodeConfig)),
             m_tcpService(std::move(tcpService)),
             m_httpServer(std::move(httpServer))
     {}
 
-    tool::NodeConfig::Ptr RpcConfig::nodeConfig()
+    tools::NodeConfig::Ptr RpcConfig::nodeConfig()
     {
         return m_nodeConfig;
     }

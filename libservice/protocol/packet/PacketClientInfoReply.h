@@ -5,23 +5,22 @@
 #ifndef TCPNETWORK_PACKETCLIENTINFOREPLY_H
 #define TCPNETWORK_PACKETCLIENTINFOREPLY_H
 
-#include "PacketReplyBase.h"
+#include "protocol/pb/clientinfo.pb.h"
 
-#include "protocol/clientinfo.pb.h"
-
-namespace packetprocess
+namespace service
 {
 
-    class PacketClientInfoReply : public PacketReplyBase
+    class PacketClientInfoReply
     {
     public:
         using Ptr = std::shared_ptr<PacketClientInfoReply>;
 
-        PacketClientInfoReply();
+        PacketClientInfoReply() = default;
+        PacketClientInfoReply(std::shared_ptr<std::vector<char>> data);
         ~PacketClientInfoReply() = default;
 
     public:
-        std::size_t packetLength() const override;
+        std::size_t packetLength() const;
 
         int setSeq(const std::uint32_t seq);
         std::uint32_t seq();
@@ -38,8 +37,8 @@ namespace packetprocess
         int setResult(const std::int32_t result);
         std::int32_t result();
 
-        int encode(char* buffer, const std::size_t length) const override;
-        int decode(const char* buffer, const std::size_t length) override;
+        int encode(char* buffer, const std::size_t length) const;
+        int decode(const char* buffer, const std::size_t length);
 
     private:
         protocol::ClientInfoReply m_protoClientInfoReply;

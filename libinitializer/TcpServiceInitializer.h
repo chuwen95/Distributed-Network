@@ -9,7 +9,6 @@
 
 #include "libtools/NodeConfig.h"
 #include "libservice/TcpService.h"
-#include "libpacketprocess/PacketProcessor.h"
 
 namespace initializer
 {
@@ -19,7 +18,7 @@ namespace initializer
     public:
         using Ptr = std::shared_ptr<TcpServiceInitializer>;
 
-        TcpServiceInitializer(tool::NodeConfig::Ptr nodeConfig, packetprocess::PacketProcessor::Ptr packetProcessor);
+        TcpServiceInitializer(tools::NodeConfig::Ptr nodeConfig);
         ~TcpServiceInitializer() = default;
 
     public:
@@ -35,7 +34,6 @@ namespace initializer
 
     private:
         service::TcpService::Ptr m_tcpService;
-        packetprocess::PacketProcessor::Ptr m_packetProcessor;
     };
 
 } // initializer

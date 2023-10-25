@@ -4,8 +4,13 @@
 
 #include "PacketClientInfo.h"
 
-namespace packetprocess
+namespace service
 {
+
+    PacketClientInfo::PacketClientInfo(std::shared_ptr<std::vector<char>> data)
+    {
+        decode(data->data(), data->size());
+    }
 
     std::size_t PacketClientInfo::packetLength() const
     {

@@ -8,7 +8,7 @@
 namespace service
 {
 
-    ServiceConfig::ServiceConfig(tool::NodeConfig::Ptr nodeConfig, components::SelectListenner::Ptr listenner,
+    ServiceConfig::ServiceConfig(tools::NodeConfig::Ptr nodeConfig, components::SelectListenner::Ptr listenner,
                                  Acceptor::Ptr acceptor, SlaveReactorManager::Ptr slaveReactorManager, components::ThreadPool::Ptr packetProcessor,
                                  HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector, HostsHeartbeatService::Ptr hostsHeartbeatService) :
                                  m_nodeConfig(std::move(nodeConfig)), m_listenner(std::move(listenner)), m_acceptor(std::move(acceptor)),
@@ -17,7 +17,7 @@ namespace service
                                  m_hostsHeartbeatService(std::move(hostsHeartbeatService))
     {}
 
-    tool::NodeConfig::Ptr ServiceConfig::nodeConfig()
+    tools::NodeConfig::Ptr ServiceConfig::nodeConfig()
     {
         return m_nodeConfig;
     }

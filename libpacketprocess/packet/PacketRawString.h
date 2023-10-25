@@ -5,14 +5,12 @@
 #ifndef TCPNETWORK_PACKETRAWSTRING_H
 #define TCPNETWORK_PACKETRAWSTRING_H
 
-#include "PacketBase.h"
-
 #include "protocol/rawstring.pb.h"
 
 namespace packetprocess
 {
 
-    class PacketRawString : public PacketBase
+    class PacketRawString
     {
     public:
         using Ptr = std::shared_ptr<PacketRawString>;
@@ -21,13 +19,13 @@ namespace packetprocess
         ~PacketRawString() = default;
 
     public:
-        std::size_t packetLength() const override;
+        std::size_t packetLength() const;
 
         int setContent(const std::string& content);
         std::string getContent();
 
-        int encode(char* buffer, const std::size_t length) const override;
-        int decode(const char* buffer, const std::size_t length) override;
+        int encode(char* buffer, const std::size_t length) const;
+        int decode(const char* buffer, const std::size_t length);
 
     private:
         protocol::RawString m_protoRawString;

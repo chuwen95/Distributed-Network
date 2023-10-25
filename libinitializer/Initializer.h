@@ -5,10 +5,8 @@
 #ifndef TCPNETWORK_INITIALIZER_H
 #define TCPNETWORK_INITIALIZER_H
 
-#include "PacketProcessorInitializer.h"
 #include "TcpServiceInitializer.h"
 #include "RpcInitializer.h"
-#include "libtools/NodeConfig.h"
 
 namespace initializer
 {
@@ -31,9 +29,8 @@ namespace initializer
         int stop();
 
     private:
-        tool::NodeConfig::Ptr m_nodeConfig;
+        tools::NodeConfig::Ptr m_nodeConfig;
 
-        PacketProcessorInitializer::Ptr m_packetProcessInitializer;
         TcpServiceInitializer::Ptr m_tcpServiceInitializer;
         RpcInitializer::Ptr m_rpcInitializer;
     };
