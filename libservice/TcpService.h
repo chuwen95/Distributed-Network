@@ -15,22 +15,6 @@
 #include "host/HostsConnector.h"
 #include "host/HostsHeartbeatService.h"
 
-template<typename T>
-concept PacketPtr = requires(T t, char* data, std::size_t size)
-{
-    t.get();
-    { t.use_count() } -> std::same_as<std::size_t>;
-    { t.unique() } -> std::same_as<bool>;
-
-    { t->encode(data, size) } -> std::same_as<int>;
-};
-
-template<typename T>
-concept Packet = requires(T t, char* data, std::size_t size)
-{
-    { t.encode(data, size) } -> std::same_as<int>;
-};
-
 namespace service
 {
 
