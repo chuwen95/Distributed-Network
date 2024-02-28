@@ -19,8 +19,15 @@ namespace components
 
     int ThreadPool::init(const int size, const std::string_view threadName)
     {
+        if (size < 1)
+        {
+            return -1;
+        }
+
         m_threadNum = size;
         m_threadName = threadName;
+
+        m_taskQueues.resize(size);
 
         return 0;
     }
@@ -42,7 +49,7 @@ namespace components
             while(false == isTerminate())
             {
                 ThreadPoolTask task;
-                m_tasks.wait_dequeue(task);
+                m_taskQueues[id].wait_dequeue(task);
                 task();
             }
         };
@@ -69,7 +76,7 @@ namespace components
 
         for(int i = 0; i < m_threadNum; ++i)
         {
-            m_tasks.enqueue([](){});
+            m_taskQueues[i].enqueue([](){});
         }
 
         for(auto& thread : m_threads)

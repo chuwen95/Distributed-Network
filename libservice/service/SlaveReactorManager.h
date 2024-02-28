@@ -20,13 +20,14 @@ namespace service
         SlaveReactorManager();
         ~SlaveReactorManager();
 
+        void addSlaveReactor(SlaveReactor::Ptr slaveReactor);
+
         /**
          *
-         * @param slaveReactorNum   共有多少个SlaveReactor
          * @param redispatchInterval    多少个客户端后重新查找管理客户端数量最少的SlaveReactor，下一个客户端将会放到最少的这个SlaveReactor中
          * @return
          */
-        int init(const std::size_t slaveReactorNum, const std::size_t redispatchInterval, const std::string& id);
+        int init(const std::size_t redispatchInterval, const std::string& id);
 
         int uninit();
 

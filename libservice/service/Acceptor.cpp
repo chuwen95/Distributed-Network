@@ -6,6 +6,7 @@
 
 #include "libcommon/Common.h"
 #include "libcomponents/Logger.h"
+#include "TcpSessionFactory.h"
 
 namespace service
 {
@@ -42,8 +43,9 @@ namespace service
                 if(-1 != clientfd)
                 {
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "client online, fd: ", clientfd);
-                    TcpSession::Ptr tcpSession = std::make_shared<TcpSession>();
-                    tcpSession->init(clientfd);
+
+                    TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(clientfd, 4*1024, 4*1024);
+                    tcpSession->init();
                     components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "create TcpSession successfully");
 
                     if (nullptr != m_newClientCallback)

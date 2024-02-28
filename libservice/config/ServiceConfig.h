@@ -28,7 +28,7 @@ namespace service
         using Ptr = std::shared_ptr<ServiceConfig>;
 
         ServiceConfig(tools::NodeConfig::Ptr nodeConfig, components::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
-                      SlaveReactorManager::Ptr slaveReactorManager, components::ThreadPool::Ptr packetProcessor,
+                      std::vector<SlaveReactor::Ptr> slaveReactors, SlaveReactorManager::Ptr slaveReactorManager, components::ThreadPool::Ptr packetProcessor,
                       HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector, HostsHeartbeatService::Ptr hostsHeartbeatService);
         ~ServiceConfig() = default;
 
@@ -37,6 +37,7 @@ namespace service
 
         components::SelectListenner::Ptr listenner();
         Acceptor::Ptr acceptor();
+        std::vector<SlaveReactor::Ptr>& slaveReactors();
         SlaveReactorManager::Ptr slaveReactorManager();
         components::ThreadPool::Ptr packetProcessor();
 
@@ -49,6 +50,7 @@ namespace service
 
         components::SelectListenner::Ptr m_listenner;
         Acceptor::Ptr m_acceptor;
+        std::vector<SlaveReactor::Ptr> m_slaveReactors;
         SlaveReactorManager::Ptr m_slaveReactorManager;
         components::ThreadPool::Ptr m_packetProcesser;
 

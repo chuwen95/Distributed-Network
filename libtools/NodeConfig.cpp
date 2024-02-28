@@ -17,6 +17,8 @@ namespace tools
             std::cout << "open config file failed" << std::endl;
             return -1;
         }
+        m_configFile = configFile;
+
         ini.parse(file);
 
         parseInfoConfig(ini);
@@ -27,12 +29,19 @@ namespace tools
         parsePacketProcessConfig(ini);
         parseLogConfig(ini);
 
+        file.close();
+
         return 0;
     }
 
     int NodeConfig::uninit()
     {
         return 0;
+    }
+
+    std::string NodeConfig::configFile()
+    {
+        return m_configFile;
     }
 
     std::string NodeConfig::id()
@@ -103,6 +112,24 @@ namespace tools
     std::string NodeConfig::logPath()
     {
         return m_logPath;
+    }
+
+    int NodeConfig::loadLogConfig()
+    {
+        std::cout << "load log config from: " << m_configFile << std::endl;
+
+        inipp::Ini<char> ini;
+        std::ifstream file(m_configFile);
+        if(false == file.is_open())
+        {
+            std::cout << "open config file failed" << std::endl;
+            return -1;
+        }
+        ini.parse(file);
+        parseLogConfig(ini);
+        file.close();
+
+        return 0;
     }
 
     template<typename T>

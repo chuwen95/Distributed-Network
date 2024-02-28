@@ -60,17 +60,34 @@ namespace components
         template<typename Func, typename... Args>
         auto push(Func&& func, Args&&... args) -> std::future<decltype(func(args...))>
         {
+            if((m_taskPushNums > 0) && (0 == m_taskPushNums % m_currentTaskPushIndexRefreshInterval))
+            {
+                std::size_t maxSize{std::numeric_limits<std::size_t>::max()};
+                for(auto iter = m_taskQueues.begin(); iter != m_taskQueues.end(); ++iter)
+                {
+                    auto taskSize = iter->size_approx();
+                    if(taskSize < maxSize)
+                    {
+                        m_currentTaskPushIndex = iter - m_taskQueues.begin();
+                        maxSize = taskSize;
+                    }
+                }
+                m_taskPushNums = 0;
+            }
+
             using RetType = decltype(func(args...));
             auto task = std::make_shared<std::packaged_task<RetType()>>(std::bind(std::forward<Func>(func), std::forward<Args>(args)...));
 
             ThreadPoolTask threadPoolTask = [task](){ (*task)(); };
-            m_tasks.enqueue(threadPoolTask);
+            m_taskQueues[m_currentTaskPushIndex].enqueue(threadPoolTask);
+
+            // 已添加的任务数量+1
+            ++m_taskPushNums;
 
             return task->get_future();
         }
 
     private:
-
         /**
          * @brief   设置整个线程池终止标志
          *
@@ -97,7 +114,13 @@ namespace components
         std::vector<std::unique_ptr<std::thread>> m_threads;
 
         // 任务队列
-        moodycamel::BlockingConcurrentQueue<ThreadPoolTask> m_tasks;
+        std::vector<moodycamel::BlockingConcurrentQueue<ThreadPoolTask>> m_taskQueues;
+
+        // 每放入多少个任务刷新一次
+        std::atomic_size_t m_taskPushNums{0};
+        std::atomic_size_t m_currentTaskPushIndexRefreshInterval{500};
+        // 当前任务往哪个队列里放
+        std::atomic_size_t m_currentTaskPushIndex{0};
     };
 
 }

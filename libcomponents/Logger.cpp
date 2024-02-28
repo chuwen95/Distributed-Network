@@ -50,7 +50,7 @@ namespace components
 
                 m_file.write(buffer.data(), buffer.size());
             };
-            m_thread.init(expression, 0, "logger");
+            m_thread.init(expression, 1, "logger");
         }
 
         return 0;

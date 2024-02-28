@@ -21,6 +21,7 @@
 #include <condition_variable>
 #include <cstring>
 #include <fstream>
+#include <sstream>
 #include <iostream>
 #include <cassert>
 #include <stdio.h>

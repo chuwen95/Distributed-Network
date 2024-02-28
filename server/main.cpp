@@ -1,12 +1,16 @@
 #include <iostream>
 
 #include "libinitializer/Initializer.h"
+#include "libpacketprocess/packet/PacketRawString.h"
+
+//#define FOR_TEST
 
 class ExitHandler
 {
 public:
     static void exitHandler(int signal)
     {
+        std::cout << "reveive signal " << signal << std::endl;
         ExitHandler::c_shouldExit = true;
     }
 
@@ -21,8 +25,9 @@ int main(int argc, char* argv[])
 {
     if(argc < 2)
     {
-        std::cerr << "usage: ./TcpServer config" << std::endl;
+        std::cerr << "usage: ./TcpServer configFile" << std::endl;
         std::cerr << "eg: ./TcpServer config.ini" << std::endl;
+        return -1;
     }
 
     initializer::Initializer initializer;
@@ -38,6 +43,16 @@ int main(int argc, char* argv[])
     {
         return -1;
     }
+#ifdef FOR_TEST
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+
+    packetprocess::PacketRawString packetRawString;
+    packetRawString.setContent("hello world");
+
+    std::shared_ptr<std::vector<char>> data = std::make_shared<std::vector<char>>();
+    data->resize(packetRawString.packetLength());
+    packetRawString.encode(data->data(), data->size());
+#endif
 
     ExitHandler exitHandler;
     signal(SIGTERM, &ExitHandler::exitHandler);
@@ -46,7 +61,12 @@ int main(int argc, char* argv[])
 
     while(false == exitHandler.shouldExit())
     {
+#ifdef FOR_TEST
+        initializer.m_tcpServiceInitializer->tcpService()->boardcastModuleMessage(1, data);
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+#else
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+#endif
     }
 
     initializer.stop();

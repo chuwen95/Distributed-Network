@@ -8,11 +8,11 @@
 namespace service
 {
 
-    ServiceConfig::ServiceConfig(tools::NodeConfig::Ptr nodeConfig, components::SelectListenner::Ptr listenner,
-                                 Acceptor::Ptr acceptor, SlaveReactorManager::Ptr slaveReactorManager, components::ThreadPool::Ptr packetProcessor,
+    ServiceConfig::ServiceConfig(tools::NodeConfig::Ptr nodeConfig, components::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
+                                 std::vector<SlaveReactor::Ptr> slaveReactors, SlaveReactorManager::Ptr slaveReactorManager, components::ThreadPool::Ptr packetProcessor,
                                  HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector, HostsHeartbeatService::Ptr hostsHeartbeatService) :
                                  m_nodeConfig(std::move(nodeConfig)), m_listenner(std::move(listenner)), m_acceptor(std::move(acceptor)),
-                                 m_slaveReactorManager(std::move(slaveReactorManager)), m_packetProcesser(std::move(packetProcessor)),
+                                 m_slaveReactors(std::move(slaveReactors)), m_slaveReactorManager(std::move(slaveReactorManager)), m_packetProcesser(std::move(packetProcessor)),
                                  m_hostsInfoManager(std::move(hostsInfoManager)), m_hostsConnector(std::move(hostsConnector)),
                                  m_hostsHeartbeatService(std::move(hostsHeartbeatService))
     {}
@@ -30,6 +30,11 @@ namespace service
     Acceptor::Ptr ServiceConfig::acceptor()
     {
         return m_acceptor;
+    }
+
+    std::vector<SlaveReactor::Ptr>& ServiceConfig::slaveReactors()
+    {
+        return m_slaveReactors;
     }
 
     SlaveReactorManager::Ptr ServiceConfig::slaveReactorManager()

@@ -5,6 +5,7 @@
 #include "Rpc.h"
 #include "libcomponents/Logger.h"
 #include "libpacketprocess/packet/PacketRawString.h"
+#include "libcomponents/CellTimestamp.h"
 
 namespace rpc
 {
@@ -17,8 +18,8 @@ namespace rpc
     {
         m_rpcConfig->httpServer()->Post("/boardcastRawString", [this](const httplib::Request& req, httplib::Response& res){
 
-            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
-                                                                         " recv raw string: : ", req.body);
+            //components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
+            //                                                             " recv raw string: : ", req.body);
 
             packetprocess::PacketRawString packetRawString;
             packetRawString.setContent(req.body);

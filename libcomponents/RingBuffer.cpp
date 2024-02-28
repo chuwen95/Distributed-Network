@@ -3,6 +3,7 @@
 //
 
 #include "RingBuffer.h"
+#include "Logger.h"
 
 namespace components
 {
@@ -32,7 +33,10 @@ namespace components
 
     int RingBuffer::writeData(const char *data, const std::size_t len)
     {
-        if(len > space())
+        std::size_t remainSpace = space();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+                                                                     ", len: ", len, ", remainSpace: ", remainSpace);
+        if(len > remainSpace)
         {
             return -1;
         }
@@ -60,7 +64,10 @@ namespace components
 
     int RingBuffer::readData(const std::size_t size, const std::size_t offset, std::vector<char> &data)
     {
-        if(dataLength() - offset < size || data.size() != size)
+        int usedDataLength = dataLength();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+                                                                     "usedDataLength: ", usedDataLength, "size: ", size, ", m_startOffset: ", m_startOffset, ", m_endOffset: ", m_endOffset);
+        if(usedDataLength < size || data.size() != size)
         {
             return -1;
         }
@@ -110,6 +117,8 @@ namespace components
 
     std::size_t RingBuffer::dataLength()
     {
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+                                                                     "m_startOffset: ", m_startOffset, ", m_endOffset", m_endOffset);
         if(m_endOffset >= m_startOffset)
         {
             return m_endOffset - m_startOffset;
@@ -122,6 +131,8 @@ namespace components
 
     std::size_t RingBuffer::space()
     {
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+                                                                     "m_startOffset: ", m_startOffset, ", m_endOffset", m_endOffset);
         // 保留2个字节不使用，避免m_startOffset > m_endOffset的情况下写入会导致m_endOffset == m_startOffset
         if(m_startOffset == m_endOffset)
         {
@@ -162,7 +173,10 @@ namespace components
 
     int RingBuffer::getBufferAndLengthForWrite(char *&buffer, std::size_t &length)
     {
-        if(0 == space())
+        std::size_t remainSpace = space();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+                                                                     "remainSpace: ", remainSpace, ", length: ", length, ", m_startOffset: ", m_startOffset, ", m_endOffset: ", m_endOffset);
+        if(0 == remainSpace)
         {
             return -1;
         }
@@ -202,6 +216,9 @@ namespace components
 
     int RingBuffer::getBufferForRead(const std::size_t size, char *&buffer)
     {
+        std::size_t usedDataLength = dataLength();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+                                                                     "usedDataLength: ", usedDataLength, "size: ", size, ", m_startOffset: ", m_startOffset, ", m_endOffset: ", m_endOffset);
         if(dataLength() < size)
         {
             return -1;
@@ -224,7 +241,10 @@ namespace components
 
     int RingBuffer::decreaseUsedSpace(const std::size_t size)
     {
-        if(dataLength() < size)
+        std::size_t usedDataLength = dataLength();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+                                                                     "usedDataLength: ", usedDataLength, ", size", size, ", m_startOffset: ", m_startOffset, ", m_endOffset: ", m_endOffset);
+        if(usedDataLength < size)
         {
             return -1;
         }
@@ -244,13 +264,19 @@ namespace components
                 m_endOffset = 0;
             }
         }
+        usedDataLength = dataLength();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+                                                                     "usedDataLength: ", usedDataLength);
 
         return 0;
     }
 
     int RingBuffer::getContinuousData(char *&buffer, std::size_t &size)
     {
-        if(0 == dataLength())
+        std::size_t usedDataLength = dataLength();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Trace, FILE_INFO,
+                                                                     "usedDataLength: ", usedDataLength, ", size", size, ", m_startOffset: ", m_startOffset, ", m_endOffset: ", m_endOffset);
+        if(0 == usedDataLength)
         {
             return -1;
         }

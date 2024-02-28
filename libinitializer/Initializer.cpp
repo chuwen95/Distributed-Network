@@ -4,8 +4,6 @@
 
 #include "Initializer.h"
 
-#include "libcomponents/Logger.h"
-
 namespace initializer
 {
 
@@ -17,13 +15,18 @@ namespace initializer
 
     int Initializer::init()
     {
-        // 设置Logger
-        if(-1 == components::Singleton<components::Logger>::instance()->init(m_nodeConfig->enableFileLog(), m_nodeConfig->logPath()))
+        // 初始化log
+        m_logInitializer = std::make_shared<LogInitializer>(m_nodeConfig);
+        if(-1 == m_logInitializer->init())
         {
+            std::cerr << "LogInitializer init failed" << std::endl;
             return -1;
         }
-        components::Singleton<components::Logger>::instance()->setLogLevel(m_nodeConfig->logType());
-        components::Singleton<components::Logger>::instance()->setConsoleOutput(m_nodeConfig->consoleOutput());
+        if(-1 == m_logInitializer->start())
+        {
+            std::cerr << "LogInitializer start failed" << std::endl;
+            return -1;
+        }
 
         // 初始化TcpService
         m_tcpServiceInitializer = std::make_shared<TcpServiceInitializer>(m_nodeConfig);
@@ -70,14 +73,23 @@ namespace initializer
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                      "TcpServiceInitializer uninit successfully");
 
-        components::Singleton<components::Logger>::instance()->uninit();
+        if(-1 == m_logInitializer->stop())
+        {
+            std::cerr << "LogInitializer stop failed" << std::endl;
+            return -1;
+        }
+
+        if(-1 == m_logInitializer->uninit())
+        {
+            std::cerr << "LogInitializer uninit failed" << std::endl;
+            return -1;
+        }
 
         return 0;
     }
 
     int Initializer::start()
     {
-        components::Singleton<components::Logger>::instance()->start();
 
         if(-1 == m_tcpServiceInitializer->start())
         {
@@ -119,8 +131,6 @@ namespace initializer
         }
         components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                      "TcpServiceInitializer stop successfully");
-
-        components::Singleton<components::Logger>::instance()->stop();
 
         return 0;
     }

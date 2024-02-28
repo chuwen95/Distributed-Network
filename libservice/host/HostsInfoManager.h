@@ -112,6 +112,14 @@ namespace service
          */
         std::vector<std::pair<std::string, int>> getAllOnlineClients();
 
+        /**
+         * brief 等待至少一个节点连接成功
+         * @param timeout       [in]超时（单位：毫秒）
+         *
+         * @return
+         */
+         bool waitAtLeastOneNodeConnected(const int timeout);
+
     private:
         // HostEndPointInfo => <Client ID, ClientInfoReply包时间戳>
         // 当对端回复ClientInfoReply后，second会有值，如果second有值，说明连上了

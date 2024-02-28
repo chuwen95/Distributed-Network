@@ -17,11 +17,11 @@ namespace service
     public:
         using Ptr = std::shared_ptr<TcpSession>;
 
-        TcpSession();
+        TcpSession(const int fd, components::RingBuffer::Ptr readBuffer, components::RingBuffer::Ptr writeBuffer);
         ~TcpSession() = default;
 
     public:
-        int init(const int fd);
+        int init();
 
         int uninit();
 
@@ -31,8 +31,8 @@ namespace service
 
         int fd();
 
-        components::RingBuffer::Ptr readBuffer();
-        components::RingBuffer::Ptr writeBuffer();
+        components::RingBuffer::Ptr& readBuffer();
+        components::RingBuffer::Ptr& writeBuffer();
 
         void setClientId(const std::string_view id);
         std::string getClientId();

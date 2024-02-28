@@ -3,6 +3,9 @@
 //
 
 #include "TcpService.h"
+
+#include <utility>
+#include <ranges>
 #include "libcomponents/Socket.h"
 #include "libcomponents/Logger.h"
 #include "libcomponents/UUIDTool.h"
@@ -20,8 +23,15 @@ namespace service
 
     int TcpService::init()
     {
-        if(-1 == m_serviceConfig->slaveReactorManager()->init(m_serviceConfig->nodeConfig()->slaveReactorNum(), m_serviceConfig->nodeConfig()->redispatchInterval(),
-                                                              m_serviceConfig->nodeConfig()->id()))
+        std::vector<SlaveReactor::Ptr> slaveReactors = m_serviceConfig->slaveReactors();
+        for(auto iter = slaveReactors.begin(); iter != slaveReactors.end(); ++iter)
+        {
+            auto offset = iter - slaveReactors.begin();
+            (*iter)->init(offset, m_serviceConfig->nodeConfig()->id());
+
+            m_serviceConfig->slaveReactorManager()->addSlaveReactor(*iter);
+        }
+        if(-1 == m_serviceConfig->slaveReactorManager()->init(m_serviceConfig->nodeConfig()->redispatchInterval(), m_serviceConfig->nodeConfig()->id()))
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "slave reactor manager init failed");
             components::Socket::close(m_fd);
@@ -110,6 +120,17 @@ namespace service
 
     int TcpService::uninit()
     {
+        std::vector<SlaveReactor::Ptr> slaveReactors = m_serviceConfig->slaveReactors();
+        for(auto iter = slaveReactors.begin(); iter != slaveReactors.end(); ++iter)
+        {
+            if(-1 == (*iter)->uninit())
+            {
+                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "uninit SlaveReactor ", iter - slaveReactors.begin(), " failed");
+                return -1;
+            }
+        }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "uninit all SlaveReactor successfully");
+
         if(-1 == m_serviceConfig->slaveReactorManager()->uninit())
         {
             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO, "uninit SlaveReactorManager failed");
@@ -145,14 +166,24 @@ namespace service
     {
         // 包处理线程池
         m_serviceConfig->packetProcessor()->start();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "start packet processor successfully");
+        std::vector<SlaveReactor::Ptr> slaveReactors = m_serviceConfig->slaveReactors();
+        for(SlaveReactor::Ptr& slaveReactor : slaveReactors)
+        {
+            slaveReactor->start();
+        }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "start all slave reactor successfully");
         // 从reactor管理器
         m_serviceConfig->slaveReactorManager()->start();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "start slave reactor manager successfully");
         // 如果还启动服务端
         if(false == m_serviceConfig->nodeConfig()->startAsClient())
         {
             // 启动主reactor的acceptor
             m_serviceConfig->acceptor()->start();
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "start acceptor successfully");
             m_serviceConfig->listenner()->start();
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "start listenner successfully");
         }
         /*
          * 本节点连接其他节点，对已经连上的节点发送心跳
@@ -160,8 +191,10 @@ namespace service
          */
         // 启动host心跳发送服务
         m_serviceConfig->hostsHeartbeatService()->start();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "start hosts heartbeat service successfully");
         // 启动host连接服务
         m_serviceConfig->hostsConnector()->start();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "start hosts connector successfully");
 
         return 0;
     }
@@ -169,22 +202,104 @@ namespace service
     int TcpService::stop()
     {
         m_serviceConfig->hostsHeartbeatService()->stop();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "stop hosts heartbeat service successfully");
         m_serviceConfig->hostsConnector()->stop();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "stop hosts connector successfully");
         m_serviceConfig->packetProcessor()->stop();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "stop packet processor successfully");
         if(false == m_serviceConfig->nodeConfig()->startAsClient())
         {
             m_serviceConfig->listenner()->stop();
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "stop listenner successfully");
             m_serviceConfig->acceptor()->stop();
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "stop acceptor successfully");
         }
         m_serviceConfig->slaveReactorManager()->stop();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "stop slave reactor manager successfully");
+        std::vector<SlaveReactor::Ptr> slaveReactors = m_serviceConfig->slaveReactors();
+        for(SlaveReactor::Ptr& slaveReactor : slaveReactors)
+        {
+            slaveReactor->stop();
+        }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "stop all slave reactor successfully");
 
         return 0;
     }
 
     void TcpService::registerModulePacketHandler(const std::int32_t moduleId,std::function<int(std::shared_ptr<std::vector<char>>)> packetHander)
     {
-        m_modulePacketHandler[moduleId] = packetHander;
+        m_modulePacketHandler[moduleId] = std::move(packetHander);
     }
+
+    bool TcpService::waitAtLeastOneNodeConnected(const int timeout)
+    {
+        return m_serviceConfig->hostsInfoManager()->waitAtLeastOneNodeConnected(timeout);
+    }
+
+    int TcpService::boardcastModuleMessage(const std::int32_t moduleId, std::shared_ptr<std::vector<char>> data)
+    {
+        PacketHeader packetHeader;
+        packetHeader.setType(PacketType::PT_ModuleMessage);
+        packetHeader.setModuleId(moduleId);
+        packetHeader.setPayloadLength(data->size());
+
+        // 编码包为待发送数据
+        std::vector<char> buffer;
+        buffer.resize(packetHeader.headerLength() + data->size());
+        packetHeader.encode(buffer.data(), packetHeader.headerLength());
+        memcpy(buffer.data() + packetHeader.headerLength(), data->data(), data->size());
+
+        // 发送给所有在线的节点
+        std::vector<std::pair<std::string, int>> allOnlineClients = m_serviceConfig->hostsInfoManager()->getAllOnlineClients();
+        for(auto& onlineClient : allOnlineClients)
+        {
+            int ret = m_serviceConfig->slaveReactorManager()->sendData(onlineClient.second, buffer);
+            if(0 != ret)
+            {
+                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                             "send message to ", onlineClient.second, ", failed, ret: ", ret);
+            }
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
+                                                                         "send message to ", onlineClient.second, ", successfully");
+        }
+
+        return 0;
+    }
+
+    int TcpService::sendModuleMessageByNodeId(const std::string& nodeId, const std::int32_t moduleId, std::shared_ptr<std::vector<char>> data)
+    {
+        PacketHeader packetHeader;
+        packetHeader.setType(PacketType::PT_ModuleMessage);
+        packetHeader.setModuleId(moduleId);
+        packetHeader.setPayloadLength(data->size());
+
+        // 编码包为待发送数据
+        std::vector<char> buffer;
+        buffer.resize(packetHeader.headerLength() + data->size());
+        packetHeader.encode(buffer.data(), packetHeader.headerLength());
+        memcpy(buffer.data() + packetHeader.headerLength(), data->data(), data->size());
+
+        // 发送给所有在线的节点
+        int fd = m_serviceConfig->hostsInfoManager()->getHostFdById(nodeId);
+        if(-1 == fd)
+        {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                         "send message to ", fd, ", failed, no such node");
+            return -1;
+        }
+
+        int ret = m_serviceConfig->slaveReactorManager()->sendData(fd, buffer);
+        if(0 != ret)
+        {
+            components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
+                                                                         "send message to ", fd, ", failed, ret: ", ret);
+        }
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
+                                                                     "send message to ", fd, ", successfully");
+
+        return 0;
+    }
+
 
     int TcpService::initServer()
     {

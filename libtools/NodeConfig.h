@@ -26,6 +26,8 @@ namespace tools
         int uninit();
 
     public:
+        std::string configFile();
+
         // [info]
         std::string id();
 
@@ -54,6 +56,9 @@ namespace tools
         components::LogType logType();
         std::string logPath();
 
+    public:
+        int loadLogConfig();
+
     private:
         int parseInfoConfig(inipp::Ini<char>& ini);
         int parseFeatureConfig(inipp::Ini<char>& ini);
@@ -64,6 +69,9 @@ namespace tools
         int parseLogConfig(inipp::Ini<char>& ini);
 
     private:
+        // log file path
+        std::string m_configFile;
+
         // [info]
         std::string m_id;
 

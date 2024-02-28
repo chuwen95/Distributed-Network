@@ -14,15 +14,13 @@ namespace service
     SlaveReactorManager::~SlaveReactorManager()
     {}
 
-    int SlaveReactorManager::init(const std::size_t slaveReactorNum, const std::size_t redispatchInterval, const std::string& hostId)
+    void SlaveReactorManager::addSlaveReactor(SlaveReactor::Ptr slaveReactor)
     {
-        for(int i = 0; i < slaveReactorNum; ++i)
-        {
-            SlaveReactor::Ptr slaveReactor = std::make_shared<SlaveReactor>();
-            slaveReactor->init(i, hostId);
-            m_slaveReactors.emplace_back(slaveReactor);
-        }
+        m_slaveReactors.emplace_back(std::move(slaveReactor));
+    }
 
+    int SlaveReactorManager::init(const std::size_t redispatchInterval, const std::string& hostId)
+    {
         const auto expression = [this, redispatchInterval]()
         {
             if(true == m_isTerminate)
@@ -56,7 +54,7 @@ namespace service
 
                 components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                              "dispatch TcpSession to slave reactor, index: ", m_slaveReactorIndexWhichHasLeastFd);
-                m_slaveReactors[m_slaveReactorIndexWhichHasLeastFd]->addClient(std::shared_ptr<TcpSession>(tcpSessionInfo->tcpSession));
+                m_slaveReactors[m_slaveReactorIndexWhichHasLeastFd]->addClient(tcpSessionInfo->tcpSession);
 
                 ++s_refreshTime;
                 if(0 == s_refreshTime % redispatchInterval)
@@ -80,17 +78,13 @@ namespace service
                 }
             }
         };
-        m_thread.init(expression, 0, "slave_reac_man");
+        m_thread.init(expression, 0, "slav_reac_man");
 
         return 0;
     }
 
     int SlaveReactorManager::uninit()
     {
-        for(auto& slaveReactor : m_slaveReactors)
-        {
-            slaveReactor->uninit();
-        }
         m_slaveReactors.clear();
 
         return 0;
@@ -98,12 +92,8 @@ namespace service
 
     int SlaveReactorManager::start()
     {
-        for(auto& slaveReactor : m_slaveReactors)
-        {
-            slaveReactor->start();
-        }
-
         m_thread.start();
+        components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO, "start slave reactor manager successfully");
 
         return 0;
     }
@@ -114,11 +104,6 @@ namespace service
         m_tcpSessionsQueueCv.notify_one();
         m_thread.stop();
         m_thread.uninit();
-
-        for(auto& slaveReactor : m_slaveReactors)
-        {
-            slaveReactor->stop();
-        }
 
         return 0;
     }

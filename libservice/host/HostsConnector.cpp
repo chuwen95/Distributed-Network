@@ -6,6 +6,7 @@
 #include "libcomponents/Logger.h"
 #include "libcomponents/Socket.h"
 #include "libcomponents/CellTimestamp.h"
+#include "libservice/service/TcpSessionFactory.h"
 
 #include <json/json.h>
 
@@ -81,8 +82,8 @@ namespace service
 
                     if(nullptr != m_connectHandler)
                     {
-                        TcpSession::Ptr tcpSession = std::make_shared<TcpSession>();
-                        tcpSession->init(fd);
+                        TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(fd, service::c_readBufferSize, service::c_writeBufferSize);
+                        tcpSession->init();
                         tcpSession->setPeerHostEndPointInfo(host.first);
 
                         // 将TcpSession回调出去，此时仍保留状态为连接中，即不处理m_connectingHosts，等到ClientInfoReply回来后再将fd从m_connectingHosts中移除
@@ -164,7 +165,7 @@ namespace service
                     {
                         int error;
                         socklen_t len = sizeof(error);
-                        if(getsockopt(iter->second.first, SOL_SOCKET, SO_ERROR, &error, &len))
+                        if(-1 == getsockopt(iter->second.first, SOL_SOCKET, SO_ERROR, &error, &len))
                         {
                             components::Socket::close(fd);
                             iter = m_connectingHosts.erase(iter);
@@ -186,8 +187,8 @@ namespace service
                             components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Info, FILE_INFO,
                                                                                          "connect to ", iter->first.host()," successfully, callback TcpSession");
 
-                            TcpSession::Ptr tcpSession = std::make_shared<TcpSession>();
-                            tcpSession->init(fd);
+                            TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(fd, service::c_readBufferSize, service::c_writeBufferSize);
+                            tcpSession->init();
                             tcpSession->setPeerHostEndPointInfo(iter->first);
 
                             // 将TcpSession回调出去，此时仍保留状态为连接中，即不处理m_connectingHosts，等到ClientInfoReply回来后再将fd从m_connectingHosts中移除
@@ -202,9 +203,8 @@ namespace service
                             std::unique_lock<std::mutex> ulock(x_connectingHosts);
                             m_connectingHosts[iter->first].second = -1;
                         }
-
-                        ++iter;
                     }
+                    ++iter;
                 }
             }
 

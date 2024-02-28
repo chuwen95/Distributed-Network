@@ -32,8 +32,6 @@ namespace service
 
         int setHostConnected(const HostEndPointInfo& hostEndPointInfo);
 
-        int setHostNotConnected(const HostEndPointInfo& hostEndPointInfo);
-
     private:
         std::mutex x_connectingHosts;
         // ip:port => pair<fd, start_connect_timestamp>

@@ -25,6 +25,11 @@ namespace service
             acceptor = std::make_shared<Acceptor>();
         }
         // 服务端客户端都需要
+        std::vector<SlaveReactor::Ptr> slaveReactors;
+        for(int i = 0; i < m_nodeConfig->slaveReactorNum(); ++i)
+        {
+            slaveReactors.emplace_back(std::make_shared<SlaveReactor>());
+        }
         SlaveReactorManager::Ptr slaveReactorManager = std::make_shared<SlaveReactorManager>();
         components::ThreadPool::Ptr packetProcessor = std::make_shared<components::ThreadPool>();
 
@@ -34,7 +39,8 @@ namespace service
         HostsHeartbeatService::Ptr hostsHeartbeatService = std::make_shared<HostsHeartbeatService>();
 
         // 创建TcpServiceConfig
-        ServiceConfig::Ptr serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor, slaveReactorManager, packetProcessor,
+        ServiceConfig::Ptr serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
+                                                                           slaveReactors, slaveReactorManager, packetProcessor,
                                                                            hostsInfoManager, hostsConnector, hostsHeartbeatService);
         return std::make_shared<TcpService>(serviceConfig);
     }

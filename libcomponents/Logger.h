@@ -60,9 +60,11 @@ namespace components
 
             if(true == m_enableFileLog)
             {
-                std::unique_lock<std::mutex> ulock(x_buffer);
-                m_buffer.insert(m_buffer.end(), result.begin(), result.end());
-                m_buffer.insert(m_buffer.end(), '\n');
+                {
+                    std::unique_lock<std::mutex> ulock(x_buffer);
+                    m_buffer.insert(m_buffer.end(), result.begin(), result.end());
+                    m_buffer.insert(m_buffer.end(), '\n');
+                }
 
                 m_bufferCv.notify_one();
             }

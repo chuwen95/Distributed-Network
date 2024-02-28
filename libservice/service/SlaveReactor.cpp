@@ -6,6 +6,7 @@
 
 #include "libcomponents/Socket.h"
 #include "libcomponents/Logger.h"
+#include "libcomponents/CellTimestamp.h"
 
 namespace service
 {
@@ -64,10 +65,13 @@ namespace service
             int timeout{0};
             if(true == m_infds.empty() && true == m_outfds.empty() && true == m_datafds.empty())
             {
-                timeout = 10;
+                timeout = 100;
             }
             struct epoll_event ev[c_maxEvent];
+            //components::CellTimestamp timestamp;
+            //timestamp.update();
             int nready = epoll_wait(m_epfd, ev, c_maxEvent, timeout);
+            //std::cout << "epoll_wait elapsed time: " << timestamp.getElapsedTimeInMilliSec() << "ms" << std::endl;
             if(-1 == nready)
             {
                 components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
@@ -453,6 +457,7 @@ namespace service
         // 停止客户端在线监测
         m_clientAliveChecker.stop();
 
+        m_isTerminate = true;
         m_thread.stop();
         m_thread.uninit();
 

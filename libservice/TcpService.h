@@ -37,35 +37,19 @@ namespace service
 
         void registerModulePacketHandler(const std::int32_t moduleId, std::function<int(std::shared_ptr<std::vector<char>>)> packetHander);
 
-        int boardcastModuleMessage(const std::int32_t moduleId, std::shared_ptr<std::vector<char>> data)
-        {
-            PacketHeader packetHeader;
-            packetHeader.setType(PacketType::PT_ModuleMessage);
-            packetHeader.setModuleId(moduleId);
-            packetHeader.setPayloadLength(data->size());
+    public:
+        /**
+         * @brief 仅作为客户端的时候使用，等待至少有一个节点连上
+         * @param timeout           [in]超时时间（单位：毫秒）
+         *
+         * @return 如果有超时时间内有节点上线，则返回true
+         *               如果超时时间内没有节点上线，则返回false
+         */
+        bool waitAtLeastOneNodeConnected(const int timeout);
 
-            // 编码包为待发送数据
-            std::vector<char> buffer;
-            buffer.resize(packetHeader.headerLength() + data->size());
-            packetHeader.encode(buffer.data(), packetHeader.headerLength());
-            memcpy(buffer.data() + packetHeader.headerLength(), data->data(), data->size());
+        int boardcastModuleMessage(const std::int32_t moduleId, std::shared_ptr<std::vector<char>> data);
 
-            // 发送给所有在线的节点
-            std::vector<std::pair<std::string, int>> allOnlineClients = m_serviceConfig->hostsInfoManager()->getAllOnlineClients();
-            for(auto& onlineClient : allOnlineClients)
-            {
-                int ret = m_serviceConfig->slaveReactorManager()->sendData(onlineClient.second, buffer);
-                if(0 != ret)
-                {
-                    components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Error, FILE_INFO,
-                                                                                 "send message to ", onlineClient.second, ", failed, ret: ", ret);
-                }
-                components::Singleton<components::Logger>::instance()->write(components::LogType::Log_Debug, FILE_INFO,
-                                                                             "send message to ", onlineClient.second, ", successfully");
-            }
-
-            return 0;
-        }
+        int sendModuleMessageByNodeId(const std::string& nodeId, const std::int32_t moduleId, std::shared_ptr<std::vector<char>> data);
 
     private:
         int initServer();

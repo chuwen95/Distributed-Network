@@ -5,6 +5,7 @@
 #include "HostsInfoManager.h"
 #include "libcomponents/Logger.h"
 #include "libcomponents/StringTool.h"
+#include "libcomponents/CellTimestamp.h"
 
 #include <json/json.h>
 
@@ -219,6 +220,25 @@ namespace service
         }
 
         return std::move(onlineClients);
+    }
+
+    bool HostsInfoManager::waitAtLeastOneNodeConnected(const int timeout)
+    {
+        components::CellTimestamp timestamp;
+        timestamp.update();
+        while(onlineClientSize() < 1 && timestamp.getElapsedTimeInMilliSec() < timeout)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
+
+        if(onlineClientSize() < 1)
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
     }
 
 } // service

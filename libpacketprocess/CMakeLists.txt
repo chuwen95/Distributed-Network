@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(libpacketprocess)
 
 # proto生成c++文件
-set(module_path ${CMAKE_SOURCE_DIR}/libpacketprocess)
+set(module_path ${CMAKE_CURRENT_SOURCE_DIR})
 set(proto_output_path ${CMAKE_CURRENT_BINARY_DIR})
 
 # 填充.proto文件

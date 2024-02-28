@@ -9,19 +9,14 @@
 namespace service
 {
 
-    TcpSession::TcpSession()
+    TcpSession::TcpSession(const int fd, components::RingBuffer::Ptr readBuffer, components::RingBuffer::Ptr writeBuffer):
+        m_clientfd(fd), m_readBuffer(std::move(readBuffer)), m_writeBuffer(std::move(writeBuffer))
     {
-        m_readBuffer = std::make_shared<components::RingBuffer>();
-        m_writeBuffer = std::make_shared<components::RingBuffer>();
     }
 
-    int TcpSession::init(const int fd)
+    int TcpSession::init()
     {
-        m_clientfd = fd;
         components::Socket::setNonBlock(m_clientfd);
-
-        m_readBuffer->init(4 * 1024 * 1024);
-        m_writeBuffer->init(4 * 1024 * 1024);
 
         return 0;
     }
@@ -46,12 +41,12 @@ namespace service
         return m_clientfd;
     }
 
-    components::RingBuffer::Ptr TcpSession::readBuffer()
+    components::RingBuffer::Ptr& TcpSession::readBuffer()
     {
         return m_readBuffer;
     }
 
-    components::RingBuffer::Ptr TcpSession::writeBuffer()
+    components::RingBuffer::Ptr& TcpSession::writeBuffer()
     {
         return m_writeBuffer;
     }
