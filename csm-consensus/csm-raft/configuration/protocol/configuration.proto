@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package raft;
+
+message Server
+{
+  string id = 1;
+}
+
+message SimpleConfiguration
+{
+  repeated Server servers = 1;
+}
+
+message ClusterConfiguration
+{
+  SimpleConfiguration prevConfiguration = 1;
+  SimpleConfiguration nextConfiguration = 2;
+}

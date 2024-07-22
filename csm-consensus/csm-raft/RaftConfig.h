@@ -1,0 +1,45 @@
+//
+// Created by ChuWen on 2024/6/4.
+//
+
+#ifndef COPYSTATEMACHINE_RAFTCONFIG_H
+#define COPYSTATEMACHINE_RAFTCONFIG_H
+
+#include "csm-common/Common.h"
+
+namespace csm
+{
+
+    namespace consensus
+    {
+
+        class RaftConfig
+        {
+        public:
+            using Ptr = std::shared_ptr<RaftConfig>;
+
+            RaftConfig(const std::string &id, const std::vector<std::string>& clusterServerIds);
+            ~RaftConfig() = default;
+
+            /**
+             * 获取本服务器ID
+             * @return
+             */
+            const std::string& id();
+
+            /**
+             * 获取集群中所有服务器ID（包含本服务器ID）
+             * @return
+             */
+            const std::vector<std::string>& clusterServerIds() const;
+
+        private:
+            std::string m_id;
+            std::vector<std::string> m_clusterServerIds;
+        };
+
+    }
+
+}
+
+#endif //COPYSTATEMACHINE_RAFTCONFIG_H

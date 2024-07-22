@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "libinitializer/Initializer.h"
-#include "libpacketprocess/packet/PacketRawString.h"
+#include "csm-initializer/Initializer.h"
+#include "csm-packetprocess/packet/PacketRawString.h"
 
 //#define FOR_TEST
 
@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    initializer::Initializer initializer;
+    csm::initializer::Initializer initializer;
     if(-1 == initializer.initConfig(argv[1]))
     {
         return -1;

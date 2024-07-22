@@ -1,5 +1,5 @@
 {
-    "name": "tcp-network",
+    "name": "copy-state-machine",
     "version": "1",
     "dependencies": [
         {
@@ -15,6 +15,7 @@
         "inipp",
         "jsoncpp",
         "stduuid",
-        "cpp-httplib"
+        "cpp-httplib",
+        "rocksdb"
     ]
 }

@@ -7,22 +7,24 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
 endif()
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/deps-cmake" CACHE PATH "The path to the deps cmake directory")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake" CACHE PATH "The path to the deps cmake directory")
 
-project(TcpNetwork)
+project(CopyStateMachine)
 
 set(CMAKE_CXX_STANDARD 20)
 
-include_directories(${CMAKE_SOURCE_DIR})
-
+include(IncludeDirectories)
 include(ProjectReaderWriterQueue)
 
-add_subdirectory(libcomponents)
-add_subdirectory(librpc)
-add_subdirectory(libservice)
-add_subdirectory(libpacketprocess)
-add_subdirectory(libtools)
-add_subdirectory(libinitializer)
+add_subdirectory(csm-utilities)
+add_subdirectory(csm-rpc)
+add_subdirectory(csm-consensus)
+add_subdirectory(csm-service)
+add_subdirectory(csm-packetprocess)
+add_subdirectory(csm-tool)
+add_subdirectory(csm-stmclog)
+add_subdirectory(csm-storage)
+add_subdirectory(csm-initializer)
 add_subdirectory(server)
 add_subdirectory(client)
 

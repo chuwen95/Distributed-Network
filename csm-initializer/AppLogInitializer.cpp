@@ -1,0 +1,55 @@
+//
+// Created by ChuWen on 2024/2/25.
+//
+
+#include "AppLogInitializer.h"
+
+struct LogLevelResetHandler
+{
+    static csm::tool::NodeConfig::Ptr nodeConfig;
+
+    static void handle(int sig)
+    {
+        nodeConfig->loadLogConfig();
+        LOG->setLogLevel(nodeConfig->logType());
+        LOG->setConsoleOutput(nodeConfig->consoleOutput());
+
+        LOG->write(csm::utilities::LogType::Log_Info, FILE_INFO,
+                                                                     "reload log config successfully, log level: ", static_cast<int>(nodeConfig->logType()));
+    }
+};
+
+csm::tool::NodeConfig::Ptr LogLevelResetHandler::nodeConfig = nullptr;
+
+using namespace csm::initializer;
+
+AppLogInitializer::AppLogInitializer(tool::NodeConfig::Ptr nodeConfig) : m_nodeConfig(std::move(nodeConfig))
+{}
+
+int AppLogInitializer::init()
+{
+    // 设置Logger
+    if (-1 == LOG->init(m_nodeConfig->enableFileLog(), m_nodeConfig->logPath()))
+    {
+        return -1;
+    }
+    LOG->setLogLevel(m_nodeConfig->logType());
+    LOG->setConsoleOutput(m_nodeConfig->consoleOutput());
+
+    LogLevelResetHandler::nodeConfig = m_nodeConfig;
+    signal(SIGUSR2, LogLevelResetHandler::handle);
+
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "register SIGUSR2 for reload log config");
+
+    return 0;
+}
+
+int AppLogInitializer::start()
+{
+    return LOG->start();
+}
+
+int AppLogInitializer::stop()
+{
+    return LOG->stop();
+}

@@ -1,0 +1,53 @@
+//
+// Created by root on 9/6/23.
+//
+
+#ifndef TCPSERVER_SELECTLISTENNER_H
+#define TCPSERVER_SELECTLISTENNER_H
+
+#include "csm-common/Common.h"
+#include "csm-utilities/Thread.h"
+
+namespace csm
+{
+
+    namespace components
+    {
+
+        class SelectListenner
+        {
+        public:
+            using Ptr = std::shared_ptr<SelectListenner>;
+
+            SelectListenner();
+
+            ~SelectListenner();
+
+        public:
+            int init(const int fd);
+
+            int uninit();
+
+            int start();
+
+            int stop();
+
+            /**
+             * @brief   注册连接事件回调
+             *
+             * @param connectHandler
+             */
+            void registerConnectHandler(std::function<void()> connectHandler);
+
+        private:
+            int m_listenfd;
+            std::function<void()> m_connectHandler;
+
+            Thread m_thread;
+        };
+
+    } // components
+
+}
+
+#endif //TCPSERVER_SELECTLISTENNER_H

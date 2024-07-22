@@ -3,7 +3,7 @@
 //
 
 #include "httplib.h"
-#include "libcomponents/StringTool.h"
+#include "csm-utilities/StringTool.h"
 
 int main(int argc, char* argv[])
 {
@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 
     std::string content{"hello world"};
 
-    httplib::Client client(argv[1], components::string_tools::convertFromString<int>(argv[2]));
+    httplib::Client client(argv[1], csm::components::convertFromString<int>(argv[2]));
     while(true)
     {
         client.Post("/boardcastRawString", content.c_str(), content.size(), "text/plain");
