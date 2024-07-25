@@ -9,7 +9,7 @@
 int putOnePacketTest()
 {
     // 创建大小32K的环形缓冲区
-    components::RingBuffer ringBuffer;
+    utilities::RingBuffer ringBuffer;
     ringBuffer.init(32 * 1024);
 
     // 请求包
@@ -101,7 +101,7 @@ int putOnePacketTest()
 int fullBufferTest()
 {
     // 创建大小32K的环形缓冲区
-    components::RingBuffer ringBuffer;
+    utilities::RingBuffer ringBuffer;
     ringBuffer.init(32 * 1024);
 
     // 请求包
@@ -318,7 +318,7 @@ int fullBufferTest()
 int fullBufferUseWriteDataTest()
 {
     // 创建大小32K的环形缓冲区
-    components::RingBuffer ringBuffer;
+    utilities::RingBuffer ringBuffer;
     ringBuffer.init(32 * 1024);
 
     // 请求包

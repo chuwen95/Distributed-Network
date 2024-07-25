@@ -5,7 +5,7 @@
 #include "HostsInfoManager.h"
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/StringTool.h"
-#include "csm-components/CellTimestamp.h"
+#include "csm-utilities/CellTimestamp.h"
 
 #include <json/json.h>
 
@@ -16,7 +16,7 @@ int HostsInfoManager::init(const std::string &configFile)
     std::ifstream nodeFile(configFile, std::ios::in);
     if (false == nodeFile.is_open())
     {
-        LOG->write(components::LogType::Log_Error, FILE_INFO, "open nodes config file failed: ", configFile);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "open nodes config file failed: ", configFile);
         return -1;
     }
     nodeFile.seekg(0, std::ios::end);
@@ -29,38 +29,38 @@ int HostsInfoManager::init(const std::string &configFile)
     nodeFile.close();
 
     std::string jsonContent(content.data(), length);
-    LOG->write(components::LogType::Log_Debug, FILE_INFO, "nodes config file content: ", jsonContent);
+    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "nodes config file content: ", jsonContent);
 
     Json::Value root;
     Json::Reader reader;
     bool ret = reader.parse(std::string(content.data(), content.size()), root);
     if (false == ret)
     {
-        LOG->write(components::LogType::Log_Error, FILE_INFO, "parse nodes config file failed: ", configFile);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "parse nodes config file failed: ", configFile);
         return -1;
     }
-    LOG->write(components::LogType::Log_Info, FILE_INFO, "parse nodes config file successfully: ", configFile);
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "parse nodes config file successfully: ", configFile);
 
     Json::Value &nodesValue = root["nodes"];
     if (false == nodesValue.isArray())
     {
-        LOG->write(components::LogType::Log_Error, FILE_INFO, "parse hosts config file failed: ", configFile);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "parse hosts config file failed: ", configFile);
         return -1;
     }
 
     for (auto iter = nodesValue.begin(); iter != nodesValue.end(); ++iter)
     {
         std::string host = iter->asString();
-        LOG->write(components::LogType::Log_Info, FILE_INFO, "hosts info: ", host);
-        std::vector<std::string> ipPort = csm::components::split(host, ':');
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "hosts info: ", host);
+        std::vector<std::string> ipPort = csm::utilities::split(host, ':');
         if (2 != ipPort.size())
         {
-            LOG->write(components::LogType::Log_Error, FILE_INFO, "parse hosts ip and port failed: ", host);
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "parse hosts ip and port failed: ", host);
             return -1;
         }
 
         std::string ip = ipPort[0];
-        unsigned short port = csm::components::convertFromString<unsigned short>(ipPort[1]);
+        unsigned short port = csm::utilities::convertFromString<unsigned short>(ipPort[1]);
         m_hosts.emplace(HostEndPointInfo(ip, port), std::make_pair("", -1));
     }
 
@@ -96,7 +96,7 @@ int HostsInfoManager::addHostIdInfo(const std::string &id, const int fd, const s
     auto iter = m_nodeIdInfos.find(id);
     if (m_nodeIdInfos.end() != iter)
     {
-        LOG->write(components::LogType::Log_Error, FILE_INFO, "host already exist");
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "host already exist");
         return -1;
     }
     m_nodeIdInfos.emplace(id, std::make_pair(fd, uuid));
@@ -110,7 +110,7 @@ int HostsInfoManager::setHostIdInfo(const std::string &id, const int fd, const s
     auto iter = m_nodeIdInfos.find(id);
     if (m_nodeIdInfos.end() == iter)
     {
-        LOG->write(components::LogType::Log_Error, FILE_INFO, "host already exist");
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "host already exist");
         return -1;
     }
     iter->second.first = fd;
@@ -125,12 +125,12 @@ int HostsInfoManager::removeHostIdInfo(const std::string &id, const std::string 
     auto iter = m_nodeIdInfos.find(id);
     if (m_nodeIdInfos.end() == iter)
     {
-        LOG->write(components::LogType::Log_Error, FILE_INFO, "host id not exist, id: ", id);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "host id not exist, id: ", id);
         return -1;
     }
     if (iter->second.second != uuid)
     {
-        LOG->write(components::LogType::Log_Error, FILE_INFO, "uuid not match, id: ", id);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "uuid not match, id: ", id);
         return -1;
     }
     m_nodeIdInfos.erase(iter);
@@ -144,7 +144,7 @@ int HostsInfoManager::setHostNotConnected(const service::HostEndPointInfo &endPo
     auto iter = m_hosts.find(endPointInfo);
     if (m_hosts.end() == iter)
     {
-        LOG->write(components::LogType::Log_Error, FILE_INFO, "host not exist");
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "host not exist");
         return -1;
     }
     iter->second.first.clear();
@@ -159,7 +159,7 @@ int HostsInfoManager::getHostFdById(const std::string id)
     auto iter = m_nodeIdInfos.find(id);
     if (m_nodeIdInfos.end() == iter)
     {
-        LOG->write(components::LogType::Log_Error, FILE_INFO, "host not exist");
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "host not exist");
         return -1;
     }
     return iter->second.first;
@@ -210,7 +210,7 @@ std::vector<std::pair<std::string, int>> HostsInfoManager::getAllOnlineClients()
 
 bool HostsInfoManager::waitAtLeastOneNodeConnected(const int timeout)
 {
-    components::CellTimestamp timestamp;
+    utilities::CellTimestamp timestamp;
     timestamp.update();
     while (onlineClientSize() < 1 && timestamp.getElapsedTimeInMilliSec() < timeout)
     {

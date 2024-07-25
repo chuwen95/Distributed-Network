@@ -42,7 +42,7 @@ namespace csm
 
             HostsInfoManager::Ptr m_hostsInfoManager;
 
-            components::Thread m_thread;
+            utilities::Thread m_thread;
 
             std::function<void(const int, TcpSession::Ptr)> m_connectHandler;
         };

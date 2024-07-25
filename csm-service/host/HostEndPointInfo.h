@@ -28,7 +28,7 @@ namespace csm
                 if (2 == values.size())
                 {
                     m_ip = values[0];
-                    m_port = csm::components::convertFromString<unsigned short>(values[1]);
+                    m_port = csm::utilities::convertFromString<unsigned short>(values[1]);
                 }
             }
 

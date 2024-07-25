@@ -10,10 +10,10 @@
 #include "csm-utilities/Logger.h"
 #include "csm-tool/NodeConfig.h"
 
-#include "csm-components/SelectListenner.h"
+#include "csm-utilities/SelectListenner.h"
 #include "csm-service/service/Acceptor.h"
 #include "csm-service/service/SlaveReactorManager.h"
-#include "csm-components/ThreadPool.h"
+#include "csm-utilities/ThreadPool.h"
 
 #include "csm-service/host/HostsInfoManager.h"
 #include "csm-service/host/HostsConnector.h"
@@ -30,10 +30,10 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<ServiceConfig>;
 
-            ServiceConfig(tool::NodeConfig::Ptr nodeConfig, components::SelectListenner::Ptr listenner,
+            ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner,
                           Acceptor::Ptr acceptor,
                           std::vector<SlaveReactor::Ptr> slaveReactors, SlaveReactorManager::Ptr slaveReactorManager,
-                          components::ThreadPool::Ptr packetProcessor,
+                          utilities::ThreadPool::Ptr packetProcessor,
                           HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector,
                           HostsHeartbeatService::Ptr hostsHeartbeatService);
 
@@ -42,7 +42,7 @@ namespace csm
         public:
             tool::NodeConfig::Ptr nodeConfig();
 
-            components::SelectListenner::Ptr listenner();
+            utilities::SelectListenner::Ptr listenner();
 
             Acceptor::Ptr acceptor();
 
@@ -50,7 +50,7 @@ namespace csm
 
             SlaveReactorManager::Ptr slaveReactorManager();
 
-            components::ThreadPool::Ptr packetProcessor();
+            utilities::ThreadPool::Ptr packetProcessor();
 
             HostsInfoManager::Ptr hostsInfoManager();
 
@@ -61,11 +61,11 @@ namespace csm
         private:
             tool::NodeConfig::Ptr m_nodeConfig;
 
-            components::SelectListenner::Ptr m_listenner;
+            utilities::SelectListenner::Ptr m_listenner;
             Acceptor::Ptr m_acceptor;
             std::vector<SlaveReactor::Ptr> m_slaveReactors;
             SlaveReactorManager::Ptr m_slaveReactorManager;
-            components::ThreadPool::Ptr m_packetProcesser;
+            utilities::ThreadPool::Ptr m_packetProcesser;
 
             HostsInfoManager::Ptr m_hostsInfoManager;
             HostsConnector::Ptr m_hostsConnector;

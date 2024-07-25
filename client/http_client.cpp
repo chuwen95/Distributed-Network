@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 
     std::string content{"hello world"};
 
-    httplib::Client client(argv[1], csm::components::convertFromString<int>(argv[2]));
+    httplib::Client client(argv[1], csm::utilities::convertFromString<int>(argv[2]));
     while(true)
     {
         client.Post("/boardcastRawString", content.c_str(), content.size(), "text/plain");

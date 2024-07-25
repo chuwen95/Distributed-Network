@@ -50,7 +50,7 @@ int SlaveReactorManager::init(const std::size_t redispatchInterval, const std::s
                 m_clientSlaveReactors[tcpSessionInfo->tcpSession->fd()] = m_slaveReactorIndexWhichHasLeastFd;
             }
 
-            LOG->write(components::LogType::Log_Info, FILE_INFO,
+            LOG->write(utilities::LogType::Log_Info, FILE_INFO,
                           "dispatch TcpSession to slave reactor, index: ", m_slaveReactorIndexWhichHasLeastFd);
             m_slaveReactors[m_slaveReactorIndexWhichHasLeastFd]->addClient(tcpSessionInfo->tcpSession);
 
@@ -91,7 +91,7 @@ int SlaveReactorManager::uninit()
 int SlaveReactorManager::start()
 {
     m_thread.start();
-    LOG->write(components::LogType::Log_Info, FILE_INFO, "start slave reactor manager successfully");
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start slave reactor manager successfully");
 
     return 0;
 }
@@ -212,7 +212,7 @@ int SlaveReactorManager::disconnectClient(const int fd)
         auto iter = m_clientSlaveReactors.find(fd);
         if (m_clientSlaveReactors.end() == iter)
         {
-            LOG->write(components::LogType::Log_Error, FILE_INFO,
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO,
                           "client not exist");
             return -1;
         }

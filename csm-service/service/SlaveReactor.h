@@ -126,7 +126,7 @@ namespace csm
 
         private:
             // 从readBuffer中获取包类型和包负载，如果缓冲区的数据不够包长度，则返回-1
-            int getPacket(const int fd, components::RingBuffer::Ptr &readBuffer, PacketType &packetType,
+            int getPacket(const int fd, utilities::RingBuffer::Ptr &readBuffer, PacketType &packetType,
                           std::int32_t &moduleId, std::shared_ptr<std::vector<char>> &data);
 
             // 处理客户端ClientInfo包
@@ -150,7 +150,7 @@ namespace csm
             std::unordered_map<int, TcpSession::Ptr> m_fdSessions;
 
             std::atomic_bool m_isTerminate{false};
-            components::Thread m_thread;
+            utilities::Thread m_thread;
 
             int m_epfd{-1};
 

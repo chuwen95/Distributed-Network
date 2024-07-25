@@ -5,7 +5,7 @@
 #include "Rpc.h"
 #include "csm-utilities/Logger.h"
 #include "csm-packetprocess/packet/PacketRawString.h"
-#include "csm-components/CellTimestamp.h"
+#include "csm-utilities/CellTimestamp.h"
 
 using namespace csm::rpc;
 
@@ -17,7 +17,7 @@ int Rpc::init()
 {
     m_rpcConfig->httpServer()->Post("/boardcastRawString", [this](const httplib::Request &req, httplib::Response &res) {
 
-        //LOG->write(components::LogType::Log_Info, FILE_INFO,
+        //LOG->write(utilities::LogType::Log_Info, FILE_INFO,
         //                                                             " recv raw string: : ", req.body);
 
         packetprocess::PacketRawString packetRawString;

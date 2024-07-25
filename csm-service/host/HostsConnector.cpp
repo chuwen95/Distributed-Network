@@ -21,11 +21,11 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
         HostsInfoManager::Hosts hosts = m_hostsInfoManager->getHosts();
         for (auto &host: hosts)
         {
-            LOG->write(components::LogType::Log_Debug, FILE_INFO, "connecting host: ", host.first.host());
+            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "connecting host: ", host.first.host());
             // 如果id不为空，证明客户端已经连上并发送了ClientInfo包
             if (false == host.second.first.empty())
             {
-                LOG->write(components::LogType::Log_Debug, FILE_INFO, "host is connected: ", host.first.host());
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "host is connected: ", host.first.host());
                 continue;
             }
 
@@ -37,37 +37,37 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
             }
             if (true == isConnecting)
             {
-                LOG->write(components::LogType::Log_Debug, FILE_INFO, "host is connecting or waiting ClientInfo packet: ", host.first.ip());
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "host is connecting or waiting ClientInfo packet: ", host.first.ip());
                 continue;
             }
-            LOG->write(components::LogType::Log_Debug, FILE_INFO, "start to connect: ", host.first.host());
+            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "start to connect: ", host.first.host());
 
             // 开始连接
-            int fd = components::Socket::create();
+            int fd = utilities::Socket::create();
             if (-1 == fd)
             {
-                LOG->write(components::LogType::Log_Error, FILE_INFO, "create socket failed, ready to connect: ", host.first.ip());
+                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "create socket failed, ready to connect: ", host.first.ip());
                 continue;
             }
-            LOG->write(components::LogType::Log_Debug, FILE_INFO, "create socket successfully, fd: ", fd);
+            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "create socket successfully, fd: ", fd);
 
             // 添加host到正在连接
             {
                 std::unique_lock<std::mutex> ulock(x_connectingHosts);
-                m_connectingHosts.emplace(host.first, std::make_pair(fd, components::CellTimestamp::getCurrentTimestamp()));
+                m_connectingHosts.emplace(host.first, std::make_pair(fd, utilities::CellTimestamp::getCurrentTimestamp()));
             }
-            LOG->write(components::LogType::Log_Debug, FILE_INFO, "add host to connecting successfully");
+            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "add host to connecting successfully");
 
-            components::Socket::setNonBlock(fd);
+            utilities::Socket::setNonBlock(fd);
 
-            LOG->write(components::LogType::Log_Debug, FILE_INFO, "set socket non block successfully");
+            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "set socket non block successfully");
 
-            int ret = components::Socket::connect(fd, host.first.ip(), host.first.port());
+            int ret = utilities::Socket::connect(fd, host.first.ip(), host.first.port());
             if (0 == ret)
             {
                 // 一般情况下这个if不会走到，因为非阻塞io第一次connect不会立即返回0，后续又因为m_connectingHosts的原因不会再connect
 
-                LOG->write(components::LogType::Log_Debug, FILE_INFO, "connect successfully, host: ", host.first.host());
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "connect successfully, host: ", host.first.host());
 
                 if (nullptr != m_connectHandler)
                 {
@@ -89,20 +89,20 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
                 continue;
             } else if (-1 == ret)
             {
-                LOG->write(components::LogType::Log_Debug, FILE_INFO, "errno: ", errno);
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "errno: ", errno);
                 if (EINPROGRESS == errno)
                 {
-                    LOG->write(components::LogType::Log_Debug, FILE_INFO, "connect status: EINPROGRESS");
+                    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "connect status: EINPROGRESS");
                     continue;
                 } else
                 {
-                    LOG->write(components::LogType::Log_Error, FILE_INFO, "connect failed");
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "connect failed");
                     auto iter = m_connectingHosts.find(host.first);
                     if (m_connectingHosts.end() != iter)
                     {
                         m_connectingHosts.erase(iter);
                     }
-                    components::Socket::close(fd);
+                    utilities::Socket::close(fd);
                     continue;
                 }
             }
@@ -113,12 +113,12 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
         int maxfd{0};
         for (auto &host: m_connectingHosts)
         {
-            LOG->write(components::LogType::Log_Debug, FILE_INFO, "checking ", host.first.host(), " connect status");
+            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "checking ", host.first.host(), " connect status");
             // 将时间戳设置为-1，表示已经连上，不需要再监测超时，
             // TcpSession已经回调出去，由Reactor管理recv/send，此时正在等待ClientInfoReply包
             if (-1 == host.second.second)
             {
-                LOG->write(components::LogType::Log_Debug, FILE_INFO, "socket connect successfully, waiting ClientInfoReply packet");
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "socket connect successfully, waiting ClientInfoReply packet");
                 continue;
             }
 
@@ -133,7 +133,7 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
         int ret = select(maxfd + 1, nullptr, &wset, nullptr, &tm);
         if (-1 == ret)
         {
-            LOG->write(components::LogType::Log_Error, FILE_INFO, "select error, errno: ", errno, ", ", strerror(errno));
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "select error, errno: ", errno, ", ", strerror(errno));
             return -1;
         } else if (0 == ret)
         {}
@@ -148,22 +148,22 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
                     socklen_t len = sizeof(error);
                     if (-1 == getsockopt(iter->second.first, SOL_SOCKET, SO_ERROR, &error, &len))
                     {
-                        components::Socket::close(fd);
+                        utilities::Socket::close(fd);
                         iter = m_connectingHosts.erase(iter);
                         continue;
                     }
                     if (0 != error)
                     {
-                        LOG->write(components::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " failed, error: ", error);
-                        components::Socket::close(fd);
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " failed, error: ", error);
+                        utilities::Socket::close(fd);
                         iter = m_connectingHosts.erase(iter);
                         continue;
                     }
 
-                    LOG->write(components::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, fd is set");
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, fd is set");
                     if (nullptr != m_connectHandler)
                     {
-                        LOG->write(components::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, callback TcpSession");
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, callback TcpSession");
 
                         TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(fd, service::c_readBufferSize,
                                                                                           service::c_writeBufferSize);
@@ -173,7 +173,7 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
                         // 将TcpSession回调出去，此时仍保留状态为连接中，即不处理m_connectingHosts，等到ClientInfoReply回来后再将fd从m_connectingHosts中移除
                         m_connectHandler(fd, tcpSession);
 
-                        LOG->write(components::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " callback TcpSession finish");
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " callback TcpSession finish");
                     }
 
                     // 将时间戳设置为-1，表示已经连上，不需要再监测超时
@@ -194,15 +194,15 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
                 continue;
             }
 
-            std::int64_t curTimestamp = components::CellTimestamp::getCurrentTimestamp();
+            std::int64_t curTimestamp = utilities::CellTimestamp::getCurrentTimestamp();
             if (curTimestamp - host.second.second >= c_connectTimeout)
             {
-                components::Socket::close(host.second.first);
+                utilities::Socket::close(host.second.first);
                 m_connectingHosts.erase(host.first);
             }
         }
 
-        LOG->write(components::LogType::Log_Info, FILE_INFO, "online node size: ", m_hostsInfoManager->onlineClientSize());
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "online node size: ", m_hostsInfoManager->onlineClientSize());
 
         return 0;
     };
@@ -242,7 +242,7 @@ int HostsConnector::setHostConnected(const service::HostEndPointInfo &hostEndPoi
     auto iter = m_connectingHosts.find(hostEndPointInfo);
     if (m_connectingHosts.end() == iter)
     {
-        LOG->write(components::LogType::Log_Error, FILE_INFO, "host not found");
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "host not found");
         return -1;
     }
     m_connectingHosts.erase(iter);

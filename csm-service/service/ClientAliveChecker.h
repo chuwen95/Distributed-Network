@@ -70,7 +70,7 @@ namespace csm
             std::mutex x_clientLastRecvTime;
             std::unordered_map<int, utilities::Timestamp::Ptr> m_clientLastRecvTime;
 
-            components::Thread m_thread;
+            utilities::Thread m_thread;
 
             std::function<void(const std::vector<int> &)> m_offlinefdsCallback;
         };

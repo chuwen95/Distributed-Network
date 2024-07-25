@@ -44,11 +44,11 @@ int Acceptor::init(const int fd)
 
                 TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(clientfd, 4 * 1024, 4 * 1024);
                 tcpSession->init();
-                LOG->write(components::LogType::Log_Info, FILE_INFO, "create TcpSession successfully");
+                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "create TcpSession successfully");
 
                 if (nullptr != m_newClientCallback)
                 {
-                    LOG->write(components::LogType::Log_Info, FILE_INFO, "send TcpSession to SlaveReactorManager");
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send TcpSession to SlaveReactorManager");
                     m_newClientCallback(clientfd, tcpSession);
                 }
             }
@@ -82,7 +82,7 @@ int Acceptor::stop()
 
 int Acceptor::onConnect()
 {
-    LOG->write(components::LogType::Log_Trace, FILE_INFO);
+    LOG->write(utilities::LogType::Log_Trace, FILE_INFO);
     m_connectCv.notify_one();
 
     return 0;

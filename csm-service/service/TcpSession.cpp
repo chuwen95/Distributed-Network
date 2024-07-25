@@ -8,14 +8,14 @@
 
 using namespace csm::service;
 
-TcpSession::TcpSession(const int fd, utilities::RingBuffer::Ptr readBuffer, components::RingBuffer::Ptr writeBuffer) :
+TcpSession::TcpSession(const int fd, utilities::RingBuffer::Ptr readBuffer, utilities::RingBuffer::Ptr writeBuffer) :
         m_clientfd(fd), m_readBuffer(std::move(readBuffer)), m_writeBuffer(std::move(writeBuffer))
 {
 }
 
 int TcpSession::init()
 {
-    components::Socket::setNonBlock(m_clientfd);
+    utilities::Socket::setNonBlock(m_clientfd);
 
     return 0;
 }
@@ -40,12 +40,12 @@ int TcpSession::fd()
     return m_clientfd;
 }
 
-csm::components::RingBuffer::Ptr &TcpSession::readBuffer()
+csm::utilities::RingBuffer::Ptr &TcpSession::readBuffer()
 {
     return m_readBuffer;
 }
 
-csm::components::RingBuffer::Ptr &TcpSession::writeBuffer()
+csm::utilities::RingBuffer::Ptr &TcpSession::writeBuffer()
 {
     return m_writeBuffer;
 }

@@ -20,7 +20,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<TcpSession>;
 
-            TcpSession(const int fd, components::RingBuffer::Ptr readBuffer, components::RingBuffer::Ptr writeBuffer);
+            TcpSession(const int fd, utilities::RingBuffer::Ptr readBuffer, utilities::RingBuffer::Ptr writeBuffer);
             ~TcpSession() = default;
 
         public:
@@ -34,9 +34,9 @@ namespace csm
 
             int fd();
 
-            components::RingBuffer::Ptr &readBuffer();
+            utilities::RingBuffer::Ptr &readBuffer();
 
-            components::RingBuffer::Ptr &writeBuffer();
+            utilities::RingBuffer::Ptr &writeBuffer();
 
             void setClientId(const std::string_view id);
 
@@ -76,8 +76,8 @@ namespace csm
 
             ClientInfo m_clientInfo;
 
-            components::RingBuffer::Ptr m_readBuffer;
-            components::RingBuffer::Ptr m_writeBuffer;
+            utilities::RingBuffer::Ptr m_readBuffer;
+            utilities::RingBuffer::Ptr m_writeBuffer;
 
             HostEndPointInfo m_peerHostEndPointInfo;
             std::string m_handshakeUuid;

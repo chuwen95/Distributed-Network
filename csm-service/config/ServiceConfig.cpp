@@ -7,10 +7,10 @@
 
 using namespace csm::service;
 
-ServiceConfig::ServiceConfig(tool::NodeConfig::Ptr nodeConfig, components::SelectListenner::Ptr listenner,
+ServiceConfig::ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner,
                              Acceptor::Ptr acceptor,
                              std::vector<SlaveReactor::Ptr> slaveReactors, SlaveReactorManager::Ptr slaveReactorManager,
-                             components::ThreadPool::Ptr packetProcessor,
+                             utilities::ThreadPool::Ptr packetProcessor,
                              HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector,
                              HostsHeartbeatService::Ptr hostsHeartbeatService) :
         m_nodeConfig(std::move(nodeConfig)), m_listenner(std::move(listenner)), m_acceptor(std::move(acceptor)),
@@ -25,7 +25,7 @@ tool::NodeConfig::Ptr ServiceConfig::nodeConfig()
     return m_nodeConfig;
 }
 
-csm::components::SelectListenner::Ptr ServiceConfig::listenner()
+csm::utilities::SelectListenner::Ptr ServiceConfig::listenner()
 {
     return m_listenner;
 }
@@ -45,7 +45,7 @@ SlaveReactorManager::Ptr ServiceConfig::slaveReactorManager()
     return m_slaveReactorManager;
 }
 
-csm::components::ThreadPool::Ptr ServiceConfig::packetProcessor()
+csm::utilities::ThreadPool::Ptr ServiceConfig::packetProcessor()
 {
     return m_packetProcesser;
 }
