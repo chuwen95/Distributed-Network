@@ -1,5 +1,5 @@
 //
-// Created by root on 9/20/23.
+// Created by ChuWen on 9/20/23.
 //
 
 #ifndef TCPNETWORK_SERVICECONFIG_H
@@ -30,8 +30,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<ServiceConfig>;
 
-            ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner,
-                          Acceptor::Ptr acceptor,
+            ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
                           std::vector<SlaveReactor::Ptr> slaveReactors, SlaveReactorManager::Ptr slaveReactorManager,
                           utilities::ThreadPool::Ptr packetProcessor,
                           HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector,

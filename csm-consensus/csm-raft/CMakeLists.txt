@@ -33,6 +33,7 @@ find_package(Protobuf CONFIG REQUIRED)
 FILE(GLOB_RECURSE SOURCES *.cpp)
 FILE(GLOB_RECURSE HEADERS *.h)
 
-add_library(raft ${PROTOBUF_SRCS} ${SOURCES} ${HEADERS})
+add_library(raft ${PROTOBUF_SRCS} ${SOURCES} ${HEADERS}
+        RaftFactory.h)
 target_link_libraries(raft PUBLIC protobuf::libprotobuf)
 target_include_directories(raft SYSTEM BEFORE PUBLIC ${proto_output_path})

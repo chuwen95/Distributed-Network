@@ -1,5 +1,5 @@
 //
-// Created by root on 10/19/23.
+// Created by ChuWen on 10/19/23.
 //
 
 #include "RpcConfig.h"
@@ -10,7 +10,7 @@ RpcConfig::RpcConfig(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr 
         m_nodeConfig(std::move(nodeConfig)), m_tcpService(std::move(tcpService)), m_httpServer(std::move(httpServer))
 {}
 
-tool::NodeConfig::Ptr RpcConfig::nodeConfig()
+csm::tool::NodeConfig::Ptr RpcConfig::nodeConfig()
 {
     return m_nodeConfig;
 }

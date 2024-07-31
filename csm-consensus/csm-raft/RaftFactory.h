@@ -7,6 +7,7 @@
 
 #include "csm-common/Common.h"
 #include "csm-consensus/csm-raft/Raft.h"
+#include "csm-stmclog/StateMachineLog.h"
 
 namespace csm
 {
@@ -19,19 +20,20 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<RaftFactory>;
 
-            explicit RaftFactory(const std::vector<std::string>& clusterServerIds);
+            explicit RaftFactory(const std::string& id, const std::vector<std::string>& clusterServerIds, stmclog::StateMachineLog::Ptr stateMachineLog);
             ~RaftFactory() = default;
 
         public:
             Raft::Ptr createRaft();
 
         private:
+            std::string m_id;
             std::vector<std::string> m_clusterServerIds;
+            stmclog::StateMachineLog::Ptr m_stateMachineLog;
         };
 
     };
 
 }
-
 
 #endif //COPYSTATEMACHINE_RAFTFACTORY_H

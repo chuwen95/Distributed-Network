@@ -1,5 +1,5 @@
 //
-// Created by root on 9/20/23.
+// Created by ChuWen on 9/20/23.
 //
 
 #include "ServiceConfig.h"
@@ -20,7 +20,7 @@ ServiceConfig::ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::Select
         m_hostsHeartbeatService(std::move(hostsHeartbeatService))
 {}
 
-tool::NodeConfig::Ptr ServiceConfig::nodeConfig()
+csm::tool::NodeConfig::Ptr ServiceConfig::nodeConfig()
 {
     return m_nodeConfig;
 }

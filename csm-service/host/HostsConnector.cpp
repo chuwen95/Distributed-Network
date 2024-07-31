@@ -1,5 +1,5 @@
 //
-// Created by root on 9/25/23.
+// Created by ChuWen on 9/25/23.
 //
 
 #include "HostsConnector.h"
@@ -54,7 +54,7 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
             // 添加host到正在连接
             {
                 std::unique_lock<std::mutex> ulock(x_connectingHosts);
-                m_connectingHosts.emplace(host.first, std::make_pair(fd, utilities::CellTimestamp::getCurrentTimestamp()));
+                m_connectingHosts.emplace(host.first, std::make_pair(fd, utilities::Timestamp::getCurrentTimestamp()));
             }
             LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "add host to connecting successfully");
 
@@ -194,7 +194,7 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
                 continue;
             }
 
-            std::int64_t curTimestamp = utilities::CellTimestamp::getCurrentTimestamp();
+            std::int64_t curTimestamp = utilities::Timestamp::getCurrentTimestamp();
             if (curTimestamp - host.second.second >= c_connectTimeout)
             {
                 utilities::Socket::close(host.second.first);

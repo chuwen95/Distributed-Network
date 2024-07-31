@@ -6,11 +6,12 @@
 #define STATEMACHINELOG_H
 
 #include "csm-common/Common.h"
+#include "StateMachineLogConfig.h"
 
 namespace csm
 {
 
-    namespace consensus
+    namespace stmclog
     {
 
         class StateMachineLog
@@ -18,7 +19,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<StateMachineLog>;
 
-            StateMachineLog() = default;
+            explicit StateMachineLog(StateMachineLogConfig::Ptr stateMachineLogConfig);
             ~StateMachineLog() = default;
 
         public:
@@ -27,6 +28,13 @@ namespace csm
              * @return
              */
             int init();
+
+            int start();
+
+            int stop();
+
+        private:
+            StateMachineLogConfig::Ptr m_stateMachineLogConfig;
         };
 
     }

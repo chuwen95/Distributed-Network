@@ -5,6 +5,8 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include "csm-common/Common.h"
+
 namespace csm
 {
 

@@ -1,5 +1,5 @@
 //
-// Created by root on 9/5/23.
+// Created by ChuWen on 9/5/23.
 //
 
 #include "TcpService.h"
@@ -45,11 +45,10 @@ int TcpService::init()
     m_serviceConfig->slaveReactorManager()->registerModuleMessageHandler(
             [this](const int fd, const std::int32_t moduleId,
                    std::shared_ptr<std::vector<char>> &payloadData) {
-                std::uint64_t curTimestamp = utilities::CellTimestamp::getCurrentTimestamp();
+                std::uint64_t curTimestamp = utilities::Timestamp::getCurrentTimestamp();
                 const auto expression = [fd, curTimestamp, moduleId, payloadData, this]() {
                     // 若任务时间戳小于客户端上线时间戳，任务直接返回不处理，因为可能是客户端离线后新的客户端被分配的相同的fd
-                    std::uint64_t onlineTimestamp = m_serviceConfig->slaveReactorManager()->getClientOnlineTimestamp(
-                            fd);
+                    std::uint64_t onlineTimestamp = m_serviceConfig->slaveReactorManager()->getClientOnlineTimestamp(fd);
                     if (0 == onlineTimestamp || curTimestamp < onlineTimestamp)
                     {
                         LOG->write(utilities::LogType::Log_Info, FILE_INFO,

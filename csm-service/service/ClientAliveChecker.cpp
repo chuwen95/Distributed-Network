@@ -1,5 +1,5 @@
 //
-// Created by root on 9/9/23.
+// Created by ChuWen on 9/9/23.
 //
 
 #include "ClientAliveChecker.h"
@@ -77,9 +77,9 @@ int ClientAliveChecker::addClient(const int fd)
         return -1;
     }
 
-    utilities::CellTimestamp::Ptr cellTimestamp = std::make_shared<utilities::CellTimestamp>();
-    cellTimestamp->update();
-    m_clientLastRecvTime.emplace(fd, cellTimestamp);
+    utilities::Timestamp::Ptr timestamp = std::make_shared<utilities::Timestamp>();
+    timestamp->update();
+    m_clientLastRecvTime.emplace(fd, timestamp);
 
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add client successfully, fd: ", fd);
 

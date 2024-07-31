@@ -1,11 +1,11 @@
 //
-// Created by root on 9/22/23.
+// Created by ChuWen on 9/22/23.
 //
 
 #include "HostsInfoManager.h"
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/StringTool.h"
-#include "csm-utilities/CellTimestamp.h"
+#include "csm-utilities/Timestamp.h"
 
 #include <json/json.h>
 
@@ -210,7 +210,7 @@ std::vector<std::pair<std::string, int>> HostsInfoManager::getAllOnlineClients()
 
 bool HostsInfoManager::waitAtLeastOneNodeConnected(const int timeout)
 {
-    utilities::CellTimestamp timestamp;
+    utilities::Timestamp timestamp;
     timestamp.update();
     while (onlineClientSize() < 1 && timestamp.getElapsedTimeInMilliSec() < timeout)
     {

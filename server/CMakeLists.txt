@@ -1,2 +1,2 @@
-add_executable(TcpService main.cpp)
-target_link_libraries(TcpService PUBLIC initializer)
+add_executable(CopyStateMachine main.cpp)
+target_link_libraries(CopyStateMachine PUBLIC initializer)

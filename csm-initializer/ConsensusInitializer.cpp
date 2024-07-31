@@ -8,10 +8,11 @@
 
 using namespace csm::initializer;
 
-ConsensusInitializer::ConsensusInitializer(csm::tool::NodeConfig::Ptr nodeConfig) :
+ConsensusInitializer::ConsensusInitializer(csm::tool::NodeConfig::Ptr nodeConfig, stmclog::StateMachineLog::Ptr stateMachineLog) :
     m_nodeConfig(std::move(nodeConfig))
 {
-    consensus::RaftFactory::Ptr raftFactory = std::make_shared<consensus::RaftFactory>(m_nodeConfig->());
+    consensus::RaftFactory::Ptr raftFactory = std::make_shared<consensus::RaftFactory>(
+            m_nodeConfig->id(), m_nodeConfig->clusterServerIds(), stateMachineLog);
     m_raft = raftFactory->createRaft();
 }
 

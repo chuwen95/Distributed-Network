@@ -14,7 +14,7 @@ StorageInitializer::StorageInitializer(const std::string &path) :
 
 int StorageInitializer::init()
 {
-
+    return 0;
 }
 
 csm::storage::Storage::Ptr StorageInitializer::storage()

@@ -6,7 +6,7 @@
 
 using namespace csm::utilities;
 
-int FileSystemtool::createFolder(const std::string& path)
+int FileSystemTools::createFolder(const std::string& path)
 {
     if(false == std::filesystem::exists(path))
     {
@@ -18,7 +18,7 @@ int FileSystemtool::createFolder(const std::string& path)
     }
 }
 
-int FileSystemtool::createFolderByFilename(const std::string &filename)
+int FileSystemTools::createFolderByFilename(const std::string &filename)
 {
     std::string fileDir = std::filesystem::path(filename).parent_path();
 

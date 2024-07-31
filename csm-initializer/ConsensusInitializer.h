@@ -7,6 +7,7 @@
 
 #include "csm-common/Common.h"
 #include "csm-tool/NodeConfig.h"
+#include "csm-stmclog/StateMachineLog.h"
 #include "csm-consensus/csm-raft/RaftFactory.h"
 
 namespace csm
@@ -20,7 +21,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<ConsensusInitializer>;
 
-            explicit ConsensusInitializer(tool::NodeConfig::Ptr nodeConfig);
+            explicit ConsensusInitializer(tool::NodeConfig::Ptr nodeConfig, stmclog::StateMachineLog::Ptr stateMachineLog);
             ~ConsensusInitializer() = default;
 
             int init();

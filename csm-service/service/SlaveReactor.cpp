@@ -1,5 +1,5 @@
 //
-// Created by root on 9/5/23.
+// Created by ChuWen on 9/5/23.
 //
 
 #include "SlaveReactor.h"
@@ -663,7 +663,7 @@ int SlaveReactor::processClientInfoPacket(const int fd, TcpSession::Ptr tcpSessi
     std::string id = packetClientInfo->nodeId();
     tcpSession->setClientId(id);
     tcpSession->setHandshakeUuid(packetClientInfo->handshakeUuid());
-    tcpSession->setClientOnlineTimestamp(utilities::CellTimestamp::getCurrentTimestamp());
+    tcpSession->setClientOnlineTimestamp(utilities::Timestamp::getCurrentTimestamp());
 
     if (nullptr != m_clientInfoHandler)
     {
@@ -688,7 +688,7 @@ int SlaveReactor::processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcp
     }
 
     tcpSession->setClientId(packetClientInfoReply->nodeId());
-    tcpSession->setClientOnlineTimestamp(utilities::CellTimestamp::getCurrentTimestamp());
+    tcpSession->setClientOnlineTimestamp(utilities::Timestamp::getCurrentTimestamp());
 
     if (nullptr != m_clientInfoReplyHandler)
     {

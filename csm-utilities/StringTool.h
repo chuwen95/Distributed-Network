@@ -1,5 +1,5 @@
 //
-// Created by root on 9/20/23.
+// Created by ChuWen on 9/20/23.
 //
 
 #ifndef TCPNETWORK_STRINGTOOL_H
@@ -84,15 +84,6 @@ namespace csm
             {
                 return value;
             }
-        }
-
-        enum class TestType
-        {
-                    Test
-        };
-        void a()
-        {
-            std::string a = convertToString(TestType::Test);
         }
 
         std::vector<std::string> split(const std::string &origin, const char delimiter);

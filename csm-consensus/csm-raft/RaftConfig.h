@@ -6,6 +6,7 @@
 #define COPYSTATEMACHINE_RAFTCONFIG_H
 
 #include "csm-common/Common.h"
+#include "csm-stmclog/StateMachineLog.h"
 
 namespace csm
 {
@@ -18,7 +19,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<RaftConfig>;
 
-            RaftConfig(const std::string &id, const std::vector<std::string>& clusterServerIds);
+            RaftConfig(const std::string &id, const std::vector<std::string>& clusterServerIds, stmclog::StateMachineLog::Ptr stateMachineLog);
             ~RaftConfig() = default;
 
             /**
@@ -33,9 +34,16 @@ namespace csm
              */
             const std::vector<std::string>& clusterServerIds() const;
 
+            /**
+             *  获取StateMachineLog对象
+             * @return
+             */
+            stmclog::StateMachineLog::Ptr stateMachineLog();
+
         private:
             std::string m_id;
             std::vector<std::string> m_clusterServerIds;
+            stmclog::StateMachineLog::Ptr m_stateMachineLog;
         };
 
     }
