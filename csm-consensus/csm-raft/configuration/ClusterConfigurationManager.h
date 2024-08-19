@@ -24,7 +24,7 @@ namespace csm
             ~ClusterConfigurationManager() = default;
 
         public:
-
+            void addClusterConfiguration(const std::uint64_t index, )
         };
 
     }

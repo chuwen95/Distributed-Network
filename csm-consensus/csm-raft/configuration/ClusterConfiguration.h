@@ -28,7 +28,11 @@ namespace csm
             struct ConfigurationInfo
             {
                 std::vector<std::string> serverIds;
+
+
                 std::map<std::string, ClusterServer::Ptr> servers;
+            private:
+                std::mutex m;
             };
 
         public:
@@ -36,7 +40,10 @@ namespace csm
             ~ClusterConfiguration() = default;
 
         public:
+            void setClusterServerIds(const std::vector<std::string>& serverIds);
 
+            void setClusterServerById(const std::string& id, ClusterServer::Ptr clusterServer);
+            ClusterServer::Ptr getClusterServerById(const std::string& id);
 
         private:
             ConfigurationInfo m_oldServers;

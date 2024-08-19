@@ -32,6 +32,9 @@ namespace csm
             int stop();
 
         private:
+            int initClusterConfiguration();
+
+        private:
             RaftConfig::Ptr m_raftConfig;
 
             csm::utilities::Thread::Ptr m_voteThread;

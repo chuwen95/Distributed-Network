@@ -24,3 +24,19 @@ int Raft::stop()
     return 0;
 }
 
+int Raft::initClusterConfiguration()
+{
+    std::uint64_t beginLogIndex = m_raftConfig->stateMachineLog()->beginIndex();
+    std::uint64_t endLogIndex = m_raftConfig->stateMachineLog()->endIndex();
+    if(-1 == beginLogIndex || -1 == endLogIndex)
+    {
+        // 日志不存在，创建
+        m_raftConfig->stateMachineLog()->buildInitialConfigurationLog();
+    }
+
+
+
+
+    return 0;
+}
+

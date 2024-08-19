@@ -7,9 +7,9 @@
 
 using namespace csm::initializer;
 
-StateMachineLogInitializer::StateMachineLogInitializer(csm::storage::Storage::Ptr storage)
+StateMachineLogInitializer::StateMachineLogInitializer(tool::NodeConfig::Ptr nodeConfig, storage::Storage::Ptr storage)
 {
-    stmclog::StateMachineLogFactory::Ptr stateMachineLogFactory = std::make_shared<stmclog::StateMachineLogFactory>(storage);
+    stmclog::StateMachineLogFactory::Ptr stateMachineLogFactory = std::make_shared<stmclog::StateMachineLogFactory>(nodeConfig, storage);
     m_stateMachineLog = stateMachineLogFactory->createStateMachineLog();
 }
 

@@ -6,10 +6,10 @@
 
 using namespace csm::consensus;
 
-RaftConfig::RaftConfig(const std::string &id, const std::vector<std::string> &clusterServerIds, stmclog::StateMachineLog::Ptr stateMachineLog) :
+RaftConfig::RaftConfig(const std::string &id, stmclog::StateMachineLog::Ptr stateMachineLog, ClusterConfigurationManager::Ptr clusterConfigurationManager) :
     m_id(id),
-    m_clusterServerIds(clusterServerIds),
-    m_stateMachineLog(std::move(stateMachineLog))
+    m_stateMachineLog(std::move(stateMachineLog)),
+    m_clusterConfigurationManager(std::move(clusterConfigurationManager))
 { }
 
 const std::string& RaftConfig::id()
@@ -17,12 +17,12 @@ const std::string& RaftConfig::id()
     return m_id;
 }
 
-const std::vector<std::string>& RaftConfig::clusterServerIds() const
-{
-    return m_clusterServerIds;
-}
-
 csm::stmclog::StateMachineLog::Ptr RaftConfig::stateMachineLog()
 {
     return m_stateMachineLog;
+}
+
+ClusterConfigurationManager::Ptr RaftConfig::clusterConfigurationManager()
+{
+    return m_clusterConfigurationManager;
 }

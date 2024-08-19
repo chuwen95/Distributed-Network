@@ -2,18 +2,18 @@ syntax = "proto3";
 
 package raft;
 
-message Server
+message RawServer
 {
   string id = 1;
 }
 
-message SimpleConfiguration
+message RawSimpleConfiguration
 {
-  repeated Server servers = 1;
+  repeated RawServer servers = 1;
 }
 
-message ClusterConfiguration
+message RawClusterConfiguration
 {
-  SimpleConfiguration prevConfiguration = 1;
-  SimpleConfiguration nextConfiguration = 2;
+  RawSimpleConfiguration prevConfiguration = 1;
+  RawSimpleConfiguration nextConfiguration = 2;
 }

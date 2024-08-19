@@ -1,5 +1,3 @@
-message("csm-service cmake generate proto file:")
-
 # proto生成c++文件
 set(module_path ${CMAKE_CURRENT_SOURCE_DIR})
 set(proto_output_path ${CMAKE_CURRENT_BINARY_DIR})
@@ -33,6 +31,12 @@ find_package(jsoncpp CONFIG REQUIRED)
 FILE(GLOB_RECURSE SOURCES *.cpp)
 FILE(GLOB_RECURSE HEADERS *.h)
 
-add_library(service ${SOURCES} ${PROTOBUF_SRCS}  ${HEADERS})
+add_library(service ${SOURCES} ${PROTOBUF_SRCS}  ${HEADERS}
+        service/TcpSessionManager.cpp
+        service/TcpSessionManager.h
+        service/TcpSessionManager.cpp
+        service/TcpSessionManager.h
+        service/TcpSessionDestroyer.cpp
+        service/TcpSessionDestroyer.h)
 target_link_libraries(service PUBLIC utilities tools readerwriterqueue JsonCpp::JsonCpp protobuf::libprotobuf)
 target_include_directories(service SYSTEM BEFORE PUBLIC ${proto_output_path})

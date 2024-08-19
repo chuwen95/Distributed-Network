@@ -6,6 +6,7 @@
 #define COPYSTATEMACHINE_STATEMACHINELOGCONFIG_H
 
 #include "csm-common/Common.h"
+#include "csm-tool/NodeConfig.h"
 #include "csm-storage/Storage.h"
 
 namespace csm
@@ -19,13 +20,15 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<StateMachineLogConfig>;
 
-            explicit StateMachineLogConfig(storage::Storage::Ptr storage);
+            explicit StateMachineLogConfig(tool::NodeConfig::Ptr nodeConfig, storage::Storage::Ptr storage);
             ~StateMachineLogConfig() = default;
 
         public:
+            tool::NodeConfig::Ptr nodeConfig();
             storage::Storage::Ptr storage();
 
         private:
+            tool::NodeConfig::Ptr m_nodeConfig;
             storage::Storage::Ptr m_storage;
         };
 
@@ -33,4 +36,4 @@ namespace csm
 
 }
 
-#endif //COPYSTATEMACHINE_STATEMACHINELOGCONFIG_H
+#endif

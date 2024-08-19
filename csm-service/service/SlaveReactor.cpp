@@ -170,7 +170,8 @@ int SlaveReactor::start()
                 // 没有数据再需要读取，从m_infds中移除
                 iter = m_infds.erase(iter);
                 continue;
-            } else if (0 == readLen)
+            }
+            else if (0 == readLen)
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client may be offline, fd: ", fd);
                 iter = m_infds.erase(iter);
@@ -250,7 +251,8 @@ int SlaveReactor::start()
                 if (PacketType::PT_None == packetType)
                 {
                     LOG->write(utilities::LogType::Log_Error, FILE_INFO, "decode packet failed, fd: ", fd);
-                } else if (PacketType::PT_ClientInfo == packetType)
+                }
+                else if (PacketType::PT_ClientInfo == packetType)
                 {
                     // 身份包，即刻处理，不必放到线程池中
                     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "recv ClientInfo packet, fd: ", fd);
@@ -263,7 +265,8 @@ int SlaveReactor::start()
                         // 从m_infds中移除，因为m_infds中的socket如果没有数据可读了或者断开了，再下一次循环中才会发现并移除
                         m_infds.erase(fd);
                     }
-                } else if (PacketType::PT_ClientInfoReply == packetType)
+                }
+                else if (PacketType::PT_ClientInfoReply == packetType)
                 {
                     // 身份包，即刻处理，不必放到线程池中
                     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "recv ClientInfoReply packet, fd: ", fd);
@@ -280,12 +283,14 @@ int SlaveReactor::start()
                             m_infds.erase(fd);
                         }
                     }
-                } else if (PacketType::PT_HeartBeat == packetType || PacketType::PT_HeartBeatReply == packetType)
+                }
+                else if (PacketType::PT_HeartBeat == packetType || PacketType::PT_HeartBeatReply == packetType)
                 {
                     // 心跳包，不必放到线程池中处理
                     LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "receive heartbeat packet, fd: ", fd);
                     m_clientAliveChecker.refreshClientLastRecvTime(fd);
-                } else
+                }
+                else
                 {
                     LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
                                   "callback packet type and packet payload, fd: ", fd, ", packet type: ", static_cast<int>(packetType));
@@ -300,7 +305,8 @@ int SlaveReactor::start()
             if (0 == readBuffer->dataLength() || packetNum < epochPacketSum)
             {
                 iter = m_datafds.erase(iter);
-            } else
+            }
+            else
             {
                 ++iter;
             }
@@ -373,7 +379,8 @@ int SlaveReactor::start()
                         // 如果发送缓冲区中还有数据，但数据直接send完，表明无需等待EPOLLOUT事件
                         iter->second.first = false;
                     }
-                } else
+                }
+                else
                 {
                     if (-1 != sendLen && (EAGAIN == errno || EWOULDBLOCK == errno))
                     {
@@ -384,7 +391,8 @@ int SlaveReactor::start()
                         // 设置EPOLLOUT事件到来为false
                         iter->second.second = false;
                         LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "send data error, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
-                    } else if (ECONNRESET == errno || EPIPE == errno)
+                    }
+                    else if (ECONNRESET == errno || EPIPE == errno)
                     {
                         // 表明对端断开连接
                         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client maybe offline, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));

@@ -50,9 +50,6 @@ namespace csm
             int set(const std::string& tableName, const std::string& key, const std::vector<char>& value) override;
 
         private:
-            std::string generateDBKey(const std::string& tableName,  const std::string& key);
-
-        private:
             std::string m_storagePath;
             std::unique_ptr<rocksdb::DB, std::function<void(rocksdb::DB*)>> m_db;
         };

@@ -34,6 +34,7 @@ FILE(GLOB_RECURSE SOURCES *.cpp)
 FILE(GLOB_RECURSE HEADERS *.h)
 
 add_library(raft ${PROTOBUF_SRCS} ${SOURCES} ${HEADERS}
-        RaftFactory.h)
-target_link_libraries(raft PUBLIC protobuf::libprotobuf)
+        server/ClusterServerFactory.cpp
+        server/ClusterServerFactory.h)
+target_link_libraries(raft PUBLIC protobuf::libprotobuf stmclog)
 target_include_directories(raft SYSTEM BEFORE PUBLIC ${proto_output_path})

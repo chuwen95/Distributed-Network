@@ -125,8 +125,7 @@ int TcpService::uninit()
     {
         if (-1 == (*iter)->uninit())
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "uninit SlaveReactor ",
-                          iter - slaveReactors.begin(), " failed");
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "uninit SlaveReactor ",iter - slaveReactors.begin(), " failed");
             return -1;
         }
     }
@@ -694,8 +693,7 @@ int TcpService::uninitClient()
     return 0;
 }
 
-int
-TcpService::onClientDisconnect(const HostEndPointInfo &hostEndPointInfo, const std::string &id, const std::string &uuid,
+int TcpService::onClientDisconnect(const HostEndPointInfo &hostEndPointInfo, const std::string &id, const std::string &uuid,
                                const int flag)
 {
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "id: ", id, ", flag: ", flag, ", hostEndPointInfo: ", hostEndPointInfo.host());

@@ -12,7 +12,7 @@ ConsensusInitializer::ConsensusInitializer(csm::tool::NodeConfig::Ptr nodeConfig
     m_nodeConfig(std::move(nodeConfig))
 {
     consensus::RaftFactory::Ptr raftFactory = std::make_shared<consensus::RaftFactory>(
-            m_nodeConfig->id(), m_nodeConfig->clusterServerIds(), stateMachineLog);
+            m_nodeConfig->id(), stateMachineLog);
     m_raft = raftFactory->createRaft();
 }
 

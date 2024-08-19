@@ -62,9 +62,7 @@ namespace csm
              * @param clientInfoHandler
              */
             void registerClientInfoHandler(std::function<int(const HostEndPointInfo &localHostEndPointInfo,
-                                                             const HostEndPointInfo &peerHostEndPointInfo, const int fd,
-                                                             const std::string &id,
-                                                             const std::string &uuid)> clientInfoHandler);
+                    const HostEndPointInfo &peerHostEndPointInfo, const int fd, const std::string &id, const std::string &uuid)> clientInfoHandler);
 
             /**
              * @brief 注册ClientInfoReply包回调
@@ -74,8 +72,7 @@ namespace csm
              */
             void registerClientInfoReplyHandler(
                     std::function<int(const HostEndPointInfo &hostEndPointInfo, const int fd, const std::string &id,
-                                      const std::string &uuid, const int result,
-                                      int &anotherFd)> clientInfoReplyHandler);
+                                      const std::string &uuid, const int result, int &anotherFd)> clientInfoReplyHandler);
 
             /**
              * @brief 客户端有包需要处理的回调，回调包类型和包负载
@@ -133,8 +130,7 @@ namespace csm
             int processClientInfoPacket(const int fd, TcpSession::Ptr tcpSession, PacketClientInfo::Ptr packet);
 
             // 处理客户端ClientInfo包
-            int processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession,
-                                             PacketClientInfoReply::Ptr packetReply);
+            int processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession, PacketClientInfoReply::Ptr packetReply);
 
             // ClientAliveChecker调用，超时未收到心跳
             void onClientsHeartbeatTimeout(const std::vector<int> &fds);
@@ -156,15 +152,13 @@ namespace csm
 
             // ClientInfo包回调
             std::function<int(const HostEndPointInfo &localHostEndPointInfo,
-                              const HostEndPointInfo &peerHostEndPointInfo,
-                              const int fd, const std::string &id, const std::string &uuid)> m_clientInfoHandler;
+                              const HostEndPointInfo &peerHostEndPointInfo, const int fd, const std::string &id, const std::string &uuid)> m_clientInfoHandler;
             // ClientInfoReply包回调
             std::function<int(const HostEndPointInfo &hostEndPointInfo, const int fd, const std::string &id,
                               const std::string &uuid, const int result, int &anotherFd)> m_clientInfoReplyHandler;
 
             // 数据接收回调
-            std::function<void(const int fd, const std::int32_t moduleId,
-                               std::shared_ptr<std::vector<char>> &)> m_moduleMessageHandler;
+            std::function<void(const int fd, const std::int32_t moduleId, std::shared_ptr<std::vector<char>> &)> m_moduleMessageHandler;
             // 客户端断开回调
             std::function<void(const int fd, const HostEndPointInfo &hostEndPointInfo, const std::string &id,
                                const std::string &uuid, const int flag)> m_disconnectHandler;

@@ -20,7 +20,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<RaftFactory>;
 
-            explicit RaftFactory(const std::string& id, const std::vector<std::string>& clusterServerIds, stmclog::StateMachineLog::Ptr stateMachineLog);
+            explicit RaftFactory(const std::string& id, stmclog::StateMachineLog::Ptr stateMachineLog);
             ~RaftFactory() = default;
 
         public:

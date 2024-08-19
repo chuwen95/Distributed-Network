@@ -6,6 +6,7 @@
 #define COPYSTATEMACHINE_STATEMACHINELOGINITIALIZER_H
 
 #include "csm-common/Common.h"
+#include "csm-tool/NodeConfig.h"
 #include "csm-storage/Storage.h"
 #include "csm-stmclog/StateMachineLog.h"
 
@@ -20,7 +21,7 @@ namespace initializer
     public:
         using Ptr = std::shared_ptr<StateMachineLogInitializer>;
 
-        explicit StateMachineLogInitializer(storage::Storage::Ptr storage);
+        explicit StateMachineLogInitializer(tool::NodeConfig::Ptr nodeConfig, storage::Storage::Ptr storage);
         ~StateMachineLogInitializer();
 
     public:

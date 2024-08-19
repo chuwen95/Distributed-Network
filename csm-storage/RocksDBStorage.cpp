@@ -9,8 +9,6 @@
 
 using namespace csm::storage;
 
-constexpr const char* const c_tableKeySplit{ ":"};
-
 RocksDBStorage::RocksDBStorage(const std::string& storagePath) :
         m_storagePath(storagePath)
 {}
@@ -41,9 +39,19 @@ int RocksDBStorage::init()
 
 int RocksDBStorage::get(const std::string &tableName, const std::string &key, std::string &value)
 {
-    std::string dbKey = generateDBKey(tableName, key);
+    rocksdb::Status status;
 
-    rocksdb::Status status = m_db->Get(rocksdb::ReadOptions(), key, &value);
+    // 创建列族
+    rocksdb::ColumnFamilyHandle* cfHandle{ nullptr };
+    status = m_db->CreateColumnFamily(rocksdb::ColumnFamilyOptions(), tableName, &cfHandle);
+    if(false == status.ok())
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO,
+                   "RocksDB get error, ercode: ", status.code(), ", message: ", status.getState());
+        return -1;
+    }
+
+    status = m_db->Get(rocksdb::ReadOptions(), cfHandle, key, &value);
     if(false == status.ok())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO,
@@ -56,9 +64,19 @@ int RocksDBStorage::get(const std::string &tableName, const std::string &key, st
 
 int RocksDBStorage::set(const std::string &tableName, const std::string &key, const std::vector<char> &value)
 {
-    std::string dbKey = generateDBKey(tableName, key);
+    rocksdb::Status status;
 
-    rocksdb::Status status = m_db->Put(rocksdb::WriteOptions(), key, rocksdb::Slice(value.data(), value.size()));
+    // 创建列族
+    rocksdb::ColumnFamilyHandle* cfHandle{ nullptr };
+    status = m_db->CreateColumnFamily(rocksdb::ColumnFamilyOptions(), tableName, &cfHandle);
+    if(false == status.ok())
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO,
+                   "RocksDB get error, ercode: ", status.code(), ", message: ", status.getState());
+        return -1;
+    }
+
+    status = m_db->Put(rocksdb::WriteOptions(), cfHandle, key, rocksdb::Slice(value.data(), value.size()));
     if(false == status.ok())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO,
@@ -67,16 +85,4 @@ int RocksDBStorage::set(const std::string &tableName, const std::string &key, co
     }
 
     return 0;
-}
-
-std::string RocksDBStorage::generateDBKey(const std::string &tableName, const std::string &key)
-{
-    std::string dbKey;
-    dbKey.reserve(tableName.size() + 1 + key.size());
-
-    dbKey.append(tableName);
-    dbKey.append(c_tableKeySplit);
-    dbKey.append(key);
-
-    return dbKey;
 }
