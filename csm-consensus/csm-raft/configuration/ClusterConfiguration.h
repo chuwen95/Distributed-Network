@@ -28,14 +28,14 @@ namespace csm
             struct ConfigurationInfo
             {
                 std::vector<std::string> serverIds;
-
-
                 std::map<std::string, ClusterServer::Ptr> servers;
             private:
                 std::mutex m;
             };
 
         public:
+            using Ptr = std::shared_ptr<ClusterConfiguration>;
+
             ClusterConfiguration() = default;
             ~ClusterConfiguration() = default;
 

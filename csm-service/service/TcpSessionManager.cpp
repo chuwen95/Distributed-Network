@@ -55,3 +55,10 @@ bool TcpSessionManager::isTcpSessionExist(const int fd)
     return m_tcpSessions.end() != m_tcpSessions.find(fd);
 }
 
+std::size_t TcpSessionManager::sessionSize()
+{
+    std::unique_lock<std::mutex> x_tcpSessions;
+
+    return m_tcpSessions.size();
+}
+

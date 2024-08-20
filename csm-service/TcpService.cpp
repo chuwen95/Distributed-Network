@@ -361,7 +361,7 @@ int TcpService::initServer()
         m_serviceConfig->slaveReactorManager()->addTcpSession(tcpSession);
     });
 
-    // 注册连接回调
+    // 注册新客户端上线回调
     m_serviceConfig->listenner()->registerConnectHandler([this]() { m_serviceConfig->acceptor()->onConnect(); });
 
     return 0;
@@ -606,7 +606,8 @@ int TcpService::initClient()
                         LOG->write(utilities::LogType::Log_Info, FILE_INFO,
                                       "send ClientInfoReply packet successfully", ", fd: ", anotherConnectionFd, ", id: ", id);
                     }
-                } else
+                }
+                else
                 {
                     /*
                      * id是对方的id

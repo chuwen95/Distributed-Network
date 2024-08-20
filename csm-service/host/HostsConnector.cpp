@@ -87,14 +87,16 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
                 }
 
                 continue;
-            } else if (-1 == ret)
+            }
+            else if (-1 == ret)
             {
                 LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "errno: ", errno);
                 if (EINPROGRESS == errno)
                 {
                     LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "connect status: EINPROGRESS");
                     continue;
-                } else
+                }
+                else
                 {
                     LOG->write(utilities::LogType::Log_Error, FILE_INFO, "connect failed");
                     auto iter = m_connectingHosts.find(host.first);

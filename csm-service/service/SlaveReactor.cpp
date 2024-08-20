@@ -12,7 +12,7 @@ using namespace csm::service;
 
 constexpr std::size_t c_maxEvent{ 500 };
 
-SlaveReactor::SlaveReactor()
+SlaveReactor::SlaveReactor(TcpSessionManager::Ptr tcpSessionManager) : m_tcpSessionManager(std::move(tcpSessionManager))
 {
 }
 
@@ -95,9 +95,7 @@ int SlaveReactor::start()
             {
                 LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "EPOLLIN event, fd: ", fd);
                 {
-                    std::unique_lock<std::mutex> ulock(x_clientSessions);
-                    auto iter = m_fdSessions.find(fd);
-                    if (m_fdSessions.end() == iter)
+                    if(false == m_tcpSessionManager->isTcpSessionExist(fd))
                     {
                         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "fd not found, fd: ", fd);
                         continue;
@@ -107,19 +105,16 @@ int SlaveReactor::start()
             }
             if (ev[i].events & EPOLLOUT)
             {
+                TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
+                if(nullptr == tcpSession)
                 {
-                    std::unique_lock<std::mutex> ulock(x_clientSessions);
-                    auto iter = m_fdSessions.find(fd);
-                    if (m_fdSessions.end() == iter)
-                    {
-                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "fd not found, fd: ", fd);
-                        continue;
-                    }
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "fd not found, fd: ", fd);
+                    continue;
+                }
 
-                    if (0 == iter->second->writeBuffer()->dataLength())
-                    {
-                        continue;
-                    }
+                if (0 == tcpSession->writeBuffer()->dataLength())
+                {
+                    continue;
                 }
 
                 std::unique_lock<std::mutex> ulock(x_outfds);
@@ -137,17 +132,12 @@ int SlaveReactor::start()
         {
             int fd = *iter;
 
-            TcpSession::Ptr tcpSession;
+            TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
+            if(nullptr == tcpSession)
             {
-                std::unique_lock<std::mutex> ulock(x_clientSessions);
-                auto sessionIter = m_fdSessions.find(fd);
-                if (m_fdSessions.end() == sessionIter)
-                {
-                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "fd not found, fd: ", fd);
-                    iter = m_infds.erase(iter);
-                    continue;
-                }
-                tcpSession = sessionIter->second;
+                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "fd not found, fd: ", fd);
+                iter = m_infds.erase(iter);
+                continue;
             }
 
             utilities::RingBuffer::Ptr readBuffer = tcpSession->readBuffer();
@@ -206,17 +196,12 @@ int SlaveReactor::start()
             int fd = *iter;
             LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "try to decode packet, fd: ", fd);
 
-            TcpSession::Ptr tcpSession{nullptr};
+            TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
+            if(nullptr == tcpSession)
             {
-                std::unique_lock<std::mutex> ulock(x_clientSessions);
-                auto sessionIter = m_fdSessions.find(fd);
-                if (m_fdSessions.end() == sessionIter)
-                {
-                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "fd not found, fd: ", fd);
-                    iter = m_datafds.erase(iter);
-                    continue;
-                }
-                tcpSession = sessionIter->second;
+                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "fd not found, fd: ", fd);
+                iter = m_datafds.erase(iter);
+                continue;
             }
 
             utilities::RingBuffer::Ptr readBuffer = tcpSession->readBuffer();
@@ -327,19 +312,12 @@ int SlaveReactor::start()
         {
             int fd = iter->first;
 
-            TcpSession::Ptr tcpSession{nullptr};
+            TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
+            if(nullptr == tcpSession)
             {
-                // 这里之所以还要判断一遍是处理这种情况：
-                // 如果在sendData中写入到缓冲区后加入到m_outfds前客户端离线m_fdSessions中TCPSession被移除
-                std::unique_lock<std::mutex> ulock(x_clientSessions);
-                auto sessionIter = m_fdSessions.find(fd);
-                if (m_fdSessions.end() == sessionIter)
-                {
-                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "fd not found, fd: ", fd);
-                    iter = outfds.erase(iter);
-                    continue;
-                }
-                tcpSession = sessionIter->second;
+                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "fd not found, fd: ", fd);
+                iter = outfds.erase(iter);
+                continue;
             }
 
             if (true == iter->second.first && false == iter->second.second)
@@ -443,15 +421,10 @@ int SlaveReactor::addClient(TcpSession::Ptr tcpSession)
 
     int fd = tcpSession->fd();
 
-    {
-        std::unique_lock<std::mutex> ulock(x_clientSessions);
-        m_fdSessions.emplace(fd, tcpSession);
-    }
-
+    m_tcpSessionManager->addTcpSession(fd, tcpSession);
     m_clientAliveChecker.addClient(fd);
 
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-                  "SlaveReactor ", m_reactorId, " add client ", fd, " to ClientAliveChecker successfully");
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "SlaveReactor ", m_reactorId, " add client ", fd, " to ClientAliveChecker successfully");
 
     struct epoll_event ev;
     memset(&ev, 0, sizeof(struct epoll_event));
@@ -463,11 +436,7 @@ int SlaveReactor::addClient(TcpSession::Ptr tcpSession)
         LOG->write(utilities::LogType::Log_Error, FILE_INFO,
                       "epoll_ctl add failed, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
 
-        {
-            std::unique_lock<std::mutex> ulock(x_clientSessions);
-            m_fdSessions.erase(fd);
-        }
-
+        m_tcpSessionManager->removeTcpSession(fd);
         m_clientAliveChecker.removeClient(fd);
 
         return -1;
@@ -481,8 +450,7 @@ int SlaveReactor::addClient(TcpSession::Ptr tcpSession)
 
 std::size_t SlaveReactor::clientSize()
 {
-    std::unique_lock<std::mutex> ulock(x_clientSessions);
-    return m_fdSessions.size();
+    return m_tcpSessionManager->sessionSize();
 }
 
 void SlaveReactor::registerClientInfoHandler(std::function<int(const HostEndPointInfo &, const HostEndPointInfo &,
@@ -513,17 +481,11 @@ int SlaveReactor::sendData(const int fd, const char *data, const std::size_t siz
 {
     LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "m_id: ", m_reactorId, ", fd: ", fd);
     //获取对应的writeBuffer
-    TcpSession::Ptr tcpSession;
+    TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
+    if(nullptr == tcpSession)
     {
-        std::unique_lock<std::mutex> ulock(x_clientSessions);
-
-        auto iter = m_fdSessions.find(fd);
-        if (m_fdSessions.end() == iter)
-        {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "id not found, id: ", fd);
-            return -2;
-        }
-        tcpSession = iter->second;
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "id not found, id: ", fd);
+        return -2;
     }
 
     {
@@ -553,26 +515,21 @@ int SlaveReactor::sendData(const int fd, const char *data, const std::size_t siz
 
 std::uint64_t SlaveReactor::getClientOnlineTimestamp(const int fd)
 {
-    std::unique_lock<std::mutex> ulock(x_clientSessions);
-
-    auto iter = m_fdSessions.find(fd);
-    if (m_fdSessions.end() == iter)
+    TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
+    if(nullptr == tcpSession)
     {
         return 0;
     }
-    return iter->second->getClientOnlineTimestamp();
+    return tcpSession->getClientOnlineTimestamp();
 }
 
 int SlaveReactor::disconnectClient(const int fd, const int flag)
 {
+    TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
+    if (nullptr == tcpSession)
     {
-        std::unique_lock<std::mutex> ulock(x_clientSessions);
-        auto iter = m_fdSessions.find(fd);
-        if (m_fdSessions.end() == iter)
-        {
-            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "client not exist, fd: ", fd);
-            return -1;
-        }
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "client not exist, fd: ", fd);
+        return -1;
     }
 
     // 将客户端从在线监测中移除
@@ -583,17 +540,11 @@ int SlaveReactor::disconnectClient(const int fd, const int flag)
     // 关闭客户端fd
     close(fd);
 
+    if (nullptr != m_disconnectHandler)
     {
-        std::unique_lock<std::mutex> ulock(x_clientSessions);
-
-        auto iter = m_fdSessions.find(fd);
-        if (nullptr != m_disconnectHandler)
-        {
-            m_disconnectHandler(fd, iter->second->peerHostEndPointInfo(), iter->second->getClientId(),
-                                iter->second->handshakeUuid(), flag);
-        }
-        m_fdSessions.erase(fd);
+        m_disconnectHandler(fd, tcpSession->peerHostEndPointInfo(), tcpSession->getClientId(), tcpSession->handshakeUuid(), flag);
     }
+    m_tcpSessionManager->removeTcpSession(fd);
 
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "client disconnect finish, fd: ", fd);
 
@@ -711,12 +662,13 @@ int SlaveReactor::processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcp
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO,
                               "another connection fd: ", anotherConnectionFd, ", peer host: ", packetClientInfoReply->peerHost());
                 assert(-1 != anotherConnectionFd);
-                std::unique_lock<std::mutex> ulock(x_clientSessions);
-                auto iter = m_fdSessions.find(anotherConnectionFd);
-                assert(m_fdSessions.end() != iter);
-                iter->second->setPeerHostEndPointInfo(packetClientInfoReply->peerHost());
+
+                TcpSession::Ptr anotherTcpSession = m_tcpSessionManager->tcpSession(anotherConnectionFd);
+                assert(nullptr != anotherTcpSession);
+                anotherTcpSession->setPeerHostEndPointInfo(packetClientInfoReply->peerHost());
+
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                              "another connection fd: ", anotherConnectionFd, ", peer host: ", iter->second->peerHostEndPointInfo().host());
+                              "another connection fd: ", anotherConnectionFd, ", peer host: ", anotherTcpSession->peerHostEndPointInfo().host());
             }
             disconnectClient(fd, packetClientInfoReply->result());
             return -1;

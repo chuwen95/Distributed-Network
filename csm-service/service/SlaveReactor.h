@@ -8,6 +8,7 @@
 #include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
 #include "TcpSession.h"
+#include "TcpSessionManager.h"
 #include "ClientAliveChecker.h"
 #include "csm-service/protocol/PacketHeader.h"
 #include "csm-service/protocol/packet/PacketClientInfo.h"
@@ -28,8 +29,7 @@ namespace csm
              * @brief 参数主要是用于设置线程名
              * @param id
              */
-            SlaveReactor();
-
+            explicit SlaveReactor(TcpSessionManager::Ptr tcpSessionManager);
             ~SlaveReactor();
 
         public:
@@ -141,9 +141,7 @@ namespace csm
             // host id
             std::string m_hostId;
 
-            // clientfd => TcpSession
-            std::mutex x_clientSessions;
-            std::unordered_map<int, TcpSession::Ptr> m_fdSessions;
+            TcpSessionManager::Ptr m_tcpSessionManager;
 
             std::atomic_bool m_isTerminate{false};
             utilities::Thread m_thread;

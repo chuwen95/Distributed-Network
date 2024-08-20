@@ -5,6 +5,7 @@
 #include "TcpServiceFactory.h"
 
 #include "config/ServiceConfig.h"
+#include "service/TcpSessionManager.h"
 
 using namespace csm::service;
 
@@ -27,7 +28,8 @@ TcpService::Ptr TcpServiceFactory::createTcpService()
     std::vector<SlaveReactor::Ptr> slaveReactors;
     for (int i = 0; i < m_nodeConfig->slaveReactorNum(); ++i)
     {
-        slaveReactors.emplace_back(std::make_shared<SlaveReactor>());
+        TcpSessionManager::Ptr tcpSessionManager = std::make_shared<TcpSessionManager>();
+        slaveReactors.emplace_back(std::make_shared<SlaveReactor>(tcpSessionManager));
     }
     SlaveReactorManager::Ptr slaveReactorManager = std::make_shared<SlaveReactorManager>();
     utilities::ThreadPool::Ptr packetProcessor = std::make_shared<utilities::ThreadPool>();

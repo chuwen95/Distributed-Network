@@ -40,7 +40,7 @@ void Entry::setEntryType(const EntryType &entryType)
 
 const std::vector<char> &Entry::data()
 {
-    return std::vector<char>(m_rawEntry.data().begin(), m_rawEntry.data().end();
+    return std::vector<char>(m_rawEntry.data().begin(), m_rawEntry.data().end());
 }
 
 void Entry::setData(const std::vector<char> &data)

@@ -52,6 +52,11 @@ namespace csm
              */
             TcpSession::Ptr tcpSession(const int fd);
 
+            /*
+             * 获取管理的TcpSessions数量
+             */
+            std::size_t sessionSize();
+
         private:
             std::mutex x_tcpSessions;
             std::unordered_map<int, TcpSession::Ptr> m_tcpSessions;
