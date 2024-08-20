@@ -20,19 +20,18 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<SlaveReactorManager>;
 
-            SlaveReactorManager();
-            ~SlaveReactorManager();
-
-        public:
-
-            void addSlaveReactor(SlaveReactor::Ptr slaveReactor);
-
             /**
              *
              * @param redispatchInterval    多少个客户端后重新查找管理客户端数量最少的SlaveReactor，下一个客户端将会放到最少的这个SlaveReactor中
+             * @param id    本节点ID
+             * @param slaveReactors     要管理的子Reactor
              * @return
              */
-            int init(const std::size_t redispatchInterval, const std::string &id);
+            SlaveReactorManager(const std::size_t redispatchInterval, const std::string& id, const std::vector<SlaveReactor::Ptr> slaveReactors);
+            ~SlaveReactorManager();
+
+        public:
+            int init();
 
             int uninit();
 
@@ -64,6 +63,10 @@ namespace csm
             int disconnectClient(const int fd);
 
         private:
+            std::size_t m_redispatchInterval;
+            std::string m_id;
+            std::vector<SlaveReactor::Ptr> m_slaveReactors;     // 所有的子Reactor集合
+
             // 新上线客户端的信号
             std::mutex x_tcpSessionsQueue;
             std::condition_variable m_tcpSessionsQueueCv;
@@ -79,11 +82,7 @@ namespace csm
                 TcpSession::Ptr tcpSession;
                 std::function<void()> callback;
             };
-
             moodycamel::ReaderWriterQueue<TcpSessionInfo::Ptr> m_tcpSessionsQueue;
-
-            // 所有的子Reactor集合
-            std::vector<SlaveReactor::Ptr> m_slaveReactors;
 
             // 管理最少fd的SlaveReactor
             std::size_t m_slaveReactorIndexWhichHasLeastFd{0};

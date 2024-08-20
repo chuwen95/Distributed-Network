@@ -7,6 +7,8 @@
 
 #include "csm-common/Common.h"
 #include "TcpSessionManager.h"
+#include "csm-service/host/HostsConnector.h"
+#include "csm-service/host/HostsInfoManager.h"
 #include "csm-utilities/Thread.h"
 
 namespace csm
@@ -20,7 +22,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<TcpSessionDestroyer>;
 
-            TcpSessionDestroyer() = default;
+            TcpSessionDestroyer(TcpSessionManager::Ptr tcpSessionManager, HostsConnector::Ptr hostsConnector, HostsInfoManager::Ptr hostsInfoManager);
             ~TcpSessionDestroyer() = default;
 
         public:
@@ -33,7 +35,14 @@ namespace csm
             int addFd(const int fd);
 
         private:
+            TcpSessionManager::Ptr m_tcpSessionManager;
+            HostsConnector::Ptr m_hostsConnector;
+            HostsInfoManager::Ptr m_hostsInfoManager;
+
             utilities::Thread m_thread;
+
+            std::mutex x_fds;
+            std::queue<int> m_fds;
         };
 
     }

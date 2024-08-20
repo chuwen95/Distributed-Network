@@ -29,13 +29,11 @@ namespace csm
              * @brief 参数主要是用于设置线程名
              * @param id
              */
-            explicit SlaveReactor(TcpSessionManager::Ptr tcpSessionManager);
+            SlaveReactor(const int reactorId, const std::string& hostId, TcpSessionManager::Ptr tcpSessionManager);
             ~SlaveReactor();
 
         public:
-            int init(const int reactorId, const std::string &hostId);
-
-            int uninit();
+            int init();
 
             int start();
 

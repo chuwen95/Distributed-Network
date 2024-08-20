@@ -25,13 +25,11 @@ int TcpService::init()
     std::vector<SlaveReactor::Ptr> slaveReactors = m_serviceConfig->slaveReactors();
     for (auto iter = slaveReactors.begin(); iter != slaveReactors.end(); ++iter)
     {
-        auto offset = iter - slaveReactors.begin();
-        (*iter)->init(offset, m_serviceConfig->nodeConfig()->id());
-
-        m_serviceConfig->slaveReactorManager()->addSlaveReactor(*iter);
+        auto index = iter - slaveReactors.begin();
+        (*iter)->init(index, m_serviceConfig->nodeConfig()->id());
+        (*iter)->setTcpSessionManager(m_serviceConfig->tcpSessionManager());
     }
-    if (-1 == m_serviceConfig->slaveReactorManager()->init(m_serviceConfig->nodeConfig()->redispatchInterval(),
-                                                           m_serviceConfig->nodeConfig()->id()))
+    if (-1 == m_serviceConfig->slaveReactorManager()->init())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "slave reactor manager init failed");
         utilities::Socket::close(m_fd);
@@ -120,17 +118,6 @@ int TcpService::init()
 
 int TcpService::uninit()
 {
-    std::vector<SlaveReactor::Ptr> slaveReactors = m_serviceConfig->slaveReactors();
-    for (auto iter = slaveReactors.begin(); iter != slaveReactors.end(); ++iter)
-    {
-        if (-1 == (*iter)->uninit())
-        {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "uninit SlaveReactor ",iter - slaveReactors.begin(), " failed");
-            return -1;
-        }
-    }
-    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "uninit all SlaveReactor successfully");
-
     if (-1 == m_serviceConfig->slaveReactorManager()->uninit())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "uninit SlaveReactorManager failed");

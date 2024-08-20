@@ -31,6 +31,7 @@ namespace csm
             using Ptr = std::shared_ptr<ServiceConfig>;
 
             ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
+                          TcpSessionManager::Ptr tcpSessionManager,
                           std::vector<SlaveReactor::Ptr> slaveReactors, SlaveReactorManager::Ptr slaveReactorManager,
                           utilities::ThreadPool::Ptr packetProcessor,
                           HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector,
@@ -44,6 +45,8 @@ namespace csm
             utilities::SelectListenner::Ptr listenner();
 
             Acceptor::Ptr acceptor();
+
+            TcpSessionManager::Ptr tcpSessionManager();
 
             std::vector<SlaveReactor::Ptr> &slaveReactors();
 
@@ -62,8 +65,12 @@ namespace csm
 
             utilities::SelectListenner::Ptr m_listenner;
             Acceptor::Ptr m_acceptor;
+
+            TcpSessionManager::Ptr m_tcpSessionManager;
+
             std::vector<SlaveReactor::Ptr> m_slaveReactors;
             SlaveReactorManager::Ptr m_slaveReactorManager;
+
             utilities::ThreadPool::Ptr m_packetProcesser;
 
             HostsInfoManager::Ptr m_hostsInfoManager;

@@ -12,19 +12,20 @@ using namespace csm::service;
 
 constexpr std::size_t c_maxEvent{ 500 };
 
-SlaveReactor::SlaveReactor(TcpSessionManager::Ptr tcpSessionManager) : m_tcpSessionManager(std::move(tcpSessionManager))
+SlaveReactor::SlaveReactor(const int reactorId, const std::string& hostId, TcpSessionManager::Ptr tcpSessionManager) :
+    m_reactorId(reactorId), m_hostId(hostId), m_tcpSessionManager(std::move(tcpSessionManager))
 {
 }
 
 SlaveReactor::~SlaveReactor()
 {
+    utilities::Socket::close(m_epfd);
+
+    m_clientAliveChecker.uninit();
 }
 
-int SlaveReactor::init(const int reactorId, const std::string &hostId)
+int SlaveReactor::init()
 {
-    m_reactorId = reactorId;
-    m_hostId = hostId;
-
     m_epfd = epoll_create1(0);
     if (-1 == m_epfd)
     {
@@ -36,15 +37,6 @@ int SlaveReactor::init(const int reactorId, const std::string &hostId)
     m_clientAliveChecker.init([this](const std::vector<int> &fds) {
         onClientsHeartbeatTimeout(fds);
     });
-
-    return 0;
-}
-
-int SlaveReactor::uninit()
-{
-    m_clientAliveChecker.uninit();
-
-    utilities::Socket::close(m_epfd);
 
     return 0;
 }
@@ -65,10 +57,7 @@ int SlaveReactor::start()
             timeout = 100;
         }
         struct epoll_event ev[c_maxEvent];
-        //utilities::Timestamp timestamp;
-        //timestamp.update();
         int nready = epoll_wait(m_epfd, ev, c_maxEvent, timeout);
-        //std::cout << "epoll_wait elapsed time: " << timestamp.getElapsedTimeInMilliSec() << "ms" << std::endl;
         if (-1 == nready)
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO, "epoll_wait failed, errno: ", errno, ", ", strerror(errno));

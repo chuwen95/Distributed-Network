@@ -7,26 +7,16 @@
 
 using namespace csm::service;
 
-SlaveReactorManager::SlaveReactorManager()
+SlaveReactorManager::SlaveReactorManager(const std::size_t redispatchInterval, const std::string &hostId, const std::vector<SlaveReactor::Ptr> slaveReactors) :
+        m_redispatchInterval(redispatchInterval), m_id(hostId), m_slaveReactors(std::move(slaveReactors))
 {}
 
 SlaveReactorManager::~SlaveReactorManager()
 {}
 
-void SlaveReactorManager::addSlaveReactor(SlaveReactor::Ptr slaveReactor)
+int SlaveReactorManager::init()
 {
-    m_slaveReactors.emplace_back(std::move(slaveReactor));
-}
-
-int SlaveReactorManager::init(const std::size_t redispatchInterval, const std::string &hostId)
-{
-    const auto expression = [this, redispatchInterval]() {
-        if (true == m_isTerminate)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-            return;
-        }
-
+    const auto expression = [this]() {
         {
             std::unique_lock<std::mutex> ulock(x_tcpSessionsQueue);
             m_tcpSessionsQueueCv.wait(ulock);
@@ -34,7 +24,6 @@ int SlaveReactorManager::init(const std::size_t redispatchInterval, const std::s
 
         if (true == m_isTerminate)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
             return;
         }
 
@@ -50,12 +39,11 @@ int SlaveReactorManager::init(const std::size_t redispatchInterval, const std::s
                 m_clientSlaveReactors[tcpSessionInfo->tcpSession->fd()] = m_slaveReactorIndexWhichHasLeastFd;
             }
 
-            LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-                          "dispatch TcpSession to slave reactor, index: ", m_slaveReactorIndexWhichHasLeastFd);
+            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "dispatch TcpSession to slave reactor, index: ", m_slaveReactorIndexWhichHasLeastFd);
             m_slaveReactors[m_slaveReactorIndexWhichHasLeastFd]->addClient(tcpSessionInfo->tcpSession);
 
             ++s_refreshTime;
-            if (0 == s_refreshTime % redispatchInterval)
+            if (0 == s_refreshTime % m_redispatchInterval)
             {
                 // 寻找管理最少client fd的SlaveReactor的index
                 std::size_t maxSize = std::numeric_limits<std::size_t>::max();
@@ -152,9 +140,8 @@ int SlaveReactorManager::sendData(const int fd, const std::vector<char> &data)
     return slaveReactor->sendData(fd, data.data(), data.size());
 }
 
-void
-SlaveReactorManager::registerClientInfoHandler(std::function<int(const HostEndPointInfo &, const HostEndPointInfo &,
-                                                                 const int, const std::string &, const std::string &)> clientInfoHandler)
+void SlaveReactorManager::registerClientInfoHandler(std::function<int(const HostEndPointInfo &, const HostEndPointInfo &,
+                                                                      const int, const std::string &, const std::string &)> clientInfoHandler)
 {
     for (auto &slaveReactor: m_slaveReactors)
     {
@@ -213,7 +200,7 @@ int SlaveReactorManager::disconnectClient(const int fd)
         if (m_clientSlaveReactors.end() == iter)
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                          "client not exist");
+                       "client not exist");
             return -1;
         }
         slaveReactorIndex = iter->second;

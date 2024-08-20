@@ -24,14 +24,17 @@ TcpService::Ptr TcpServiceFactory::createTcpService()
         listenner = std::make_shared<utilities::SelectListenner>();
         acceptor = std::make_shared<Acceptor>();
     }
+    // 创建TcpSession管理器
+    TcpSessionManager::Ptr tcpSessionManager = std::make_shared<TcpSessionManager>();
+
     // 服务端客户端都需要
     std::vector<SlaveReactor::Ptr> slaveReactors;
-    for (int i = 0; i < m_nodeConfig->slaveReactorNum(); ++i)
+    for (int index = 0; index < m_nodeConfig->slaveReactorNum(); ++index)
     {
-        TcpSessionManager::Ptr tcpSessionManager = std::make_shared<TcpSessionManager>();
-        slaveReactors.emplace_back(std::make_shared<SlaveReactor>(tcpSessionManager));
+        slaveReactors.emplace_back(std::make_shared<SlaveReactor>(index, m_nodeConfig->id(), tcpSessionManager));
     }
-    SlaveReactorManager::Ptr slaveReactorManager = std::make_shared<SlaveReactorManager>();
+    SlaveReactorManager::Ptr slaveReactorManager =
+            std::make_shared<SlaveReactorManager>(m_nodeConfig->redispatchInterval(), m_nodeConfig->id(), slaveReactors);
     utilities::ThreadPool::Ptr packetProcessor = std::make_shared<utilities::ThreadPool>();
 
     // 客户端需要
@@ -41,6 +44,7 @@ TcpService::Ptr TcpServiceFactory::createTcpService()
 
     // 创建TcpServiceConfig
     ServiceConfig::Ptr serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
+                                                                       tcpSessionManager,
                                                                        slaveReactors, slaveReactorManager, packetProcessor,
                                                                        hostsInfoManager, hostsConnector, hostsHeartbeatService);
     return std::make_shared<TcpService>(serviceConfig);

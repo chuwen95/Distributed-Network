@@ -7,12 +7,11 @@
 
 using namespace csm::service;
 
-ServiceConfig::ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner,
-                             Acceptor::Ptr acceptor,
+ServiceConfig::ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner,Acceptor::Ptr acceptor,
+                             TcpSessionManager::Ptr tcpSessionManager,
                              std::vector<SlaveReactor::Ptr> slaveReactors, SlaveReactorManager::Ptr slaveReactorManager,
                              utilities::ThreadPool::Ptr packetProcessor,
-                             HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector,
-                             HostsHeartbeatService::Ptr hostsHeartbeatService) :
+                             HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector, HostsHeartbeatService::Ptr hostsHeartbeatService) :
         m_nodeConfig(std::move(nodeConfig)), m_listenner(std::move(listenner)), m_acceptor(std::move(acceptor)),
         m_slaveReactors(std::move(slaveReactors)), m_slaveReactorManager(std::move(slaveReactorManager)),
         m_packetProcesser(std::move(packetProcessor)),
@@ -33,6 +32,11 @@ csm::utilities::SelectListenner::Ptr ServiceConfig::listenner()
 Acceptor::Ptr ServiceConfig::acceptor()
 {
     return m_acceptor;
+}
+
+TcpSessionManager::Ptr ServiceConfig::tcpSessionManager()
+{
+    return m_tcpSessionManager;
 }
 
 std::vector<SlaveReactor::Ptr> &ServiceConfig::slaveReactors()
