@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package stmclog_proto;
+
+enum RawEntryType
+{
+    Unknown = 0;
+    Configuration = 1;     // 集群配置，在共识模块内部使用
+    Data = 2;                   // 数据，需要被状态机执行
+    NoOperation = 3;
+}
+
+message RawEntry
+{
+    uint64 index = 1;
+    uint64 term = 2;
+    RawEntryType type = 3;
+    bytes data = 4;
+}
