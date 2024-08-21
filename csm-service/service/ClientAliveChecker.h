@@ -21,7 +21,6 @@ namespace csm
             using Ptr = std::shared_ptr<ClientAliveChecker>;
 
             ClientAliveChecker();
-
             ~ClientAliveChecker();
 
         public:
@@ -69,6 +68,9 @@ namespace csm
         private:
             std::mutex x_clientLastRecvTime;
             std::unordered_map<int, utilities::Timestamp::Ptr> m_clientLastRecvTime;
+
+            // 每一次检查500个客户端心跳情况，上一次检查到哪里了
+            std::size_t m_lastCheckPos{ 0 };
 
             utilities::Thread m_thread;
 

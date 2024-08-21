@@ -6,7 +6,7 @@
 #define TCPNETWORK_HOSTSHEARTBEATSERVICE_H
 
 #include "HostsInfoManager.h"
-#include "csm-service/service/SlaveReactorManager.h"
+#include "csm-service/service/SessionDispatcher.h"
 #include "csm-utilities/Thread.h"
 
 namespace csm

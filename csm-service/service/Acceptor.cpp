@@ -48,7 +48,7 @@ int Acceptor::init(const int fd)
 
                 if (nullptr != m_newClientCallback)
                 {
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send TcpSession to SlaveReactorManager");
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send TcpSession to SessionDispatcher");
                     m_newClientCallback(clientfd, tcpSession);
                 }
             }

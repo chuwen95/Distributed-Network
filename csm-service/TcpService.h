@@ -10,7 +10,7 @@
 #include "csm-utilities/ThreadPool.h"
 #include "config/ServiceConfig.h"
 #include "service/Acceptor.h"
-#include "service/SlaveReactorManager.h"
+#include "service/SessionDispatcher.h"
 #include "host/HostsInfoManager.h"
 #include "host/HostsConnector.h"
 #include "host/HostsHeartbeatService.h"
@@ -65,8 +65,19 @@ namespace csm
 
             int uninitClient();
 
-            int onClientDisconnect(
-                    const HostEndPointInfo &hostEndPointInfo, const std::string &id, const std::string &uuid, const int flag);
+            SlaveReactor::Ptr getSlaveReactorByFd(const int fd);
+
+            int sendData(const int fd, const std::vector<char>& data);
+
+            /**
+             * 断开客户端
+             * @param hostEndPointInfo
+             * @param id
+             * @param uuid
+             * @param flag  0：因为socket发生错误而断开，-1/-2/-3为协议错误码
+             * @return
+             */
+            int disconnectClient(const HostEndPointInfo &hostEndPointInfo, const std::string &id, const std::string &uuid, const int flag);
 
         private:
             int m_fd;

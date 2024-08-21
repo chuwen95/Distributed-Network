@@ -2,8 +2,8 @@
 // Created by ChuWen on 9/6/23.
 //
 
-#ifndef TCPSERVER_SLAVEREACTORMANAGER_H
-#define TCPSERVER_SLAVEREACTORMANAGER_H
+#ifndef COPYSTATEMACHINE_SESSIONDISPATCHER_H
+#define COPYSTATEMACHINE_SESSIONDISPATCHER_H
 
 #include "SlaveReactor.h"
 
@@ -15,10 +15,10 @@ namespace csm
     namespace service
     {
 
-        class SlaveReactorManager
+        class SessionDispatcher
         {
         public:
-            using Ptr = std::shared_ptr<SlaveReactorManager>;
+            using Ptr = std::shared_ptr<SessionDispatcher>;
 
             /**
              *
@@ -27,8 +27,8 @@ namespace csm
              * @param slaveReactors     要管理的子Reactor
              * @return
              */
-            SlaveReactorManager(const std::size_t redispatchInterval, const std::string& id, const std::vector<SlaveReactor::Ptr> slaveReactors);
-            ~SlaveReactorManager();
+            SessionDispatcher(const std::size_t redispatchInterval, const std::string& id, const std::size_t slaveReactorSize);
+            ~SessionDispatcher();
 
         public:
             int init();
@@ -39,9 +39,11 @@ namespace csm
 
             int stop();
 
-            int addTcpSession(TcpSession::Ptr tcpSession, std::function<void()> callback = nullptr);
+            int addSession(const int fd, std::function<void(const std::size_t slaveReactorIndex)> callback);
 
-            std::uint64_t getClientOnlineTimestamp(const int fd);
+            int removeFdSlaveReactorRelation(const int fd);
+
+            int getSlaveReactorIndexByFd(const int fd);
 
             int sendData(const int fd, const std::vector<char> &data);
 
@@ -60,43 +62,46 @@ namespace csm
                     std::function<void(const HostEndPointInfo &hostEndPointInfo, const std::string &id,
                                        const std::string &uuid, const int flag)> disconnectHandler);
 
+            // Todo: TcpSessionDestoryer处理fd客户端断开的情况时，需要将SessionDispatcher中的fd也移除
             int disconnectClient(const int fd);
 
         private:
             std::size_t m_redispatchInterval;
             std::string m_id;
-            std::vector<SlaveReactor::Ptr> m_slaveReactors;     // 所有的子Reactor集合
+            std::size_t m_slaveReactorSize;
 
             // 新上线客户端的信号
             std::mutex x_tcpSessionsQueue;
             std::condition_variable m_tcpSessionsQueueCv;
 
             // 新上线的客户端队列，等待分发到各个SlaveReactor
-            struct TcpSessionInfo
+            struct SessionInfo
             {
-                using Ptr = std::shared_ptr<TcpSessionInfo>;
+                using Ptr = std::shared_ptr<SessionInfo>;
 
-                TcpSessionInfo(TcpSession::Ptr t, std::function<void()> c) : tcpSession(t), callback(c)
+                SessionInfo(const int f, std::function<void(const std::size_t slaveReactorIndex)> c) : fd(f), callback(std::move(c))
                 {}
 
-                TcpSession::Ptr tcpSession;
-                std::function<void()> callback;
+                int fd;
+                std::function<void(const std::size_t slaveReactorIndex)> callback;
             };
-            moodycamel::ReaderWriterQueue<TcpSessionInfo::Ptr> m_tcpSessionsQueue;
+            moodycamel::ReaderWriterQueue<SessionInfo::Ptr> m_tcpSessionsQueue;
 
-            // 管理最少fd的SlaveReactor
-            std::size_t m_slaveReactorIndexWhichHasLeastFd{0};
+            // 当前管理最少fd的SlaveReactor index（非实时刷新）
+            std::size_t m_slaveReactorIndexWhichHasLeastFd{ 0 };
+            // 每个SlaveReactor管理的fd数量
+            std::vector<std::unique_ptr<std::atomic_uint32_t>> m_slaveReactorFdSize;
 
             // clientfd是谁那个SlaveReactor管理的，clientfd=>SlaveReactor index
-            std::mutex x_clientSlaveReactors;
-            std::unordered_map<int, std::size_t> m_clientSlaveReactors;
+            std::mutex x_fdSlaveReactorIndex;
+            std::unordered_map<int, std::size_t> m_fdSlaveReactorIndex;
 
             std::atomic_bool m_isTerminate{false};
             utilities::Thread m_thread;
         };
 
-    } // server
+    } // service
 
-}
+} // csm
 
-#endif //TCPSERVER_SLAVEREACTORMANAGER_H
+#endif //COPYSTATEMACHINE_SESSIONDISPATCHER_H

@@ -8,9 +8,11 @@
 using namespace csm::service;
 
 // ClientAliveChecker任务运行间隔，每间隔一段时间运行一次检查
-constexpr std::size_t c_aliveCheckInterval{3000};
+constexpr std::size_t c_aliveCheckInterval{ 20 };
+// 每一次检查的客户端数量，防止一次检查所有客户端占用锁时间过长
+constexpr std::size_t c_circleCheckSize{ 500 };
 // 若c_aliveTimeout时间内没有收到任何数据，判定客户端掉线
-constexpr std::size_t c_aliveTimeout{30000};
+constexpr std::size_t c_aliveTimeout{ 15000 };
 
 ClientAliveChecker::ClientAliveChecker()
 {}
@@ -25,13 +27,32 @@ int ClientAliveChecker::init(const std::function<void(const std::vector<int> &)>
     const auto expression = [this]() {
         std::vector<int> offlinefds;
 
-        std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
-        for (auto iter = m_clientLastRecvTime.begin(); iter != m_clientLastRecvTime.end(); ++iter)
+        std::size_t clientCheckNum{ 0 };
         {
-            if (iter->second->getElapsedTimeInMilliSec() > c_aliveTimeout)
+            std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
+            for (auto iter = m_clientLastRecvTime.begin(); iter != m_clientLastRecvTime.end(); ++iter)
             {
-                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "client offline, fd: ", iter->first);
-                offlinefds.emplace_back(iter->first);
+                if (clientCheckNum < m_lastCheckPos)
+                {
+                    continue;
+                }
+
+                if (iter->second->getElapsedTimeInMilliSec() > c_aliveTimeout)
+                {
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "client offline, fd: ", iter->first);
+                    offlinefds.emplace_back(iter->first);
+                }
+
+                ++clientCheckNum;
+                if (clientCheckNum - m_lastCheckPos == c_circleCheckSize)
+                {
+                    break;
+                }
+            }
+            m_lastCheckPos = clientCheckNum;
+            if (m_clientLastRecvTime.size() == m_lastCheckPos)
+            {
+                m_lastCheckPos = 0;
             }
         }
 

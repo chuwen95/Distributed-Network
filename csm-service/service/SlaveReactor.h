@@ -42,17 +42,10 @@ namespace csm
             /**
              * @brief 添加客户端
              *
-             * @param tcpSession
+             * @param fd
              * @return
              */
-            int addClient(TcpSession::Ptr tcpSession);
-
-            /**
-             * #brief 返回本SlaveReactor管理的客户端数量
-             *
-             * @return
-             */
-            std::size_t clientSize();
+            int addClient(const int fd);
 
             /**
              * @brief 注册ClientInfo包回调，收到客户端的ClientInfo解析出id后，将id和fd回调出去，存储id和fd的对应关系
@@ -101,14 +94,11 @@ namespace csm
             int sendData(const int fd, const char *data, const std::size_t size);
 
             /**
-             * @brief 获取客户端上线的时间戳，供业务线程池用，业务线程池放入任务的时候会记录放入任务那一刻的时间戳
-             * 如果客户端不存在此函数返回-1，表示客户端已经离线，直接丢弃任务
-             * 如果任务时间戳小于客户端上线时间戳，可能是客户端离线后又上线但是fd分配的是一样的
-             *
-             * @param fd 客户端fd
+             * 将fd从SlaveReactor中移除
+             * @param fd
              * @return
              */
-            std::uint64_t getClientOnlineTimestamp(const int fd);
+            int removeClient(const int fd);
 
             /**
              * @brief 断开某fd的连接
@@ -168,9 +158,6 @@ namespace csm
             // 若m_outfds[fd].second = true，表示EPOLLOUT事件到来
             std::mutex x_outfds;
             std::unordered_map<int, std::pair<bool, bool>> m_outfds;
-
-            // 客户端心跳检测
-            ClientAliveChecker m_clientAliveChecker;
 
             // 多个线程同时写入待发送的数据，需要加锁
             std::mutex x_writeBuffer;

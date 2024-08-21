@@ -20,8 +20,6 @@ SlaveReactor::SlaveReactor(const int reactorId, const std::string& hostId, TcpSe
 SlaveReactor::~SlaveReactor()
 {
     utilities::Socket::close(m_epfd);
-
-    m_clientAliveChecker.uninit();
 }
 
 int SlaveReactor::init()
@@ -385,17 +383,11 @@ int SlaveReactor::start()
     m_thread.init(expression, 0, threadName.c_str());
     m_thread.start();
 
-    // 启动客户端在线监测
-    m_clientAliveChecker.start();
-
     return 0;
 }
 
 int SlaveReactor::stop()
 {
-    // 停止客户端在线监测
-    m_clientAliveChecker.stop();
-
     m_isTerminate = true;
     m_thread.stop();
     m_thread.uninit();
@@ -403,17 +395,9 @@ int SlaveReactor::stop()
     return 0;
 }
 
-int SlaveReactor::addClient(TcpSession::Ptr tcpSession)
+int SlaveReactor::addClient(const int fd)
 {
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-                  "SlaveReactor ", m_reactorId, " try to add client ", tcpSession->fd(), " to epoll");
-
-    int fd = tcpSession->fd();
-
-    m_tcpSessionManager->addTcpSession(fd, tcpSession);
-    m_clientAliveChecker.addClient(fd);
-
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "SlaveReactor ", m_reactorId, " add client ", fd, " to ClientAliveChecker successfully");
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "SlaveReactor ", m_reactorId, " try to add client ", fd, " to epoll");
 
     struct epoll_event ev;
     memset(&ev, 0, sizeof(struct epoll_event));
@@ -424,22 +408,13 @@ int SlaveReactor::addClient(TcpSession::Ptr tcpSession)
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO,
                       "epoll_ctl add failed, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
-
-        m_tcpSessionManager->removeTcpSession(fd);
-        m_clientAliveChecker.removeClient(fd);
-
         return -1;
     }
 
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "SlaveReactor ", m_reactorId,
-                  " add client ", tcpSession->fd(), " to epoll successfully, events: EPOLLIN and EPOLLET", ", m_epfd: ", m_epfd);
+                  " add client ", fd, " to epoll successfully, events: EPOLLIN and EPOLLET", ", m_epfd: ", m_epfd);
 
     return 0;
-}
-
-std::size_t SlaveReactor::clientSize()
-{
-    return m_tcpSessionManager->sessionSize();
 }
 
 void SlaveReactor::registerClientInfoHandler(std::function<int(const HostEndPointInfo &, const HostEndPointInfo &,
@@ -502,14 +477,10 @@ int SlaveReactor::sendData(const int fd, const char *data, const std::size_t siz
     return 0;
 }
 
-std::uint64_t SlaveReactor::getClientOnlineTimestamp(const int fd)
+int SlaveReactor::removeClient(const int fd)
 {
-    TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
-    if(nullptr == tcpSession)
-    {
-        return 0;
-    }
-    return tcpSession->getClientOnlineTimestamp();
+    // 将客户端从epoll中移除
+    epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, nullptr);
 }
 
 int SlaveReactor::disconnectClient(const int fd, const int flag)
@@ -523,8 +494,6 @@ int SlaveReactor::disconnectClient(const int fd, const int flag)
 
     // 将客户端从在线监测中移除
     m_clientAliveChecker.removeClient(fd);
-    // 将客户端从epoll中移除
-    epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, nullptr);
 
     // 关闭客户端fd
     close(fd);

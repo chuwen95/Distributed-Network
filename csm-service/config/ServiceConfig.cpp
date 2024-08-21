@@ -7,14 +7,14 @@
 
 using namespace csm::service;
 
-ServiceConfig::ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner,Acceptor::Ptr acceptor,
-                             TcpSessionManager::Ptr tcpSessionManager,
-                             std::vector<SlaveReactor::Ptr> slaveReactors, SlaveReactorManager::Ptr slaveReactorManager,
-                             utilities::ThreadPool::Ptr packetProcessor,
+ServiceConfig::ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
+                             TcpSessionManager::Ptr tcpSessionManager, ClientAliveChecker::Ptr clientAliveChecker, std::vector<SlaveReactor::Ptr> slaveReactors,
+                             SessionDispatcher::Ptr sessionDispatcher, SessionDestroyer::Ptr sessionDestroyer, utilities::ThreadPool::Ptr packetProcessor,
                              HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector, HostsHeartbeatService::Ptr hostsHeartbeatService) :
         m_nodeConfig(std::move(nodeConfig)), m_listenner(std::move(listenner)), m_acceptor(std::move(acceptor)),
-        m_slaveReactors(std::move(slaveReactors)), m_slaveReactorManager(std::move(slaveReactorManager)),
-        m_packetProcesser(std::move(packetProcessor)),
+        m_tcpSessionManager(std::move(tcpSessionManager)), m_clientAliveChecker(std::move(clientAliveChecker)),
+        m_slaveReactors(std::move(slaveReactors)), m_sessionDispatcher(std::move(sessionDispatcher)),
+        m_sessionDestroyer(std::move(sessionDestroyer)), m_packetProcesser(std::move(packetProcessor)),
         m_hostsInfoManager(std::move(hostsInfoManager)), m_hostsConnector(std::move(hostsConnector)),
         m_hostsHeartbeatService(std::move(hostsHeartbeatService))
 {}
@@ -39,14 +39,24 @@ TcpSessionManager::Ptr ServiceConfig::tcpSessionManager()
     return m_tcpSessionManager;
 }
 
-std::vector<SlaveReactor::Ptr> &ServiceConfig::slaveReactors()
+ClientAliveChecker::Ptr ServiceConfig::clientAliveChecker()
+{
+    return m_clientAliveChecker;
+}
+
+std::vector<SlaveReactor::Ptr>& ServiceConfig::slaveReactors()
 {
     return m_slaveReactors;
 }
 
-SlaveReactorManager::Ptr ServiceConfig::slaveReactorManager()
+SessionDispatcher::Ptr ServiceConfig::sessionDispatcher()
 {
-    return m_slaveReactorManager;
+    return m_sessionDispatcher;
+}
+
+SessionDestroyer::Ptr ServiceConfig::sessionDestroyer()
+{
+    return m_sessionDestroyer;
 }
 
 csm::utilities::ThreadPool::Ptr ServiceConfig::packetProcessor()
