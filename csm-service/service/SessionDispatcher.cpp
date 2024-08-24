@@ -87,7 +87,6 @@ int SessionDispatcher::stop()
     m_isTerminate = true;
     m_tcpSessionsQueueCv.notify_one();
     m_thread.stop();
-    m_thread.uninit();
 
     return 0;
 }
@@ -130,6 +129,7 @@ int SessionDispatcher::getSlaveReactorIndexByFd(const int fd)
     return iter->second;
 }
 
+#if 0
 int SessionDispatcher::sendData(const int fd, const std::vector<char> &data)
 {
     SlaveReactor::Ptr slaveReactor;
@@ -216,3 +216,4 @@ int SessionDispatcher::disconnectClient(const int fd)
 
     return m_slaveReactors[slaveReactorIndex]->disconnectClient(fd);
 }
+#endif

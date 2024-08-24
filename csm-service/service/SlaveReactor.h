@@ -9,10 +9,6 @@
 #include "csm-utilities/Thread.h"
 #include "TcpSession.h"
 #include "TcpSessionManager.h"
-#include "ClientAliveChecker.h"
-#include "csm-service/protocol/PacketHeader.h"
-#include "csm-service/protocol/packet/PayloadClientInfo.h"
-#include "csm-service/protocol/packet/PayloadClientInfoReply.h"
 
 namespace csm
 {
@@ -67,41 +63,6 @@ namespace csm
             void setSessionDataHandler(const std::function<int(const int fd, const char* data, const std::size_t dataLen)> handler);
 
             /**
-             * @brief 注册ClientInfo包回调，收到客户端的ClientInfo解析出id后，将id和fd回调出去，存储id和fd的对应关系
-             *
-             * @param clientInfoHandler
-             */
-            void registerClientInfoHandler(std::function<int(const HostEndPointInfo &localHostEndPointInfo,
-                                                             const HostEndPointInfo &peerHostEndPointInfo, const int fd, const std::string &id, const std::string &uuid)> clientInfoHandler);
-
-            /**
-             * @brief 注册ClientInfoReply包回调
-             *              三个参数信息：ip, port, id
-             *
-             * @param clientInfoReplyHandler
-             */
-            void registerClientInfoReplyHandler(
-                    std::function<int(const HostEndPointInfo &hostEndPointInfo, const int fd, const std::string &id,
-                                      const std::string &uuid, const int result, int &anotherFd)> clientInfoReplyHandler);
-
-            /**
-             * @brief 客户端有包需要处理的回调，回调包类型和包负载
-             *
-             * @param moduleMessageHandler
-             */
-            void registerModuleMessageHandler(std::function<void(const int, const std::int32_t,
-                                                                 std::shared_ptr<std::vector<char>> &)> moduleMessageHandler);
-
-            /**
-             * @brief 客户端离线回调
-             *
-             * @param disconnectHandler
-             */
-            void registerDisconnectHandler(
-                    std::function<void(const int fd, const HostEndPointInfo &hostEndPointInfo, const std::string &id,
-                                       const std::string &uuid, const int flag)> disconnectHandler);
-
-            /**
              * @brief 写入待发送的数据到writeBuffer，如果writeBuffer的可用空间小于要写入的数据大小，则返回-1，客户端需重新尝试写入
              * 这里不能writeBuffer可用空间还剩多少就写入多少，防止多个客户端同时写入的时候包数据混乱
              *
@@ -111,6 +72,8 @@ namespace csm
              * @return
              */
             int sendData(const int fd, const char *data, const std::size_t size);
+
+            int sendData(const int fd, const std::vector<char> data);
 
             /**
              * 将fd从SlaveReactor中移除
@@ -129,32 +92,15 @@ namespace csm
             int disconnectClient(const int fd, const int flag = 0);
 
         private:
-            // 从readBuffer中获取包类型和包负载，如果缓冲区的数据不够包长度，则返回-1
-            int getPacket(const int fd, utilities::RingBuffer::Ptr &readBuffer, PacketType &packetType,
-                          std::int32_t &moduleId, std::shared_ptr<std::vector<char>> &data);
-
-            // 处理客户端ClientInfo包
-            int processClientInfoPacket(const int fd, TcpSession::Ptr tcpSession, PayloadClientInfo::Ptr packet);
-
-            // 处理客户端ClientInfo包
-            int processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession, PayloadClientInfoReply::Ptr packetReply);
-
-            // ClientAliveChecker调用，超时未收到心跳
-            void onClientsHeartbeatTimeout(const std::vector<int> &fds);
-
-        private:
             // SlaveReactor的id
             int m_reactorId;
-            // host id
-            std::string m_hostId;
-
+            // TcpSession管理器
             TcpSessionManager::Ptr m_tcpSessionManager;
 
             std::atomic_bool m_isTerminate{false};
             utilities::Thread m_thread;
 
             int m_epfd{-1};
-
             std::vector<char> m_recvBuffer;
 
             // 心跳刷新回调
@@ -162,30 +108,7 @@ namespace csm
             // 链接断开处理回调
             std::function<int(const int fd)> m_disconnectHandler;
             // 收到数据后对数据进行处理的回调
-            std::function<int(const int fd, , const char* data, const std::size_t dataLen)> m_sessionDataHandler;
-
-            // ClientInfo包回调
-            std::function<int(const HostEndPointInfo &localHostEndPointInfo,
-                              const HostEndPointInfo &peerHostEndPointInfo, const int fd, const std::string &id, const std::string &uuid)> m_clientInfoHandler;
-            // ClientInfoReply包回调
-            std::function<int(const HostEndPointInfo &hostEndPointInfo, const int fd, const std::string &id,
-                              const std::string &uuid, const int result, int &anotherFd)> m_clientInfoReplyHandler;
-
-            // 数据接收回调
-            std::function<void(const int fd, const std::int32_t moduleId, std::shared_ptr<std::vector<char>> &)> m_moduleMessageHandler;
-            // 客户端断开回调
-            //std::function<void(const int fd, const HostEndPointInfo &hostEndPointInfo, const std::string &id,
-            //const std::string &uuid, const int flag)> m_disconnectHandler;
-
-            // 有EpollIn的事件回调
-            std::unordered_set<int> m_infds;
-            // fd收到了数据，需要处理
-            std::unordered_set<int> m_datafds;
-            // 若fd存在于m_outfds中，表明有数据要发送
-            // 若m_outfds[fd].first = true，表明正在等待EPOLLOUT事件
-            // 若m_outfds[fd].second = true，表示EPOLLOUT事件到来
-            std::mutex x_outfds;
-            std::unordered_map<int, std::pair<bool, bool>> m_outfds;
+            std::function<int(const int fd, const char* data, const std::size_t dataLen)> m_sessionDataHandler;
 
             // 多个线程同时写入待发送的数据，需要加锁
             std::mutex x_writeBuffer;

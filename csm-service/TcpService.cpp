@@ -52,6 +52,7 @@ int TcpService::init()
         // 获取TcpSession中的协议信息，移除负责共享一条连接协议的信息
         TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
         assert(nullptr != tcpSession);
+        tcpSession->setWaitingDisconnect(true);
         disconnectClient(tcpSession->peerHostEndPointInfo(), tcpSession->getClientId(), tcpSession->handshakeUuid(), flag);
 
         m_serviceConfig->sessionDispatcher()->removeFdSlaveReactorRelation(fd);
@@ -525,7 +526,7 @@ int TcpService::initClient()
 
     // 收到ClientInfoReply包
     m_serviceConfig->sessionDataProcessor()->registerPacketHandler(PacketType::PT_ClientInfoReply, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
-        PayloadClientInfo::Ptr payloadClientInfoReply = std::dynamic_pointer_cast<PayloadClientInfo>(payload);
+        PayloadClientInfoReply::Ptr payloadClientInfoReply = std::dynamic_pointer_cast<PayloadClientInfoReply>(payload);
 
         TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
         if(nullptr != tcpSession)
@@ -712,13 +713,6 @@ int TcpService::uninitServer()
 
 int TcpService::uninitClient()
 {
-    if (-1 == m_serviceConfig->hostsHeartbeatService()->uninit())
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "HostsHeartbeatService uninit failed");
-        return -1;
-    }
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "HostsHeartbeatService uninit successfully");
-
     if (-1 == m_serviceConfig->hostsConnector()->uninit())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "HostsConnector uninit failed");

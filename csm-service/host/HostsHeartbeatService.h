@@ -23,8 +23,6 @@ namespace csm
         public:
             int init(const std::string &hostId, HostsInfoManager::Ptr hostsInfoManager);
 
-            int uninit();
-
             int start();
 
             int stop();

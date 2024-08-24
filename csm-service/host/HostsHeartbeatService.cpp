@@ -5,7 +5,8 @@
 #include "HostsHeartbeatService.h"
 
 #include "csm-utilities/Timestamp.h"
-#include "csm-service//protocol/packet/PayloadHeartBeat.h"
+#include "csm-service/protocol/PacketHeader.h"
+#include "csm-service/protocol/payload/PayloadHeartBeat.h"
 
 using namespace csm::service;
 
@@ -52,13 +53,6 @@ int HostsHeartbeatService::init(const std::string &hostId, HostsInfoManager::Ptr
         }
     };
     m_thread.init(expression, c_heartbeatInterval, "host_heartbeat");
-
-    return 0;
-}
-
-int HostsHeartbeatService::uninit()
-{
-    m_thread.uninit();
 
     return 0;
 }

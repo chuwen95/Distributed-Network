@@ -19,7 +19,7 @@ int ClientAliveChecker::init()
 
             for (auto iter = m_clientLastRecvTime.begin(); iter != m_clientLastRecvTime.end(); ++iter)
             {
-                if (iter->second.first() == iter->second.second)
+                if (iter->second.first == iter->second.second)
                 {
                     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "client offline, fd: ", iter->first);
                     offlinefds.emplace_back(iter->first);

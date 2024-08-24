@@ -27,7 +27,7 @@ namespace csm
              * @param threadName    线程池线程名
              */
             ThreadPool(const int threadNum, const std::string_view threadName);
-            ~ThreadPool();
+            ~ThreadPool() = default;
 
         public:
             int init();

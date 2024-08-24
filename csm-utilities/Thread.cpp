@@ -23,11 +23,6 @@ int Thread::init(const std::function<void()> threadFunc, const int time, const s
     return 0;
 }
 
-int Thread::uninit()
-{
-    return 0;
-}
-
 void Thread::start()
 {
     if (true == m_isRunning)

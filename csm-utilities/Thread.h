@@ -19,7 +19,6 @@ namespace csm
             using Ptr = std::shared_ptr<Thread>;
 
             Thread();
-
             ~Thread();
 
         public:
@@ -30,12 +29,6 @@ namespace csm
              * @param threadName        [in] 线程名
              */
             int init(const std::function<void()> threadFunc, const int time = 0, const std::string_view threadName = "");
-
-            /**
-             * @brief   反初始化
-             * @return
-             */
-            int uninit();
 
             void start();
 

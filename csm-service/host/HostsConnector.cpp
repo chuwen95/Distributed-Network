@@ -79,8 +79,7 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
 
                 if (nullptr != m_connectHandler)
                 {
-                    TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(fd, service::c_readBufferSize,
-                                                                                      service::c_writeBufferSize);
+                    TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(fd, service::c_tcpSessionReadBufferSize, service::c_tcpSessionWriteBufferSize);
                     tcpSession->init();
                     tcpSession->setPeerHostEndPointInfo(host.first);
 
@@ -175,8 +174,7 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
                     {
                         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, callback TcpSession");
 
-                        TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(fd, service::c_readBufferSize,
-                                                                                          service::c_writeBufferSize);
+                        TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(fd, service::c_tcpSessionReadBufferSize, service::c_tcpSessionWriteBufferSize);
                         tcpSession->init();
                         tcpSession->setPeerHostEndPointInfo(iter->first);
 
@@ -223,7 +221,6 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
 
 int HostsConnector::uninit()
 {
-    m_thread.uninit();
     return 0;
 }
 

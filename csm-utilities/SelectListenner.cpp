@@ -52,7 +52,6 @@ int SelectListenner::init(const int fd)
 
 int SelectListenner::uninit()
 {
-    m_thread.uninit();
     return 0;
 }
 

@@ -45,6 +45,7 @@ namespace csm
 
             int getSlaveReactorIndexByFd(const int fd);
 
+#if 0
             int sendData(const int fd, const std::vector<char> &data);
 
             void registerClientInfoHandler(std::function<int(const HostEndPointInfo &localHostEndPointInfo,
@@ -64,6 +65,7 @@ namespace csm
 
             // Todo: TcpSessionDestoryer处理fd客户端断开的情况时，需要将SessionDispatcher中的fd也移除
             int disconnectClient(const int fd);
+#endif
 
         private:
             std::size_t m_redispatchInterval;
