@@ -40,12 +40,22 @@ int TcpSession::fd()
     return m_clientfd;
 }
 
-csm::utilities::RingBuffer::Ptr &TcpSession::readBuffer()
+std::mutex& TcpSession::readBufferMutex()
+{
+    return x_readBuffer;
+}
+
+csm::utilities::RingBuffer::Ptr& TcpSession::readBuffer()
 {
     return m_readBuffer;
 }
 
-csm::utilities::RingBuffer::Ptr &TcpSession::writeBuffer()
+std::mutex& TcpSession::writeBufferMutex()
+{
+    return x_writeBuffer;
+}
+
+csm::utilities::RingBuffer::Ptr& TcpSession::writeBuffer()
 {
     return m_writeBuffer;
 }
@@ -88,4 +98,14 @@ void TcpSession::setHandshakeUuid(const std::string &uuid)
 std::string TcpSession::handshakeUuid()
 {
     return m_handshakeUuid;
+}
+
+bool TcpSession::isWaitingDisconnect() const
+{
+    return m_isWaitingDisconnect;
+}
+
+void TcpSession::setWaitingDisconnect(const bool value)
+{
+    m_isWaitingDisconnect = value;
 }

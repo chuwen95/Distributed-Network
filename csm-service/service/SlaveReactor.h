@@ -11,8 +11,8 @@
 #include "TcpSessionManager.h"
 #include "ClientAliveChecker.h"
 #include "csm-service/protocol/PacketHeader.h"
-#include "csm-service/protocol/packet/PacketClientInfo.h"
-#include "csm-service/protocol/packet/PacketClientInfoReply.h"
+#include "csm-service/protocol/packet/PayloadClientInfo.h"
+#include "csm-service/protocol/packet/PayloadClientInfoReply.h"
 
 namespace csm
 {
@@ -48,12 +48,31 @@ namespace csm
             int addClient(const int fd);
 
             /**
+             * @brief 设置心跳刷新回调
+             * @param handler
+             * @return
+             */
+            void setHeartbeatRefreshHandler(const std::function<int(const int fd)> handler);
+
+            /**
+             * @brief 设置链接断开处理回调
+             * @param handler
+             */
+            void setDisconnectHandler(const std::function<int(const int fd)> handler);
+
+            /**
+             * @brief 设置TcpSession有数据需要解码处理的回调函数
+             * @param handler
+             */
+            void setSessionDataHandler(const std::function<int(const int fd, const char* data, const std::size_t dataLen)> handler);
+
+            /**
              * @brief 注册ClientInfo包回调，收到客户端的ClientInfo解析出id后，将id和fd回调出去，存储id和fd的对应关系
              *
              * @param clientInfoHandler
              */
             void registerClientInfoHandler(std::function<int(const HostEndPointInfo &localHostEndPointInfo,
-                    const HostEndPointInfo &peerHostEndPointInfo, const int fd, const std::string &id, const std::string &uuid)> clientInfoHandler);
+                                                             const HostEndPointInfo &peerHostEndPointInfo, const int fd, const std::string &id, const std::string &uuid)> clientInfoHandler);
 
             /**
              * @brief 注册ClientInfoReply包回调
@@ -115,10 +134,10 @@ namespace csm
                           std::int32_t &moduleId, std::shared_ptr<std::vector<char>> &data);
 
             // 处理客户端ClientInfo包
-            int processClientInfoPacket(const int fd, TcpSession::Ptr tcpSession, PacketClientInfo::Ptr packet);
+            int processClientInfoPacket(const int fd, TcpSession::Ptr tcpSession, PayloadClientInfo::Ptr packet);
 
             // 处理客户端ClientInfo包
-            int processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession, PacketClientInfoReply::Ptr packetReply);
+            int processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession, PayloadClientInfoReply::Ptr packetReply);
 
             // ClientAliveChecker调用，超时未收到心跳
             void onClientsHeartbeatTimeout(const std::vector<int> &fds);
@@ -136,6 +155,15 @@ namespace csm
 
             int m_epfd{-1};
 
+            std::vector<char> m_recvBuffer;
+
+            // 心跳刷新回调
+            std::function<int(const int fd)> m_heartRefreshHandler;
+            // 链接断开处理回调
+            std::function<int(const int fd)> m_disconnectHandler;
+            // 收到数据后对数据进行处理的回调
+            std::function<int(const int fd, , const char* data, const std::size_t dataLen)> m_sessionDataHandler;
+
             // ClientInfo包回调
             std::function<int(const HostEndPointInfo &localHostEndPointInfo,
                               const HostEndPointInfo &peerHostEndPointInfo, const int fd, const std::string &id, const std::string &uuid)> m_clientInfoHandler;
@@ -146,8 +174,8 @@ namespace csm
             // 数据接收回调
             std::function<void(const int fd, const std::int32_t moduleId, std::shared_ptr<std::vector<char>> &)> m_moduleMessageHandler;
             // 客户端断开回调
-            std::function<void(const int fd, const HostEndPointInfo &hostEndPointInfo, const std::string &id,
-                               const std::string &uuid, const int flag)> m_disconnectHandler;
+            //std::function<void(const int fd, const HostEndPointInfo &hostEndPointInfo, const std::string &id,
+            //const std::string &uuid, const int flag)> m_disconnectHandler;
 
             // 有EpollIn的事件回调
             std::unordered_set<int> m_infds;

@@ -5,7 +5,7 @@
 #include "HostsHeartbeatService.h"
 
 #include "csm-utilities/Timestamp.h"
-#include "csm-service//protocol/packet/PacketHeartBeat.h"
+#include "csm-service//protocol/packet/PayloadHeartBeat.h"
 
 using namespace csm::service;
 
@@ -28,7 +28,7 @@ int HostsHeartbeatService::init(const std::string &hostId, HostsInfoManager::Ptr
             std::int64_t curTimestamp = utilities::Timestamp::getCurrentTimestamp();
             if (curTimestamp - host.second.second >= c_heartbeatInterval)
             {
-                PacketHeartBeat packetHeartbeat;
+                PayloadHeartBeat packetHeartbeat;
                 packetHeartbeat.setId(m_hostId);
                 packetHeartbeat.setTimestamp(curTimestamp);
                 int payloadSize = packetHeartbeat.packetLength();

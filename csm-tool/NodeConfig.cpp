@@ -86,9 +86,9 @@ std::size_t NodeConfig::redispatchInterval()
     return m_redispatchInterval;
 }
 
-std::size_t NodeConfig::packetProcessThreadNum()
+std::size_t NodeConfig::sessionDataWorkerNum()
 {
-    return m_packetProcessThreadNum;
+    return m_sessionDataWorkerNum;
 }
 
 bool NodeConfig::enableFileLog()
@@ -181,13 +181,12 @@ int NodeConfig::parseNetworkConfig(inipp::Ini<char>& ini)
 {
     m_p2pIp = getValue(ini, "network", "ip", m_p2pIp);
     m_p2pPort = getValue(ini, "network", "port", m_p2pPort);
-
     m_nodesFile = getValue(ini, "network", "nodes_file", m_nodesFile);
+    m_sessionDataWorkerNum = getValue(ini, "network", "packet_process_worker_num", m_sessionDataWorkerNum);
 
     m_slaveReactorNum = getValue(ini, "reactor", "slave_reactor", m_slaveReactorNum);
     m_redispatchInterval = getValue(ini, "reactor", "redispatch_interval", m_redispatchInterval);
 
-    m_packetProcessThreadNum = getValue(ini, "packet_process", "thread_pool_thread_num", m_packetProcessThreadNum);
 
     m_startAsClient = getValue(ini, "network", "start_as_client", m_startAsClient);
 

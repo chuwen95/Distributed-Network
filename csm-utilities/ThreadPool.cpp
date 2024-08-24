@@ -7,32 +7,19 @@
 
 using namespace csm::utilities;
 
-ThreadPool::ThreadPool()
-{
+ThreadPool::ThreadPool(const int size, const std::string_view threadName) :
+    m_threadNum(size), m_threadName(threadName)
+{}
 
-}
-
-ThreadPool::~ThreadPool()
+int ThreadPool::init()
 {
-}
-
-int ThreadPool::init(const int size, const std::string_view threadName)
-{
-    if (size < 1)
+    if (m_threadNum < 1)
     {
         return -1;
     }
 
-    m_threadNum = size;
-    m_threadName = threadName;
+    m_taskQueues.resize(m_threadNum);
 
-    m_taskQueues.resize(size);
-
-    return 0;
-}
-
-int ThreadPool::uninit()
-{
     return 0;
 }
 

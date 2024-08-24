@@ -2,47 +2,47 @@
 // Created by ChuWen on 9/11/23.
 //
 
-#include "PacketHeartBeat.h"
+#include "PayloadHeartBeat.h"
 
 using namespace csm::service;
 
-std::size_t PacketHeartBeat::packetLength() const
+std::size_t PayloadHeartBeat::packetLength() const
 {
     return m_protoHeartBeat.ByteSizeLong();
 }
 
-int PacketHeartBeat::setId(const std::string &id)
+int PayloadHeartBeat::setId(const std::string &id)
 {
     m_protoHeartBeat.set_id(id);
 
     return 0;
 }
 
-std::string PacketHeartBeat::getId()
+std::string PayloadHeartBeat::getId()
 {
     return m_protoHeartBeat.id();
 }
 
-int PacketHeartBeat::setTimestamp(const std::uint32_t timestamp)
+int PayloadHeartBeat::setTimestamp(const std::uint32_t timestamp)
 {
     m_protoHeartBeat.set_timestamp(timestamp);
 
     return 0;
 }
 
-std::uint32_t PacketHeartBeat::getTimestamp()
+std::uint32_t PayloadHeartBeat::getTimestamp()
 {
     return m_protoHeartBeat.timestamp();
 }
 
-int PacketHeartBeat::encode(char *buffer, const std::size_t length) const
+int PayloadHeartBeat::encode(char *buffer, const std::size_t length) const
 {
     m_protoHeartBeat.SerializeToArray(buffer, length);
 
     return 0;
 }
 
-int PacketHeartBeat::decode(const char *buffer, const std::size_t length)
+int PayloadHeartBeat::decode(const char *buffer, const std::size_t length)
 {
     m_protoHeartBeat.ParseFromArray(buffer, length);
 

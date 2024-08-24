@@ -10,12 +10,13 @@
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/UUIDTool.h"
 #include "protocol/PacketHeader.h"
-#include "protocol/packet/PacketClientInfo.h"
-#include "protocol/packet/PacketClientInfoReply.h"
+#include "protocol/payload/PayloadClientInfo.h"
+#include "protocol/payload/PayloadClientInfoReply.h"
+#include "protocol/payload/PayloadModuleMessage.h"
 
 using namespace csm::service;
 
-constexpr std::size_t c_conQueueSize{500};
+constexpr std::size_t c_conQueueSize{ 500 };
 
 TcpService::TcpService(ServiceConfig::Ptr serviceConfig) : m_serviceConfig(std::move(serviceConfig))
 {}
@@ -38,15 +39,6 @@ int TcpService::init()
     }
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session destroyer init successfully");
 
-    // 初始化包处理线程池
-    if(-1 == m_serviceConfig->packetProcessor()->init(m_serviceConfig->nodeConfig()->packetProcessThreadNum(), "packet_proc"))
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "packet processor init failed");
-        utilities::Socket::close(m_fd);
-        return -1;
-    }
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "packet processor init successfully");
-
     // 当flag为0的时候，是因为socket发生错误而断开，如果是-1/-2/-3则是握手协议ClientInfoReply包的返回码
     m_serviceConfig->sessionDestroyer()->setHandler([this](const int fd, const int flag){
         // 不再检查心跳
@@ -65,68 +57,46 @@ int TcpService::init()
         m_serviceConfig->sessionDispatcher()->removeFdSlaveReactorRelation(fd);
         m_serviceConfig->tcpSessionManager()->removeTcpSession(fd);
 
+        utilities::Socket::close(fd);
+
         return 0;
     });
 
+    for(SlaveReactor::Ptr slaveReactor : m_serviceConfig->slaveReactors())
+    {
+        slaveReactor->setHeartbeatRefreshHandler([this](const int fd) { return m_serviceConfig->clientAliveChecker()->refreshClientLastRecvTime(fd); });
+        slaveReactor->setDisconnectHandler([this](const int fd) { return m_serviceConfig->sessionDestroyer()->addSession(fd); });
+        slaveReactor->setSessionDataHandler([this](const int fd, const char* data, const std::size_t dataLen) {
+            return m_serviceConfig->sessionDataProcessor()->addSessionData(fd, data, dataLen); });
+    }
+
+    m_serviceConfig->clientAliveChecker()->setTimeoutHandler([this](const std::vector<int>& fds){
+        for_each(fds.begin(), fds.end(), [this](const int fd){ m_serviceConfig->sessionDestroyer()->addSession(fd, 0); });
+    });
+
     // 注册数据接收回调，SlaveReactor回调包类型和包负载二进制数据
-    m_serviceConfig->slaveReactorManager()->registerModuleMessageHandler(
-            [this](const int fd, const std::int32_t moduleId, std::shared_ptr<std::vector<char>> &payloadData) {
+    m_serviceConfig->sessionDataProcessor()->registerPacketHandler(PacketType::PT_ModuleMessage, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
                 std::uint64_t curTimestamp = utilities::Timestamp::getCurrentTimestamp();
-                const auto expression = [fd, curTimestamp, moduleId, payloadData, this]() {
-                    // 获取fd对应的TcpSession
-                    TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
-                    // 若任务时间戳小于客户端上线时间戳，任务直接返回不处理，因为可能是客户端离线后新的客户端被分配的相同的fd
-                    if(nullptr == tcpSession || curTimestamp < tcpSession->getClientOnlineTimestamp())
-                    {
-                        LOG->write(utilities::LogType::Log_Info, FILE_INFO,
+                // 获取fd对应的TcpSession
+                TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
+                // 若任务时间戳小于客户端上线时间戳，任务直接返回不处理，因为可能是客户端离线后新的客户端被分配的相同的fd
+                if(nullptr == tcpSession || curTimestamp < tcpSession->getClientOnlineTimestamp())
+                {
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO,
                                    "online timestamp: ", tcpSession->getClientOnlineTimestamp(), ", curTimestamp: ", curTimestamp);
-                        return -1;
-                    }
+                    return -1;
+                }
 
-                    auto iter = m_modulePacketHandler.find(moduleId);
-                    if (m_modulePacketHandler.end() == iter)
-                    {
-                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "module handler not found, moduleId: ", moduleId);
-                        return -1;
-                    }
-                    return iter->second(payloadData);
+                PayloadModuleMessage::Ptr payloadModuleMessage = std::dynamic_pointer_cast<PayloadModuleMessage>(payload);
 
-#if 0
-                    if(nullptr != writeHandler)
-                    {
-                        // 将回应包写入发送缓冲区
-                        LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                                                                                     "try write reply packet to buffer, write size: ", sumLength, ", fd: ", fd);
-                        int ret{0};
-                        while(0 != (ret = writeHandler(fd, buffer)))
-                        {
-                            if(-2 == ret)
-                            {
-                                // 客户端已经离线
-                                LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                                                                                             " client offline, fd: ", fd);
-                                break;
-                            }
-                            else if(-1 == ret)
-                            {
-                                // 发送缓冲区满，等待10ms再次发送
-                                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                            }
-                        }
-                        LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                                                                                     " write reply packet to buffer successfully, write size: ", sumLength, ", fd: ", fd);
-                    }
-#endif
-
-                    return 0;
-                };
-                m_serviceConfig->packetProcessor()->push(expression);
+                auto iter = m_modulePacketHandler.find(header->moduleId());
+                if (m_modulePacketHandler.end() == iter)
+                {
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "module handler not found, moduleId: ", header->moduleId());
+                    return -1;
+                }
+                return iter->second(payloadModuleMessage->payload());
             });
-
-    // 注册客户端离线回调
-    m_serviceConfig->slaveReactorManager()->registerDisconnectHandler(
-            std::bind(&TcpService::onClientDisconnect, this, std::placeholders::_1,
-                      std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
     if (-1 == initServer())
     {
@@ -154,13 +124,6 @@ int TcpService::uninit()
     }
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "uninit SessionDispatcher successfully");
 
-    if (-1 == m_serviceConfig->packetProcessor()->uninit())
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "uninit PacketProcessThreadPool failed");
-        return -1;
-    }
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "uninit PacketProcessThreadPool successfully");
-
     if (-1 == uninitServer())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "uninit server failed");
@@ -181,8 +144,8 @@ int TcpService::uninit()
 int TcpService::start()
 {
     // 包处理线程池
-    m_serviceConfig->packetProcessor()->start();
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start packet processor successfully");
+    m_serviceConfig->sessionDataProcessor()->start();
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start session data processor successfully");
     std::vector<SlaveReactor::Ptr> slaveReactors = m_serviceConfig->slaveReactors();
     for (SlaveReactor::Ptr &slaveReactor: slaveReactors)
     {
@@ -230,8 +193,8 @@ int TcpService::stop()
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop hosts heartbeat service successfully");
     m_serviceConfig->hostsConnector()->stop();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop hosts connector successfully");
-    m_serviceConfig->packetProcessor()->stop();
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop packet processor successfully");
+    m_serviceConfig->sessionDataProcessor()->stop();
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop payload processor successfully");
     if (false == m_serviceConfig->nodeConfig()->startAsClient())
     {
         m_serviceConfig->listenner()->stop();
@@ -385,7 +348,7 @@ int TcpService::initServer()
     // 完成一个客户端的创建，将客户端分配到从reactor进行recv/send处理
     m_serviceConfig->acceptor()->setNewClientCallback([this](const int fd, TcpSession::Ptr tcpSession) {
         // 将fd添加到TcpSession派发器中，由TcpSessionManager决定TcpSession由哪个SlaveReactor管理
-        m_serviceConfig->tcpSessionDispatcher()->addSession(fd, [this, fd, tcpSession](const int slaveReactorIndex){
+        m_serviceConfig->sessionDispatcher()->addSession(fd, [this, fd, tcpSession](const int slaveReactorIndex){
             if(-1 == m_serviceConfig->slaveReactors()[slaveReactorIndex]->addClient(fd))
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add client to SlaveReactor failed, fd: ", fd);
@@ -450,10 +413,10 @@ int TcpService::initClient()
 
         m_serviceConfig->tcpSessionManager()->addTcpSession(fd, tcpSession);
 
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send ClientInfo packet");
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send ClientInfo payload");
 
         // 发送ClientInfo包
-        PacketClientInfo clientInfoPacket;
+        PayloadClientInfo clientInfoPacket;
         clientInfoPacket.setLocalHost(m_serviceConfig->nodeConfig()->p2pIp() + ":" +
                                       csm::utilities::convertToString(m_serviceConfig->nodeConfig()->p2pPort()));
         clientInfoPacket.setPeerHost(tcpSession->peerHostEndPointInfo().host());
@@ -476,15 +439,24 @@ int TcpService::initClient()
     });
 
     // 客户端发送ClientInfo包表明自己的身份后，将id与fd绑定，一方面供判定重复连接使用，一方面发送数据的时候通过id查找fd
-    m_serviceConfig->slaveReactorManager()->registerClientInfoHandler([this](const int fd, TcpSession::Ptr tcpSession, PacketClientInfo::Ptr packetClientInfo){
+    m_serviceConfig->sessionDataProcessor()->registerPacketHandler(PacketType::PT_ClientInfo, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) {
+        PayloadClientInfo::Ptr payloadClientInfo = std::dynamic_pointer_cast<PayloadClientInfo>(payload);
+
+        TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
+        if(nullptr != tcpSession)
+        {
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find TcpSession failed, fd: ", fd);
+            return -1;
+        }
+
         // 收到ClientInfo包，是别人连自己的情况
-        std::string id = packetClientInfo->nodeId();
+        std::string id = payloadClientInfo->nodeId();
         tcpSession->setClientId(id);
-        tcpSession->setHandshakeUuid(packetClientInfo->handshakeUuid());
+        tcpSession->setHandshakeUuid(payloadClientInfo->handshakeUuid());
         tcpSession->setClientOnlineTimestamp(utilities::Timestamp::getCurrentTimestamp());
 
-        HostEndPointInfo localHostEndPointInfo(packetClientInfo->localHost());
-        HostEndPointInfo peerHostEndPointInfo(packetClientInfo->peerHost());
+        HostEndPointInfo localHostEndPointInfo(payloadClientInfo->localHost());
+        HostEndPointInfo peerHostEndPointInfo(payloadClientInfo->peerHost());
 
         LOG->write(utilities::LogType::Log_Info, FILE_INFO,
                    "recv ClientInfo, fd: ", fd, ", id: ", id, ", localhost: ", localHostEndPointInfo.host(), ", peerHost: ", peerHostEndPointInfo.host());
@@ -509,7 +481,7 @@ int TcpService::initClient()
         }
         else
         {
-            int ret = m_serviceConfig->hostsInfoManager()->addHostIdInfo(id, fd, packetClientInfo->handshakeUuid());
+            int ret = m_serviceConfig->hostsInfoManager()->addHostIdInfo(id, fd, payloadClientInfo->handshakeUuid());
             if (-1 == ret)
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client already in HostInfoManager");
@@ -520,9 +492,9 @@ int TcpService::initClient()
         }
 
         // 构造回应包
-        PacketClientInfoReply reply;
+        PayloadClientInfoReply reply;
         reply.setPeerHost(peerHostEndPointInfo.host());
-        reply.setHandshakeUuid(packetClientInfo->handshakeUuid());
+        reply.setHandshakeUuid(payloadClientInfo->handshakeUuid());
         reply.setNodeId(m_serviceConfig->nodeConfig()->id());
         reply.setResult(replyResult);
 
@@ -541,24 +513,33 @@ int TcpService::initClient()
 
         if (-1 == sendData(fd, buffer))
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send ClientInfoReply packet failed", ", fd: ", fd, ", id: ", id);
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send ClientInfoReply payload failed", ", fd: ", fd, ", id: ", id);
             return -1;
         }
 
         LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-                   "send ClientInfoReply packet successfully, result:", replyResult, ", fd: ", fd, ", id: ", id);
+                   "send ClientInfoReply payload successfully, result:", replyResult, ", fd: ", fd, ", id: ", id);
 
         return 0;
     });
 
     // 收到ClientInfoReply包
-    m_serviceConfig->slaveReactorManager()->registerClientInfoReplyHandler([this](const int fd, TcpSession::Ptr tcpSession, PacketClientInfoReply::Ptr packetClientInfoReply) -> int {
-        tcpSession->setClientId(packetClientInfoReply->nodeId());
+    m_serviceConfig->sessionDataProcessor()->registerPacketHandler(PacketType::PT_ClientInfoReply, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
+        PayloadClientInfo::Ptr payloadClientInfoReply = std::dynamic_pointer_cast<PayloadClientInfo>(payload);
+
+        TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
+        if(nullptr != tcpSession)
+        {
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find TcpSession failed, fd: ", fd);
+            return -1;
+        }
+
+        tcpSession->setClientId(payloadClientInfoReply->nodeId());
         tcpSession->setClientOnlineTimestamp(utilities::Timestamp::getCurrentTimestamp());
 
         HostEndPointInfo hostEndPointInfo(tcpSession->peerHostEndPointInfo());
-        std::string id = packetClientInfoReply->nodeId();
-        int result = packetClientInfoReply->result();
+        std::string id = payloadClientInfoReply->nodeId();
+        int result = payloadClientInfoReply->result();
 
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "recv ClientInfoReply, host: ", hostEndPointInfo.host(), ", result: ", result);
 
@@ -590,12 +571,12 @@ int TcpService::initClient()
 
                 TcpSession::Ptr anotherTcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(anotherConnectionFd);
                 assert(nullptr != anotherTcpSession);
-                anotherTcpSession->setPeerHostEndPointInfo(packetClientInfoReply->peerHost());
+                anotherTcpSession->setPeerHostEndPointInfo(payloadClientInfoReply->peerHost());
 
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO,
                            "another connection fd: ", anotherConnectionFd, ", peer host: ", anotherTcpSession->peerHostEndPointInfo().host());
             }
-            m_serviceConfig->sessionDestroyer()->addSession(fd, packetClientInfoReply->result());
+            m_serviceConfig->sessionDestroyer()->addSession(fd, payloadClientInfoReply->result());
             return -1;
         }
 
@@ -603,10 +584,10 @@ int TcpService::initClient()
         std::string anotherConnectionUuid;
         if (true == m_serviceConfig->hostsInfoManager()->isHostIdExist(id, anotherConnectionFd, anotherConnectionUuid))
         {
-            if (anotherConnectionUuid < packetClientInfoReply->handshakeUuid())
+            if (anotherConnectionUuid < payloadClientInfoReply->handshakeUuid())
             {
                 // 构造回应包
-                PacketClientInfoReply reply;
+                PayloadClientInfoReply reply;
                 reply.setHandshakeUuid(anotherConnectionUuid);
                 reply.setNodeId(m_serviceConfig->nodeConfig()->id());
                 reply.setResult(-3);
@@ -627,21 +608,21 @@ int TcpService::initClient()
                 if (-1 == sendData(anotherConnectionFd, buffer))
                 {
                     LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                               "send ClientInfoReply packet failed", ", fd: ", anotherConnectionFd, ", id: ", id);
+                               "send ClientInfoReply payload failed", ", fd: ", anotherConnectionFd, ", id: ", id);
                     return -1;
                 }
 
                 LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-                           "send ClientInfoReply packet successfully", ", fd: ", anotherConnectionFd, ", id: ", id);
+                           "send ClientInfoReply payload successfully", ", fd: ", anotherConnectionFd, ", id: ", id);
             }
-            else if (anotherConnectionUuid > packetClientInfoReply->handshakeUuid())
+            else if (anotherConnectionUuid > payloadClientInfoReply->handshakeUuid())
             {
                 return -1;
             }
             else
             {
                 // 构造回应包
-                PacketClientInfoReply reply;
+                PayloadClientInfoReply reply;
                 reply.setHandshakeUuid(anotherConnectionUuid);
                 reply.setNodeId(m_serviceConfig->nodeConfig()->id());
                 reply.setResult(-1);
@@ -662,12 +643,12 @@ int TcpService::initClient()
                 if (-1 == sendData(anotherConnectionFd, buffer))
                 {
                     LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                               "send ClientInfoReply packet failed", ", fd: ", anotherConnectionFd, ", id: ", id);
+                               "send ClientInfoReply payload failed", ", fd: ", anotherConnectionFd, ", id: ", id);
                     return -1;
                 }
 
                 LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-                           "send ClientInfoReply packet successfully", ", fd: ", anotherConnectionFd, ", id: ", id);
+                           "send ClientInfoReply payload successfully", ", fd: ", anotherConnectionFd, ", id: ", id);
             }
         }
         else
@@ -677,7 +658,7 @@ int TcpService::initClient()
              * fd是对端的连接套接字
              * uuid是我方连接对方的uuid
              */
-            if (-1 == m_serviceConfig->hostsInfoManager()->addHostIdInfo(id, fd, packetClientInfoReply->handshakeUuid()))
+            if (-1 == m_serviceConfig->hostsInfoManager()->addHostIdInfo(id, fd, payloadClientInfoReply->handshakeUuid()))
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add id fd relation failed");
             }

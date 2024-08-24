@@ -36,7 +36,7 @@ int TcpServiceInitializer::init()
             ++receiveNum;
             if (receiveNum % 5000 == 0)
             {
-                std::cout << "5000 packet received" << std::endl;
+                std::cout << "5000 payload received" << std::endl;
                 receiveNum = 0;
             }
         }

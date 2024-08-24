@@ -7,68 +7,33 @@
 
 using namespace csm::service;
 
-// ClientAliveChecker任务运行间隔，每间隔一段时间运行一次检查
-constexpr std::size_t c_aliveCheckInterval{ 20 };
-// 每一次检查的客户端数量，防止一次检查所有客户端占用锁时间过长
-constexpr std::size_t c_circleCheckSize{ 500 };
 // 若c_aliveTimeout时间内没有收到任何数据，判定客户端掉线
 constexpr std::size_t c_aliveTimeout{ 15000 };
 
-ClientAliveChecker::ClientAliveChecker()
-{}
-
-ClientAliveChecker::~ClientAliveChecker()
-{}
-
-int ClientAliveChecker::init(const std::function<void(const std::vector<int> &)> offlinefdsCallback)
+int ClientAliveChecker::init()
 {
-    m_offlinefdsCallback = std::move(offlinefdsCallback);
-
     const auto expression = [this]() {
         std::vector<int> offlinefds;
-
-        std::size_t clientCheckNum{ 0 };
         {
             std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
+
             for (auto iter = m_clientLastRecvTime.begin(); iter != m_clientLastRecvTime.end(); ++iter)
             {
-                if (clientCheckNum < m_lastCheckPos)
-                {
-                    continue;
-                }
-
-                if (iter->second->getElapsedTimeInMilliSec() > c_aliveTimeout)
+                if (iter->second.first() == iter->second.second)
                 {
                     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "client offline, fd: ", iter->first);
                     offlinefds.emplace_back(iter->first);
                 }
-
-                ++clientCheckNum;
-                if (clientCheckNum - m_lastCheckPos == c_circleCheckSize)
-                {
-                    break;
-                }
-            }
-            m_lastCheckPos = clientCheckNum;
-            if (m_clientLastRecvTime.size() == m_lastCheckPos)
-            {
-                m_lastCheckPos = 0;
+                iter->second.first = iter->second.second;
             }
         }
 
-        if (nullptr != m_offlinefdsCallback)
+        if (nullptr != m_timeoutHandler)
         {
-            m_offlinefdsCallback(offlinefds);
+            m_timeoutHandler(offlinefds);
         }
     };
-    m_thread.init(expression, c_aliveCheckInterval, "cli_check");
-
-    return 0;
-}
-
-int ClientAliveChecker::uninit()
-{
-    m_thread.uninit();
+    m_thread.init(expression, c_aliveTimeout, "cli_check");
 
     return 0;
 }
@@ -87,6 +52,11 @@ int ClientAliveChecker::stop()
     return 0;
 }
 
+void ClientAliveChecker::setTimeoutHandler(const std::function<void(const std::vector<int> &)> handler)
+{
+    m_timeoutHandler = std::move(handler);
+}
+
 int ClientAliveChecker::addClient(const int fd)
 {
     std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
@@ -98,9 +68,7 @@ int ClientAliveChecker::addClient(const int fd)
         return -1;
     }
 
-    utilities::Timestamp::Ptr timestamp = std::make_shared<utilities::Timestamp>();
-    timestamp->update();
-    m_clientLastRecvTime.emplace(fd, timestamp);
+    m_clientLastRecvTime.emplace(fd, std::make_pair(0, 0));
 
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add client successfully, fd: ", fd);
 
@@ -110,6 +78,7 @@ int ClientAliveChecker::addClient(const int fd)
 int ClientAliveChecker::removeClient(const int fd)
 {
     std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
+
     auto iter = m_clientLastRecvTime.find(fd);
     if (m_clientLastRecvTime.end() == iter)
     {
@@ -126,12 +95,14 @@ int ClientAliveChecker::removeClient(const int fd)
 int ClientAliveChecker::refreshClientLastRecvTime(const int fd)
 {
     std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
+
     auto iter = m_clientLastRecvTime.find(fd);
     if (m_clientLastRecvTime.end() == iter)
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client not exist, fd: ", iter->first);
         return -1;
     }
-    iter->second->update();
+    ++iter->second.second;
+
     return 0;
 }

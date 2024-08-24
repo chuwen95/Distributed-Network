@@ -54,7 +54,7 @@ namespace csm
             // 下一轮将新上线的客户端分配给该reactor管理
             std::size_t redispatchInterval();
             // 包处理线程池线程数量
-            std::size_t packetProcessThreadNum();
+            std::size_t sessionDataWorkerNum();
             // 仅作为客户端启动
             bool startAsClient();
 
@@ -101,12 +101,13 @@ namespace csm
             std::string m_p2pIp{"127.0.0.1"};
             unsigned short m_p2pPort{30200};
             std::string m_nodesFile{"nodes.json"};
+            std::size_t m_sessionDataWorkerNum{8};
 
             // [reactor]
             std::size_t m_slaveReactorNum{8};
             std::size_t m_redispatchInterval{50};
 
-            // [packet_process]
+            // []
             std::size_t m_packetProcessThreadNum{8};
 
             // [log]

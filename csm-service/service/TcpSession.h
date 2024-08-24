@@ -15,6 +15,9 @@ namespace csm
     namespace service
     {
 
+        constexpr std::size_t c_tcpSessionReadBufferSize{ 16 * 1024 };
+        constexpr std::size_t c_tcpSessionWriteBufferSize{ 16 * 1024 };
+
         class TcpSession
         {
         public:
@@ -34,8 +37,10 @@ namespace csm
 
             int fd();
 
+            std::mutex& readBufferMutex();
             utilities::RingBuffer::Ptr &readBuffer();
 
+            std::mutex& writeBufferMutex();
             utilities::RingBuffer::Ptr &writeBuffer();
 
             void setClientId(const std::string_view id);
@@ -66,6 +71,9 @@ namespace csm
 
             std::string handshakeUuid();
 
+            bool isWaitingDisconnect() const;
+            void setWaitingDisconnect(const bool value);
+
         public:
             int m_clientfd{-1};
 
@@ -82,11 +90,15 @@ namespace csm
 
             ClientInfo m_clientInfo;
 
+            std::mutex x_readBuffer;
             utilities::RingBuffer::Ptr m_readBuffer;
+            std::mutex x_writeBuffer;
             utilities::RingBuffer::Ptr m_writeBuffer;
 
             HostEndPointInfo m_peerHostEndPointInfo;
             std::string m_handshakeUuid;
+
+            std::atomic_bool m_isWaitingDisconnect{ false };
         };
 
     } // server

@@ -37,7 +37,7 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
             }
             if (true == isConnecting)
             {
-                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "host is connecting or waiting ClientInfo packet: ", host.first.ip());
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "host is connecting or waiting ClientInfo payload: ", host.first.ip());
                 continue;
             }
             LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "start to connect: ", host.first.host());
@@ -50,6 +50,14 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
                 continue;
             }
             LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "create socket successfully, fd: ", fd);
+
+            // 设置socket接收缓冲区大小
+            if(-1 == utilities::Socket::setSocketKernelRecvBufferSize(fd, utilities::Socket::c_defaultSocketRecvBufferSize))
+            {
+                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "set socket recv buffer size failed, errno: ", errno, ", ", strerror(errno));
+                return -1;
+            }
+            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "set socket recv buffer size to ", utilities::Socket::c_defaultSocketRecvBufferSize, "successfully");
 
             // 添加host到正在连接
             {
@@ -120,7 +128,7 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
             // TcpSession已经回调出去，由Reactor管理recv/send，此时正在等待ClientInfoReply包
             if (-1 == host.second.second)
             {
-                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "socket connect successfully, waiting ClientInfoReply packet");
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "socket connect successfully, waiting ClientInfoReply payload");
                 continue;
             }
 

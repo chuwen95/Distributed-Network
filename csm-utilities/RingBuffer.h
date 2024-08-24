@@ -19,7 +19,6 @@ namespace csm
             using Ptr = std::shared_ptr<RingBuffer>;
 
             RingBuffer();
-
             ~RingBuffer();
 
         public:

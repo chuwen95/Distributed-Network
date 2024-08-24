@@ -27,14 +27,35 @@ endforeach ()
 
 find_package(Protobuf CONFIG REQUIRED)
 find_package(jsoncpp CONFIG REQUIRED)
+find_package(unofficial-concurrentqueue CONFIG REQUIRED)
 
 FILE(GLOB_RECURSE SOURCES *.cpp)
 FILE(GLOB_RECURSE HEADERS *.h)
 
 add_library(service ${SOURCES} ${PROTOBUF_SRCS} ${HEADERS}
-        service/SlaveReactorEventProcessor.cpp
-        service/SlaveReactorEventProcessor.h
-        service/SlaveReactorEventProcessor.cpp
-        service/SlaveReactorEventProcessor.h)
-target_link_libraries(service PUBLIC utilities tools readerwriterqueue JsonCpp::JsonCpp protobuf::libprotobuf)
+        service/TcpSession.h
+        service/SlaveReactor.cpp
+        service/TcpSession.h
+        protocol/PayloadFactory.cpp
+        protocol/PayloadFactory.h
+        protocol/PayloadFactory.cpp
+        protocol/PayloadFactory.h
+        protocol/payload/PayloadBase.h
+        protocol/PayloadFactory.h
+        service/SessionDataProcessor.cpp
+        service/SessionDataProcessor.cpp
+        service/SessionDataProcessor.h
+        protocol/PayloadFactory.cpp
+        protocol/PayloadFactory.h
+        protocol/PayloadFactory.cpp
+        protocol/PayloadFactory.cpp
+        protocol/payload/PayloadModuleMessage.cpp
+        protocol/payload/PayloadModuleMessage.h
+        service/SessionDataProcessor.cpp
+        service/SessionDataProcessor.h
+        service/SessionDataProcessor.cpp
+        service/SessionDataProcessor.cpp
+        service/SessionDataProcessor.h
+)
+target_link_libraries(service PUBLIC utilities tools readerwriterqueue JsonCpp::JsonCpp protobuf::libprotobuf unofficial::concurrentqueue::concurrentqueue)
 target_include_directories(service SYSTEM BEFORE PUBLIC ${proto_output_path})

@@ -16,10 +16,13 @@ namespace csm
         class Socket
         {
         public:
-            Socket();
+            static const int c_defaultSocketRecvBufferSize{ 32 * 1024 };
 
+        public:
+            Socket();
             ~Socket();
 
+        public:
             static int create();
 
             static int close(const int fd);
@@ -40,6 +43,10 @@ namespace csm
             static int setNoSigPipe(const int fd);
 
             static int connect(const int fd, const std::string &ip, const unsigned short port);
+
+            static int getSocketKernelRecvBufferSize(const int fd);
+
+            static int setSocketKernelRecvBufferSize(const int fd, const int size);
         };
 
     } // componnets

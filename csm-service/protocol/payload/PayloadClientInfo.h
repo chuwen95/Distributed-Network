@@ -2,9 +2,10 @@
 // Created by ChuWen on 9/16/23.
 //
 
-#ifndef TCPNETWORK_PACKETCLIENTINFO_H
-#define TCPNETWORK_PACKETCLIENTINFO_H
+#ifndef TCPNETWORK_PAYLOADCLIENTINFO_H
+#define TCPNETWORK_PAYLOADCLIENTINFO_H
 
+#include "PayloadBase.h"
 #include "protocol/pb/clientinfo.pb.h"
 
 namespace csm
@@ -13,17 +14,17 @@ namespace csm
     namespace service
     {
 
-        class PacketClientInfo
+        class PayloadClientInfo : public PayloadBase
         {
         public:
-            using Ptr = std::shared_ptr<PacketClientInfo>;
+            using Ptr = std::shared_ptr<PayloadClientInfo>;
 
-            PacketClientInfo() = default;
-            PacketClientInfo(std::shared_ptr<std::vector<char>> data);
-            ~PacketClientInfo() = default;
+            PayloadClientInfo() = default;
+            PayloadClientInfo(std::shared_ptr<std::vector<char>> data);
+            ~PayloadClientInfo() = default;
 
         public:
-            std::size_t packetLength() const;
+            std::size_t packetLength() const override;
 
             int setSeq(const std::uint32_t seq);
 
@@ -53,8 +54,8 @@ namespace csm
             protocol::ClientInfo m_protoClientInfo;
         };
 
-    } // packetprocess
+    } // service
 
 }
 
-#endif //TCPNETWORK_PACKETCLIENTINFO_H
+#endif // TCPNETWORK_PAYLOADCLIENTINFO_H

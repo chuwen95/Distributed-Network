@@ -90,7 +90,7 @@ int putOnePacketTest()
 
     if (rawStringPacket.getContent() != "hello")
     {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " packet content error, value: " << rawStringPacket.getContent() << std::endl;
+        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " payload content error, value: " << rawStringPacket.getContent() << std::endl;
         return -1;
     }
 
@@ -167,7 +167,7 @@ int fullBufferTest()
     {
         if(ringBuffer.dataLength() < headerLength)
         {
-            // std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available packet pop finish" << std::endl;
+            // std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available payload pop finish" << std::endl;
             break;
         }
 
@@ -194,7 +194,7 @@ int fullBufferTest()
         std::size_t payloadLength = packetHeader.payloadLength();
         if(ringBuffer.dataLength() - headerLength < payloadLength)
         {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available packet pop finish" << std::endl;
+            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available payload pop finish" << std::endl;
             break;
         }
 
@@ -289,7 +289,7 @@ int fullBufferTest()
         std::size_t payloadLength = packetHeader.payloadLength();
         if(ringBuffer.dataLength() - headerLength < payloadLength)
         {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available packet pop finish" << std::endl;
+            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available payload pop finish" << std::endl;
             break;
         }
 
@@ -362,7 +362,7 @@ int fullBufferUseWriteDataTest()
     {
         if(ringBuffer.dataLength() < headerLength)
         {
-            // std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available packet pop finish" << std::endl;
+            // std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available payload pop finish" << std::endl;
             break;
         }
 
@@ -389,7 +389,7 @@ int fullBufferUseWriteDataTest()
         std::size_t payloadLength = packetHeader.payloadLength();
         if(ringBuffer.dataLength() - headerLength < payloadLength)
         {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available packet pop finish" << std::endl;
+            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available payload pop finish" << std::endl;
             break;
         }
 
@@ -407,7 +407,7 @@ int fullBufferUseWriteDataTest()
         rawStringPacket.decode(payloadBuffer.data(), payloadLength);
         if(rawStringPacket.getContent() != "hello")
         {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " packet error" << std::endl;
+            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " payload error" << std::endl;
             return -1;
         }
     }
@@ -442,7 +442,7 @@ int fullBufferUseWriteDataTest()
             int offset = (startOffset + i * rawStringLength + j) % (32 * 1024);
             if(*(ringBuffer.data() + offset) != rawStringBuffer[j])
             {
-                std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " packet error, offset: " << offset << ", j: " << j << std::endl;
+                std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " payload error, offset: " << offset << ", j: " << j << std::endl;
                 return -1;
             }
         }
@@ -457,7 +457,7 @@ int fullBufferUseWriteDataTest()
         int ret = ringBuffer.getBufferForRead(headerLength, buffer);
         if(-2 == ret)
         {
-            //std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " getBufferForRead ret -2, packet num: " << i << std::endl;
+            //std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " getBufferForRead ret -2, payload num: " << i << std::endl;
             bufferForBackspaceLessThanHeaderLength.resize(headerLength);
             ringBuffer.readData(headerLength, 0, bufferForBackspaceLessThanHeaderLength);
             buffer = bufferForBackspaceLessThanHeaderLength.data();
@@ -475,7 +475,7 @@ int fullBufferUseWriteDataTest()
         std::size_t payloadLength = packetHeader.payloadLength();
         if(ringBuffer.dataLength() - headerLength < payloadLength)
         {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available packet pop finish" << std::endl;
+            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available payload pop finish" << std::endl;
             break;
         }
 
@@ -493,7 +493,7 @@ int fullBufferUseWriteDataTest()
         rawStringPacket.decode(payloadBuffer.data(), payloadLength);
         if(rawStringPacket.getContent() != "hello")
         {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " packet error, i: " << i << std::endl;
+            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " payload error, i: " << i << std::endl;
             return -1;
         }
     }

@@ -9,6 +9,7 @@
 #include "service/ClientAliveChecker.h"
 #include "service/SessionDispatcher.h"
 #include "service/SessionDestroyer.h"
+#include "service/SessionDataProcessor.h"
 
 using namespace csm::service;
 
@@ -43,8 +44,8 @@ TcpService::Ptr TcpServiceFactory::createTcpService()
             std::make_shared<SessionDispatcher>(m_nodeConfig->redispatchInterval(), m_nodeConfig->id(), m_nodeConfig->slaveReactorNum());
     // TcpSession销毁器
     SessionDestroyer::Ptr sessionDestroyer = std::make_shared<SessionDestroyer>();
-    // 包处理线程池
-    utilities::ThreadPool::Ptr packetProcessor = std::make_shared<utilities::ThreadPool>();
+    // 包处理器
+    SessionDataProcessor::Ptr sessionDataProcessor = std::make_shared<SessionDataProcessor>(tcpSessionManager, m_nodeConfig->sessionDataWorkerNum());
 
     // 客户端需要
     HostsInfoManager::Ptr hostsInfoManager = std::make_shared<HostsInfoManager>();
@@ -54,7 +55,7 @@ TcpService::Ptr TcpServiceFactory::createTcpService()
     // 创建TcpServiceConfig
     ServiceConfig::Ptr serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
                                                                        tcpSessionManager, clientAliveChecker, slaveReactors,
-                                                                       sessionDispatcher, sessionDestroyer, packetProcessor,
+                                                                       sessionDispatcher, sessionDestroyer, sessionDataProcessor,
                                                                        hostsInfoManager, hostsConnector, hostsHeartbeatService);
     return std::make_shared<TcpService>(serviceConfig);
 }

@@ -217,7 +217,8 @@ int RingBuffer::getBufferForRead(const std::size_t size, char *&buffer)
     if (m_startOffset < m_endOffset)
     {
         buffer = m_buffer.data() + m_startOffset;
-    } else
+    }
+    else
     {
         if (m_size - m_startOffset < size)
         {
@@ -273,13 +274,15 @@ int RingBuffer::getContinuousData(char *&buffer, std::size_t &size)
     {
         buffer = m_buffer.data() + m_startOffset;
         size = m_endOffset - m_startOffset;
-    } else
+    }
+    else
     {
         buffer = m_buffer.data() + m_startOffset;
         if (m_endOffset <= c_reservedSpace)
         {
             size = m_size - (c_reservedSpace - m_endOffset) - m_startOffset;
-        } else
+        }
+        else
         {
             size = m_size - m_startOffset;
         }

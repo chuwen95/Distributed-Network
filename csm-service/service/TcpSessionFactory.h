@@ -12,8 +12,6 @@ namespace csm
 
     namespace service
     {
-        constexpr std::size_t c_readBufferSize{4 * 1024};
-        constexpr std::size_t c_writeBufferSize{4 * 1024};
 
         class TcpSessionFactory
         {

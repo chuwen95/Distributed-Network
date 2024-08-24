@@ -2,9 +2,10 @@
 // Created by ChuWen on 9/16/23.
 //
 
-#ifndef TCPNETWORK_PACKETCLIENTINFOREPLY_H
-#define TCPNETWORK_PACKETCLIENTINFOREPLY_H
+#ifndef TCPNETWORK_PAYLOADCLIENTINFOREPLY_H
+#define TCPNETWORK_PAYLOADCLIENTINFOREPLY_H
 
+#include "PayloadBase.h"
 #include "protocol/pb/clientinfo.pb.h"
 
 namespace csm
@@ -13,17 +14,17 @@ namespace csm
     namespace service
     {
 
-        class PacketClientInfoReply
+        class PayloadClientInfoReply : public PayloadBase
         {
         public:
-            using Ptr = std::shared_ptr<PacketClientInfoReply>;
+            using Ptr = std::shared_ptr<PayloadClientInfoReply>;
 
-            PacketClientInfoReply() = default;
-            PacketClientInfoReply(std::shared_ptr<std::vector<char>> data);
-            ~PacketClientInfoReply() = default;
+            PayloadClientInfoReply() = default;
+            PayloadClientInfoReply(std::shared_ptr<std::vector<char>> data);
+            ~PayloadClientInfoReply() = default;
 
         public:
-            std::size_t packetLength() const;
+            std::size_t packetLength() const override;
 
             int setSeq(const std::uint32_t seq);
 
@@ -45,16 +46,16 @@ namespace csm
 
             std::int32_t result();
 
-            int encode(char *buffer, const std::size_t length) const;
+            int encode(char *buffer, const std::size_t length) const override;
 
-            int decode(const char *buffer, const std::size_t length);
+            int decode(const char *buffer, const std::size_t length) override;
 
         private:
             protocol::ClientInfoReply m_protoClientInfoReply;
         };
 
-    } // packetprocess
+    } // service
 
 }
 
-#endif //TCPNETWORK_PACKETCLIENTINFOREPLY_H
+#endif //TCPNETWORK_PAYLOADCLIENTINFOREPLY_H

@@ -14,6 +14,7 @@
 #include "csm-service/service/Acceptor.h"
 #include "csm-service/service/SessionDispatcher.h"
 #include "csm-service/service/SessionDestroyer.h"
+#include "csm-service/service/SessionDataProcessor.h"
 #include "csm-utilities/ThreadPool.h"
 
 #include "csm-service/host/HostsInfoManager.h"
@@ -36,7 +37,7 @@ namespace csm
 
             ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
                           TcpSessionManager::Ptr tcpSessionManager, ClientAliveChecker::Ptr clientAliveChecker, std::vector<SlaveReactor::Ptr> slaveReactors,
-                          SessionDispatcher::Ptr tcpSessionDispatcher, SessionDestroyer::Ptr sessionDestroyer, utilities::ThreadPool::Ptr packetProcessor,
+                          SessionDispatcher::Ptr tcpSessionDispatcher, SessionDestroyer::Ptr sessionDestroyer, SessionDataProcessor::Ptr sessionDataProcessor,
                           HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector, HostsHeartbeatService::Ptr hostsHeartbeatService);
 
             ~ServiceConfig() = default;
@@ -53,7 +54,7 @@ namespace csm
             std::vector<SlaveReactor::Ptr>& slaveReactors();
             SessionDispatcher::Ptr sessionDispatcher();
             SessionDestroyer::Ptr sessionDestroyer();
-            utilities::ThreadPool::Ptr packetProcessor();
+            SessionDataProcessor::Ptr sessionDataProcessor();
 
             HostsInfoManager::Ptr hostsInfoManager();
             HostsConnector::Ptr hostsConnector();
@@ -71,6 +72,7 @@ namespace csm
 
             SessionDispatcher::Ptr m_sessionDispatcher;
             SessionDestroyer::Ptr m_sessionDestroyer;
+            SessionDataProcessor::Ptr m_sessionDataProcessor;
 
             utilities::ThreadPool::Ptr m_packetProcesser;
 

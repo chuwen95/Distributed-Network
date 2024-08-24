@@ -6,6 +6,7 @@
 
 #include "csm-common/Common.h"
 #include "csm-utilities/Logger.h"
+#include "csm-utilities/Socket.h"
 #include "TcpSessionFactory.h"
 
 using namespace csm::service;
@@ -42,7 +43,16 @@ int Acceptor::init(const int fd)
             {
                 LOG->write(utilities::LogType::Log_Info, FILE_INFO, "client online, fd: ", clientfd);
 
-                TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(clientfd, 4 * 1024, 4 * 1024);
+                // 设置socket接收缓冲区大小
+                if(-1 == utilities::Socket::setSocketKernelRecvBufferSize(clientfd, utilities::Socket::c_defaultSocketRecvBufferSize))
+                {
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "set socket recv buffer size failed, errno: ", errno, ", ", strerror(errno));
+                    utilities::Socket::close(clientfd);
+                    continue;
+                }
+                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "set socket recv buffer size to ", utilities::Socket::c_defaultSocketRecvBufferSize, "successfully");
+
+                TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(clientfd, c_tcpSessionReadBufferSize, c_tcpSessionWriteBufferSize);
                 tcpSession->init();
                 LOG->write(utilities::LogType::Log_Info, FILE_INFO, "create TcpSession successfully");
 

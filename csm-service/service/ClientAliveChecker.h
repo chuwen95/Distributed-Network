@@ -20,17 +20,17 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<ClientAliveChecker>;
 
-            ClientAliveChecker();
-            ~ClientAliveChecker();
+            ClientAliveChecker() = default;
+            ~ClientAliveChecker() = default;
 
         public:
-            int init(const std::function<void(const std::vector<int> &)> offlinefdsCallback);
-
-            int uninit();
+            int init();
 
             int start();
 
             int stop();
+
+            void setTimeoutHandler(const std::function<void(const std::vector<int>&)> handler);
 
             /**
              * @brief 添加要监测是否在线的客户端
@@ -49,15 +49,6 @@ namespace csm
             int removeClient(const int fd);
 
             /**
-             * @brief 获取c_aliveTimeout时间内没有收到任何数据的客户端,
-             *              主要是SlaveReactor调用该函数，踢掉这些可能掉线的客户端
-             *
-             * @param offlinefds
-             * @return
-             */
-            int getOfflineClient(std::vector<int> &offlinefds);
-
-            /**
              * @brief 客户端收到了数据，更新最后收到数据的时间戳
              *
              * @param fd
@@ -67,14 +58,14 @@ namespace csm
 
         private:
             std::mutex x_clientLastRecvTime;
-            std::unordered_map<int, utilities::Timestamp::Ptr> m_clientLastRecvTime;
+            std::unordered_map<int, std::pair<std::uint32_t, std::uint32_t>> m_clientLastRecvTime;
 
             // 每一次检查500个客户端心跳情况，上一次检查到哪里了
             std::size_t m_lastCheckPos{ 0 };
 
             utilities::Thread m_thread;
 
-            std::function<void(const std::vector<int> &)> m_offlinefdsCallback;
+            std::function<void(const std::vector<int> &)> m_timeoutHandler;
         };
 
     } // server

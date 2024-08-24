@@ -13,8 +13,9 @@ using namespace csm::service;
 constexpr std::size_t c_maxEvent{ 500 };
 
 SlaveReactor::SlaveReactor(const int reactorId, const std::string& hostId, TcpSessionManager::Ptr tcpSessionManager) :
-    m_reactorId(reactorId), m_hostId(hostId), m_tcpSessionManager(std::move(tcpSessionManager))
+        m_reactorId(reactorId), m_hostId(hostId), m_tcpSessionManager(std::move(tcpSessionManager))
 {
+    m_recvBuffer.resize(utilities::Socket::c_defaultSocketRecvBufferSize);
 }
 
 SlaveReactor::~SlaveReactor()
@@ -32,10 +33,6 @@ int SlaveReactor::init()
     }
     LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "create epoll fd successfully, fd: ", m_epfd);
 
-    m_clientAliveChecker.init([this](const std::vector<int> &fds) {
-        onClientsHeartbeatTimeout(fds);
-    });
-
     return 0;
 }
 
@@ -43,19 +40,14 @@ int SlaveReactor::start()
 {
     const auto expression = [this]()
     {
+        struct epoll_event ev[c_maxEvent];
+        int nready = epoll_wait(m_epfd, ev, c_maxEvent, 5000);
+
         if (true == m_isTerminate)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
             return 0;
         }
 
-        int timeout{0};
-        if (true == m_infds.empty() && true == m_outfds.empty() && true == m_datafds.empty())
-        {
-            timeout = 100;
-        }
-        struct epoll_event ev[c_maxEvent];
-        int nready = epoll_wait(m_epfd, ev, c_maxEvent, timeout);
         if (-1 == nready)
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO, "epoll_wait failed, errno: ", errno, ", ", strerror(errno));
@@ -74,20 +66,42 @@ int SlaveReactor::start()
                 ev[i].events & EPOLLHUP)     // 文件描述符被挂断
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "fd error, fd: ", fd);
-                disconnectClient(fd);
+                if(nullptr != m_disconnectHandler)
+                {
+                    // 将客户端从epoll中移除
+                    m_disconnectHandler(fd);
+                }
                 return -1;
             }
 
             if (ev[i].events & EPOLLIN)
             {
                 LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "EPOLLIN event, fd: ", fd);
+
+                int readLen = recv(fd, m_recvBuffer.data(), m_recvBuffer.size(), 0);
+                if (readLen < 0)    // 没有数据再需要读取
                 {
-                    if(false == m_tcpSessionManager->isTcpSessionExist(fd))
+                }
+                else if (0 == readLen)
+                {
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client may be offline, fd: ", fd);
+
+                    if(nullptr != m_disconnectHandler)
                     {
-                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "fd not found, fd: ", fd);
-                        continue;
+                        m_disconnectHandler(fd);
                     }
-                    m_infds.insert(fd);
+
+                    continue;
+                }
+
+                if(nullptr != m_heartRefreshHandler)
+                {
+                    m_heartRefreshHandler(fd);
+                }
+
+                if(nullptr != m_sessionDataHandler)
+                {
+                    m_sessionDataHandler(fd, m_recvBuffer.data(), readLen);
                 }
             }
             if (ev[i].events & EPOLLOUT)
@@ -99,17 +113,56 @@ int SlaveReactor::start()
                     continue;
                 }
 
-                if (0 == tcpSession->writeBuffer()->dataLength())
+                utilities::RingBuffer::Ptr writeBuffer = tcpSession->writeBuffer();
+                assert(0 != writeBuffer->dataLength());
+
+                x_writeBuffer.lock();
+
+                char *data{nullptr};
+                std::size_t length{0};
+                int ret = writeBuffer->getContinuousData(data, length);
+                assert(-1 != ret);
+
+                int sendLen = send(fd, data, length, 0);
+                if (sendLen == length)
                 {
-                    continue;
+                    writeBuffer->decreaseUsedSpace(sendLen);
+                    x_writeBuffer.unlock();
+
+                    struct epoll_event ev;
+                    memset(&ev, 0, sizeof(struct epoll_event));
+                    ev.events = EPOLLIN | EPOLLET;
+                    ev.data.fd = fd;
+                    epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &ev);
+
+                    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "send data successfully, remove epollout event, fd: ", fd, ", sendlen: ", sendLen);
                 }
-
-                std::unique_lock<std::mutex> ulock(x_outfds);
-
-                auto iter = m_outfds.find(fd);
-                if (m_outfds.end() != iter)
+                else if(sendLen < length)
                 {
-                    iter->second.second = true;
+                    writeBuffer->decreaseUsedSpace(sendLen);
+                    x_writeBuffer.unlock();
+
+                    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "sendLen less then data length, fd: ", fd, ", sendlen: ", sendLen);
+                }
+                else if(-1 == sendLen)
+                {
+                    x_writeBuffer.unlock();
+
+                    if (EAGAIN == errno || EWOULDBLOCK == errno)
+                    {
+                        // 这种情况理应不会发生
+                        LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "sendLen = -1, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
+                    }
+                    else if (ECONNRESET == errno || EPIPE == errno)
+                    {
+                        // 表明对端断开连接
+                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client maybe offline, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
+
+                        if(nullptr != m_disconnectHandler)
+                        {
+                            m_disconnectHandler(fd);
+                        }
+                    }
                 }
             }
         }
@@ -151,8 +204,13 @@ int SlaveReactor::start()
             else if (0 == readLen)
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client may be offline, fd: ", fd);
+
                 iter = m_infds.erase(iter);
-                disconnectClient(fd);
+                if(nullptr != m_disconnectHandler)
+                {
+                    m_disconnectHandler(*iter);
+                }
+
                 continue;
             }
             // 增加已经使用的空间
@@ -160,16 +218,19 @@ int SlaveReactor::start()
             if (-1 == ret)
             {
                 LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
-                              "increaseUsedSpace failed, space: ", readBuffer->space(), ", readLen: ", readLen, ", fd: ", fd);
+                           "increaseUsedSpace failed, space: ", readBuffer->space(), ", readLen: ", readLen, ", fd: ", fd);
                 // 致命错误，缓冲区使用方法不正确
                 assert(-1 != ret);
             }
 
             LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
-                          "refresh last recv time, recv length: ", readLen, ", readBuffer dataLength: ", readBuffer->dataLength(), ", fd: ", fd);
+                       "refresh last recv time, recv length: ", readLen, ", readBuffer dataLength: ", readBuffer->dataLength(), ", fd: ", fd);
 
             // 更新时间戳
-            m_clientAliveChecker.refreshClientLastRecvTime(fd);
+            if(nullptr != m_heartRefreshHandler)
+            {
+                m_heartRefreshHandler(fd);
+            }
 
             // 接收到了数据，需要回调给业务层
             m_datafds.insert(fd);
@@ -181,7 +242,7 @@ int SlaveReactor::start()
         for (auto iter = m_datafds.begin(); iter != m_datafds.end();)
         {
             int fd = *iter;
-            LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "try to decode packet, fd: ", fd);
+            LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "try to decode payload, fd: ", fd);
 
             TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
             if(nullptr == tcpSession)
@@ -198,16 +259,12 @@ int SlaveReactor::start()
                 assert(0 != readBuffer->dataLength());
             }
 
-#if 0
-            utilities::Timestamp timestamp;
-            timestamp.update();
-#endif
             std::size_t epochPacketSum{100};
             std::size_t packetNum{0};
             for (packetNum = 0; packetNum < epochPacketSum; ++packetNum)
             {
                 LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "readBuffer length: ", readBuffer->dataLength(),
-                              ", startOffset: ", readBuffer->startOffset(), ", endOffset: ", readBuffer->endOffset(), ", fd: ", fd);
+                           ", startOffset: ", readBuffer->startOffset(), ", endOffset: ", readBuffer->endOffset(), ", fd: ", fd);
 
                 PacketType packetType{PacketType::PT_None};
                 std::int32_t moduleId{-1};
@@ -216,22 +273,22 @@ int SlaveReactor::start()
                 if (0 != ret)
                 {
                     // 缓冲区中的数据已经不够一个包头的长度
-                    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "pop packet finish", ", fd: ", fd);
+                    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "pop payload finish", ", fd: ", fd);
                     break;
                 }
 
                 if (PacketType::PT_None == packetType)
                 {
-                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "decode packet failed, fd: ", fd);
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "decode payload failed, fd: ", fd);
                 }
                 else if (PacketType::PT_ClientInfo == packetType)
                 {
                     // 身份包，即刻处理，不必放到线程池中
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "recv ClientInfo packet, fd: ", fd);
-                    PacketClientInfo::Ptr clientInfoPacket = std::make_shared<PacketClientInfo>(packetPayload);
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "recv ClientInfo payload, fd: ", fd);
+                    PayloadClientInfo::Ptr clientInfoPacket = std::make_shared<PayloadClientInfo>(packetPayload);
                     if (-1 == processClientInfoPacket(fd, tcpSession, clientInfoPacket))
                     {
-                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "process ClientInfo packet failed, fd: ", fd);
+                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "process ClientInfo payload failed, fd: ", fd);
                         // 将packetNum置为小于epochPacketSum，后续会将fd从m_datafds中移除
                         packetNum = 0;
                         // 从m_infds中移除，因为m_infds中的socket如果没有数据可读了或者断开了，再下一次循环中才会发现并移除
@@ -241,12 +298,12 @@ int SlaveReactor::start()
                 else if (PacketType::PT_ClientInfoReply == packetType)
                 {
                     // 身份包，即刻处理，不必放到线程池中
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "recv ClientInfoReply packet, fd: ", fd);
-                    PacketClientInfoReply::Ptr clientInfoReplyPacket = std::make_shared<PacketClientInfoReply>(packetPayload);
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "recv ClientInfoReply payload, fd: ", fd);
+                    PayloadClientInfoReply::Ptr clientInfoReplyPacket = std::make_shared<PayloadClientInfoReply>(packetPayload);
                     int ret = processClientInfoReplyPacket(fd, tcpSession, clientInfoReplyPacket);
                     if (0 != ret)
                     {
-                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "process ClientInfoReply packet failed, ret: ", ret, ", fd: ", fd);
+                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "process ClientInfoReply payload failed, ret: ", ret, ", fd: ", fd);
                         if (-1 == ret)
                         {
                             // 将packetNum置为小于epochPacketSum，后续会将fd从m_datafds中移除
@@ -259,13 +316,13 @@ int SlaveReactor::start()
                 else if (PacketType::PT_HeartBeat == packetType || PacketType::PT_HeartBeatReply == packetType)
                 {
                     // 心跳包，不必放到线程池中处理
-                    LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "receive heartbeat packet, fd: ", fd);
+                    LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "receive heartbeat payload, fd: ", fd);
                     m_clientAliveChecker.refreshClientLastRecvTime(fd);
                 }
                 else
                 {
                     LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
-                                  "callback packet type and packet payload, fd: ", fd, ", packet type: ", static_cast<int>(packetType));
+                               "callback payload type and payload payload, fd: ", fd, ", payload type: ", static_cast<int>(packetType));
                     if (nullptr != m_moduleMessageHandler)
                     {
                         m_moduleMessageHandler(fd, moduleId, packetPayload);
@@ -282,11 +339,7 @@ int SlaveReactor::start()
             {
                 ++iter;
             }
-            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "decode packet finish, fd: ", fd, ", packet num: ", packetNum);
-#if 0
-            LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
-                                                                         "elapsed time: ", timestamp.getElapsedTimeInMilliSec());
-#endif
+            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "decode payload finish, fd: ", fd, ", payload num: ", packetNum);
         }
 
         // 处理fd写
@@ -401,20 +454,35 @@ int SlaveReactor::addClient(const int fd)
 
     struct epoll_event ev;
     memset(&ev, 0, sizeof(struct epoll_event));
-    ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
+    ev.events = EPOLLIN | EPOLLET;
     ev.data.fd = fd;
     int ret = epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &ev);
     if (-1 == ret)
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                      "epoll_ctl add failed, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
+                   "epoll_ctl add failed, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
         return -1;
     }
 
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "SlaveReactor ", m_reactorId,
-                  " add client ", fd, " to epoll successfully, events: EPOLLIN and EPOLLET", ", m_epfd: ", m_epfd);
+               " add client ", fd, " to epoll successfully, events: EPOLLIN and EPOLLET", ", m_epfd: ", m_epfd);
 
     return 0;
+}
+
+void SlaveReactor::setHeartbeatRefreshHandler(const std::function<int(const int)> handler)
+{
+    m_heartRefreshHandler = std::move(handler);
+}
+
+void SlaveReactor::setDisconnectHandler(const std::function<int(const int)> handler)
+{
+    m_disconnectHandler = std::move(handler);
+}
+
+void SlaveReactor::setSessionDataHandler(const std::function<int(const int, const char* data, const std::size_t dataLen)> handler)
+{
+    m_sessionDataHandler = std::move(handler);
 }
 
 void SlaveReactor::registerClientInfoHandler(std::function<int(const HostEndPointInfo &, const HostEndPointInfo &,
@@ -424,7 +492,7 @@ void SlaveReactor::registerClientInfoHandler(std::function<int(const HostEndPoin
 }
 
 void SlaveReactor::registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo &, const int, const std::string &,
-                                                               const std::string &, const int, int &)> clientInfoReplyHandler)
+                                                                    const std::string &, const int, int &)> clientInfoReplyHandler)
 {
     m_clientInfoReplyHandler = std::move(clientInfoReplyHandler);
 }
@@ -438,11 +506,17 @@ void SlaveReactor::registerModuleMessageHandler(std::function<void(const int, co
 void SlaveReactor::registerDisconnectHandler(std::function<void(const int fd, const HostEndPointInfo &hostEndPointInfo,
                                                                 const std::string &id, const std::string &uuid, const int flag)> disconnectHandler)
 {
-    m_disconnectHandler = std::move(disconnectHandler);
+    //m_disconnectHandler = std::move(disconnectHandler);
 }
 
 int SlaveReactor::sendData(const int fd, const char *data, const std::size_t size)
 {
+    if(size > c_tcpSessionWriteBufferSize)
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "data size must less than session write buffer size");
+        return -1;
+    }
+
     LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "m_id: ", m_reactorId, ", fd: ", fd);
     //获取对应的writeBuffer
     TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
@@ -453,25 +527,63 @@ int SlaveReactor::sendData(const int fd, const char *data, const std::size_t siz
     }
 
     {
-        std::unique_lock<std::mutex> ulock(x_writeBuffer);
+        x_writeBuffer.lock();
+
         utilities::RingBuffer::Ptr writeBuffer = tcpSession->writeBuffer();
-
-        // 拷贝数据到缓冲区
-        if (-1 == writeBuffer->writeData(data, size))
+        if(0 == writeBuffer->dataLength())
         {
-            // 缓冲区放不下，返回错误给业务层
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "buffer not enough, fd: ", fd);
-            return -1;
-        }
-        writeBuffer->increaseUsedSpace(size);
-        LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "write data to buffer successfully, size: ", size, ", fd: ", fd);
-    }
+            int sendLen = send(fd, data, size, 0);
+            if (sendLen == size)
+            {
+                x_writeBuffer.unlock();
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "send data successfully, fd: ", fd, ", sendlen: ", sendLen);
+                return 0;
+            }
+            else if(sendLen < size)
+            {
+                // 拷贝数据到缓冲区，此时缓冲区应该为空，不应该出现返回值为-1放不进去的情况，如果出现，表明代码逻辑错误
+                assert(-1 != writeBuffer->writeData(data + sendLen, size - sendLen));
+                writeBuffer->increaseUsedSpace(size - sendLen);
 
-    // fd有数据发送
-    std::unique_lock<std::mutex> ulock(x_outfds);
-    if (m_outfds.end() == m_outfds.find(tcpSession->fd()))
-    {
-        m_outfds.emplace(tcpSession->fd(), std::make_pair(false, false));
+                x_writeBuffer.unlock();
+
+                struct epoll_event ev;
+                memset(&ev, 0, sizeof(struct epoll_event));
+                ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
+                ev.data.fd = fd;
+                epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &ev);
+
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
+                           "sendLen < size, write remain data to buffer successfully and wait for epollout, remain data size: ", size - sendLen, ", fd: ", fd);
+            }
+            else if(-1 == sendLen)
+            {
+                x_writeBuffer.unlock();
+
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "send data successfully, fd: ", fd, ", sendlen: ", sendLen);
+                // 如果发送缓冲区中还有数据，但数据直接send完，表明无需等待EPOLLOUT事件
+                if (EAGAIN == errno || EWOULDBLOCK == errno)
+                {
+                    struct epoll_event ev;
+                    memset(&ev, 0, sizeof(struct epoll_event));
+                    ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
+                    ev.data.fd = fd;
+                    epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &ev);
+
+                    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "socket write kernel buffer full, wait for epollout, fd: ", fd);
+                }
+                else if (ECONNRESET == errno || EPIPE == errno)
+                {
+                    // 表明对端断开连接
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client maybe offline, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
+
+                    if(nullptr != m_disconnectHandler)
+                    {
+                        m_disconnectHandler(fd);
+                    }
+                }
+            }
+        }
     }
 
     return 0;
@@ -542,15 +654,15 @@ int SlaveReactor::getPacket(const int fd, utilities::RingBuffer::Ptr &readBuffer
     moduleId = packetHeader.moduleId();
 
     LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
-                  "decode packet header successfully, packet type: ", static_cast<int>(packetType),
-                  ", payload length: ", packetHeader.payloadLength(), ", fd: ", fd);
+               "decode payload header successfully, payload type: ", static_cast<int>(packetType),
+               ", payload length: ", packetHeader.payloadLength(), ", fd: ", fd);
 
     // 尝试复制包数据
     std::size_t payloadLength = packetHeader.payloadLength();
     if (readBuffer->dataLength() - headerLength < payloadLength)
     {
         LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                      "payload length not enough, packet type: ", static_cast<int>(packetType), " fd: ", fd);
+                   "payload length not enough, payload type: ", static_cast<int>(packetType), " fd: ", fd);
         return -1;
     }
 
@@ -558,7 +670,7 @@ int SlaveReactor::getPacket(const int fd, utilities::RingBuffer::Ptr &readBuffer
     if (-1 == (ret = readBuffer->readData(payloadLength, headerLength, *data)))
     {
         LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                      "payload length not enough, packet type: ", static_cast<int>(packetType), " fd: ", fd);
+                   "payload length not enough, payload type: ", static_cast<int>(packetType), " fd: ", fd);
         assert(-1 != ret);
     }
 
@@ -569,11 +681,11 @@ int SlaveReactor::getPacket(const int fd, utilities::RingBuffer::Ptr &readBuffer
     return 0;
 }
 
-int SlaveReactor::processClientInfoPacket(const int fd, TcpSession::Ptr tcpSession, PacketClientInfo::Ptr packetClientInfo)
+int SlaveReactor::processClientInfoPacket(const int fd, TcpSession::Ptr tcpSession, PayloadClientInfo::Ptr packetClientInfo)
 {
     if (nullptr == packetClientInfo)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "decode ClientInfo packet failed", ", fd: ", fd);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "decode ClientInfo payload failed", ", fd: ", fd);
         return -1;
     }
 
@@ -596,11 +708,11 @@ int SlaveReactor::processClientInfoPacket(const int fd, TcpSession::Ptr tcpSessi
     return 0;
 }
 
-int SlaveReactor::processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession, PacketClientInfoReply::Ptr packetClientInfoReply)
+int SlaveReactor::processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcpSession, PayloadClientInfoReply::Ptr packetClientInfoReply)
 {
     if (nullptr == packetClientInfoReply)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "decode ClientInfo packet failed", ", fd: ", fd);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "decode ClientInfo payload failed", ", fd: ", fd);
         return -1;
     }
 
@@ -618,7 +730,7 @@ int SlaveReactor::processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcp
             if (-3 == packetClientInfoReply->result())
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                              "another connection fd: ", anotherConnectionFd, ", peer host: ", packetClientInfoReply->peerHost());
+                           "another connection fd: ", anotherConnectionFd, ", peer host: ", packetClientInfoReply->peerHost());
                 assert(-1 != anotherConnectionFd);
 
                 TcpSession::Ptr anotherTcpSession = m_tcpSessionManager->tcpSession(anotherConnectionFd);
@@ -626,7 +738,7 @@ int SlaveReactor::processClientInfoReplyPacket(const int fd, TcpSession::Ptr tcp
                 anotherTcpSession->setPeerHostEndPointInfo(packetClientInfoReply->peerHost());
 
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                              "another connection fd: ", anotherConnectionFd, ", peer host: ", anotherTcpSession->peerHostEndPointInfo().host());
+                           "another connection fd: ", anotherConnectionFd, ", peer host: ", anotherTcpSession->peerHostEndPointInfo().host());
             }
             disconnectClient(fd, packetClientInfoReply->result());
             return -1;

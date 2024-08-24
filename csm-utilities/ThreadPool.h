@@ -22,25 +22,15 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<ThreadPool>;
 
-            ThreadPool();
-
+            /**
+             * @param threadNum  线程池线程数量
+             * @param threadName    线程池线程名
+             */
+            ThreadPool(const int threadNum, const std::string_view threadName);
             ~ThreadPool();
 
         public:
-            /**
-             * @brief   初始化线程池
-             *
-             * @param threadNum  线程池线程数量
-             * @param threadName    线程池线程名
-             * @return
-             */
-            int init(const int threadNum, const std::string_view threadName);
-
-            /**
-             *@brief    反初始化线程池
-             * @return
-             */
-            int uninit();
+            int init();
 
             /**
              * @brief   开启线程池
@@ -80,8 +70,7 @@ namespace csm
                 }
 
                 using RetType = decltype(func(args...));
-                auto task = std::make_shared<std::packaged_task<RetType()>>(
-                        std::bind(std::forward<Func>(func), std::forward<Args>(args)...));
+                auto task = std::make_shared<std::packaged_task<RetType()>>(std::bind(std::forward<Func>(func), std::forward<Args>(args)...));
 
                 ThreadPoolTask threadPoolTask = [task]() { (*task)(); };
                 m_taskQueues[m_currentTaskPushIndex].enqueue(threadPoolTask);
