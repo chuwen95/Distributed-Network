@@ -19,16 +19,13 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<HostsInfoManager>;
 
-            HostsInfoManager() = default;
-
+            HostsInfoManager(const std::string& nodesFile);
             ~HostsInfoManager() = default;
 
             using Hosts = std::unordered_map<HostEndPointInfo, std::pair<std::string, std::uint64_t>, HostEndPointInfo::hashFunction>;
 
         public:
-            int init(const std::string &configFile);
-
-            int uninit();
+            int init();
 
             auto getHosts() -> const Hosts &;
 
@@ -125,6 +122,8 @@ namespace csm
             bool waitAtLeastOneNodeConnected(const int timeout);
 
         private:
+            std::string m_nodesFile;
+
             // HostEndPointInfo => <Client ID, ClientInfoReply包时间戳>
             // 当对端回复ClientInfoReply后，second会有值，如果second有值，说明连上了
             std::mutex x_hosts;

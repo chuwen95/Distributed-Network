@@ -12,11 +12,13 @@ using namespace csm::service;
 
 constexpr std::int32_t c_heartbeatInterval{5000};
 
-int HostsHeartbeatService::init(const std::string &hostId, HostsInfoManager::Ptr hostsInfoManager)
+HostsHeartbeatService::HostsHeartbeatService(const std::string &hostId, HostsInfoManager::Ptr hostsInfoManager) :
+    m_hostId(hostId), m_hostInfoManager(std::move(hostsInfoManager))
 {
-    m_hostId = hostId;
-    m_hostInfoManager = hostsInfoManager;
+}
 
+int HostsHeartbeatService::init()
+{
     const auto expression = [this]() {
         HostsInfoManager::Hosts hosts = m_hostInfoManager->getHosts();
         for (auto &host: hosts)

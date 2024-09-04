@@ -32,8 +32,6 @@ namespace csm
 
             int init();
 
-            int uninit();
-
             int start();
 
             int stop();

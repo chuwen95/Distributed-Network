@@ -3,7 +3,6 @@
 //
 
 #include "SessionDispatcher.h"
-#include "csm-utilities/Logger.h"
 
 using namespace csm::service;
 
@@ -22,62 +21,54 @@ SessionDispatcher::~SessionDispatcher()
 int SessionDispatcher::init()
 {
     const auto expression = [this]() {
-        {
-            std::unique_lock<std::mutex> ulock(x_tcpSessionsQueue);
-            m_tcpSessionsQueueCv.wait(ulock);
-        }
-
-        if (true == m_isTerminate)
+        if(true == m_isTerminate)
         {
             return;
         }
 
+        SessionInfo::Ptr sessionInfo{nullptr};
+        m_tcpSessionsQueue.wait_dequeue(sessionInfo);
+
+        if(nullptr == sessionInfo)
+        {
+            return;
+        }
+
+        {
+            // 记录客户端fd所在的SlaveRactor
+            std::unique_lock<std::mutex> ulock(x_fdSlaveReactorIndex);
+            m_fdSlaveReactorIndex[sessionInfo->fd] = m_slaveReactorIndexWhichHasLeastFd;
+        }
+
+        sessionInfo->callback(m_slaveReactorIndexWhichHasLeastFd);
+
         // 一定间隔后刷新拥有最少数量的SlaveReactor
         static std::size_t s_refreshTime{0};
 
-        SessionInfo::Ptr sessionInfo{nullptr};
-        while (true == m_tcpSessionsQueue.try_dequeue(sessionInfo))
+        ++s_refreshTime;
+        if (0 == s_refreshTime % m_redispatchInterval)
         {
+            // 寻找管理最少client fd的SlaveReactor的index
+            std::size_t maxSize = std::numeric_limits<std::size_t>::max();
+            for (std::size_t i = 0; i < m_slaveReactorSize; ++i)
             {
-                // 记录客户端fd所在的SlaveRactor
-                std::unique_lock<std::mutex> ulock(x_fdSlaveReactorIndex);
-                m_fdSlaveReactorIndex[sessionInfo->fd] = m_slaveReactorIndexWhichHasLeastFd;
-            }
-
-            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "dispatch TcpSession to slave reactor, index: ", m_slaveReactorIndexWhichHasLeastFd);
-            sessionInfo->callback(m_slaveReactorIndexWhichHasLeastFd);
-
-            ++s_refreshTime;
-            if (0 == s_refreshTime % m_redispatchInterval)
-            {
-                // 寻找管理最少client fd的SlaveReactor的index
-                std::size_t maxSize = std::numeric_limits<std::size_t>::max();
-                for (std::size_t i = 0; i < m_slaveReactorSize; ++i)
+                if (maxSize > *(m_slaveReactorFdSize[i]))
                 {
-                    if (maxSize > *(m_slaveReactorFdSize[i]))
-                    {
-                        maxSize = *(m_slaveReactorFdSize[i]);
-                        m_slaveReactorIndexWhichHasLeastFd = i;
-                    }
+                    maxSize = *(m_slaveReactorFdSize[i]);
+                    m_slaveReactorIndexWhichHasLeastFd = i;
                 }
-                s_refreshTime = 0;
             }
+            s_refreshTime = 0;
         }
     };
-    m_thread.init(expression, 1, "tcp_session_dis");
+    m_thread.init(expression, 1, "session_dispa");
 
-    return 0;
-}
-
-int SessionDispatcher::uninit()
-{
     return 0;
 }
 
 int SessionDispatcher::start()
 {
     m_thread.start();
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start slave reactor manager successfully");
 
     return 0;
 }
@@ -85,7 +76,7 @@ int SessionDispatcher::start()
 int SessionDispatcher::stop()
 {
     m_isTerminate = true;
-    m_tcpSessionsQueueCv.notify_one();
+    m_tcpSessionsQueue.emplace(nullptr);
     m_thread.stop();
 
     return 0;
@@ -93,10 +84,7 @@ int SessionDispatcher::stop()
 
 int SessionDispatcher::addSession(const int fd, std::function<void(const std::size_t slaveReactorIndex)> callback)
 {
-    SessionInfo::Ptr tcpSessionInfo = std::make_shared<SessionInfo>(fd, callback);
-
-    m_tcpSessionsQueue.enqueue(tcpSessionInfo);
-    m_tcpSessionsQueueCv.notify_one();
+    m_tcpSessionsQueue.try_emplace(std::make_shared<SessionInfo>(fd, callback));
 
     return 0;
 }
@@ -181,20 +169,20 @@ void SessionDispatcher::registerDisconnectHandler(std::function<void(const HostE
     for (auto &slaveReactor: m_slaveReactors)
     {
         slaveReactor->registerDisconnectHandler(
-                [disconnectHandler, this](const int fd, const HostEndPointInfo &hostEndPointInfo,
-                                          const std::string &id, const std::string &uuid, const int flag) {
+            [disconnectHandler, this](const int fd, const HostEndPointInfo &hostEndPointInfo, const std::string &id, const std::string &uuid, const int flag)
+            {
+                {
+                    std::unique_lock<std::mutex> ulock(x_clientSlaveReactors);
+                    auto iter = m_clientSlaveReactors.find(fd);
+                    if (m_clientSlaveReactors.end() == iter)
                     {
-                        std::unique_lock<std::mutex> ulock(x_clientSlaveReactors);
-                        auto iter = m_clientSlaveReactors.find(fd);
-                        if (m_clientSlaveReactors.end() == iter)
-                        {
-                            return 0;
-                        }
-                        m_clientSlaveReactors.erase(iter);
+                        return 0;
                     }
-                    disconnectHandler(hostEndPointInfo, id, uuid, flag);
-                    return 0;
-                });
+                    m_clientSlaveReactors.erase(iter);
+                }
+                disconnectHandler(hostEndPointInfo, id, uuid, flag);
+                return 0;
+            });
     }
 }
 
@@ -207,8 +195,7 @@ int SessionDispatcher::disconnectClient(const int fd)
         auto iter = m_clientSlaveReactors.find(fd);
         if (m_clientSlaveReactors.end() == iter)
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                       "client not exist");
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client not exist");
             return -1;
         }
         slaveReactorIndex = iter->second;

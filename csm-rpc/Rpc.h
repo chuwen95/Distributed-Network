@@ -25,8 +25,6 @@ namespace csm
         public:
             int init();
 
-            int uninit();
-
             int start();
 
             int stop();

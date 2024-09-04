@@ -7,21 +7,25 @@
 
 using namespace csm::service;
 
-SessionDataProcessor::SessionDataProcessor(TcpSessionManager::Ptr tcpSessionManager, const std::size_t workerNum) :
+SessionDataProcessor::SessionDataProcessor(TcpSessionManager::Ptr tcpSessionManager, ClientAliveChecker::Ptr clientAliveChecker, const std::size_t workerNum) :
         m_tcpSessionManager(std::move(tcpSessionManager)),
+        m_clientAliveChecker(std::move(clientAliveChecker)),
         m_worker(std::make_shared<utilities::ThreadPool>(workerNum, "sess_dt_work"))
 {}
 
+int SessionDataProcessor::init()
+{
+    return m_worker->init();
+}
+
 int SessionDataProcessor::start()
 {
-    m_worker->start();
-    return 0;
+    return m_worker->start();
 }
 
 int SessionDataProcessor::stop()
 {
-    m_worker->stop();
-    return 0;
+    return m_worker->stop();
 }
 
 int SessionDataProcessor::addSessionData(const int fd, const char* data, const std::size_t dataLen)
@@ -102,6 +106,8 @@ int SessionDataProcessor::processPackets(const int fd, std::vector<std::pair<Pac
             case PacketType::PT_ClientInfoReply:
             case PacketType::PT_ModuleMessage:
             {
+                m_clientAliveChecker->refreshClientLastRecvTime(fd);
+
                 auto iter = m_packetHandler.find(packet.first->type());
                 if(m_packetHandler.end() != iter)
                 {
@@ -111,6 +117,8 @@ int SessionDataProcessor::processPackets(const int fd, std::vector<std::pair<Pac
             }
             case PacketType::PT_HeartBeat:
             case PacketType::PT_HeartBeatReply:
+                m_clientAliveChecker->refreshClientLastRecvTime(fd);
+
                 LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "receive heartbeat payload, fd: ", fd);
                 break;
             default:

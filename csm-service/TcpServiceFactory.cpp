@@ -45,12 +45,13 @@ TcpService::Ptr TcpServiceFactory::createTcpService()
     // TcpSession销毁器
     SessionDestroyer::Ptr sessionDestroyer = std::make_shared<SessionDestroyer>();
     // 包处理器
-    SessionDataProcessor::Ptr sessionDataProcessor = std::make_shared<SessionDataProcessor>(tcpSessionManager, m_nodeConfig->sessionDataWorkerNum());
+    SessionDataProcessor::Ptr sessionDataProcessor =
+        std::make_shared<SessionDataProcessor>(tcpSessionManager, clientAliveChecker ,m_nodeConfig->sessionDataWorkerNum());
 
     // 客户端需要
-    HostsInfoManager::Ptr hostsInfoManager = std::make_shared<HostsInfoManager>();
-    HostsConnector::Ptr hostsConnector = std::make_shared<HostsConnector>();
-    HostsHeartbeatService::Ptr hostsHeartbeatService = std::make_shared<HostsHeartbeatService>();
+    HostsInfoManager::Ptr hostsInfoManager = std::make_shared<HostsInfoManager>(m_nodeConfig->nodesFile());
+    HostsConnector::Ptr hostsConnector = std::make_shared<HostsConnector>(hostsInfoManager);
+    HostsHeartbeatService::Ptr hostsHeartbeatService = std::make_shared<HostsHeartbeatService>(m_nodeConfig->id(), hostsInfoManager);
 
     // 创建TcpServiceConfig
     ServiceConfig::Ptr serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,

@@ -26,8 +26,6 @@ namespace csm
         public:
             int init(const int fd);
 
-            int uninit();
-
             int start();
 
             int stop();

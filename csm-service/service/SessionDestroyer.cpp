@@ -11,7 +11,7 @@ int SessionDestroyer::init()
     const auto expression = [this](){
         {
             std::unique_lock<std::mutex> ulock(x_waitingDestroySessionInfos);
-            m_waitingDestroySessionInfosCv.wait(ulock, [&](){ return false == m_waitingDestroySessionInfos.empty(); });
+            m_waitingDestroySessionInfosCv.wait(ulock, [&](){ return 0 == m_destroyInterval || false == m_waitingDestroySessionInfos.empty(); });
         }
 
         while(true)
@@ -21,6 +21,11 @@ int SessionDestroyer::init()
                 std::pair<int, int> sessionInfo;
                 {
                     std::unique_lock<std::mutex> ulock(x_waitingDestroySessionInfos);
+
+                    if(true == m_waitingDestroySessionInfos.empty())
+                    {
+                        break;
+                    }
 
                     sessionInfo = m_waitingDestroySessionInfos.front();
                     m_waitingDestroySessionInfos.pop();
@@ -47,6 +52,7 @@ int SessionDestroyer::start()
 int SessionDestroyer::stop()
 {
     m_destroyInterval = 0;
+    m_waitingDestroySessionInfosCv.notify_all();
     m_thread.stop();
 
     return 0;
@@ -56,6 +62,7 @@ int SessionDestroyer::addSession(const int fd, const int flag)
 {
     std::unique_lock<std::mutex> ulock(x_waitingDestroySessionInfos);
     m_waitingDestroySessionInfos.emplace(fd, flag);
+    m_waitingDestroySessionInfosCv.notify_all();
 
     return 0;
 }

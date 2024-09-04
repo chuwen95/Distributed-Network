@@ -40,7 +40,7 @@ namespace csm
             EntryType entryType() const;
             void setEntryType(const EntryType& entryType);
 
-            const std::vector<char>& data();
+            const std::vector<char> data();
             void setData(const std::vector<char>& data);
             void setData(const std::string& data);
 

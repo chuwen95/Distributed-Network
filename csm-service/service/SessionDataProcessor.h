@@ -10,6 +10,7 @@
 #include "csm-utilities/ThreadPool.h"
 #include "TcpSession.h"
 #include "TcpSessionManager.h"
+#include "ClientAliveChecker.h"
 #include "csm-service/protocol/PayloadFactory.h"
 
 namespace csm
@@ -23,10 +24,12 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<SessionDataProcessor>;
 
-            SessionDataProcessor(TcpSessionManager::Ptr tcpSessionManager, const std::size_t workerNum);
+            SessionDataProcessor(TcpSessionManager::Ptr tcpSessionManager, ClientAliveChecker::Ptr clientAliveChecker, const std::size_t workerNum);
             ~SessionDataProcessor() = default;
 
         public:
+            int init();
+
             int start();
 
             int stop();
@@ -50,6 +53,7 @@ namespace csm
 
         private:
             TcpSessionManager::Ptr m_tcpSessionManager;
+            ClientAliveChecker::Ptr m_clientAliveChecker;
             utilities::ThreadPool::Ptr m_worker;
 
             std::unordered_map<PacketType, std::function<int(const int fd, PacketHeader::Ptr, PayloadBase::Ptr packet)>> m_packetHandler;

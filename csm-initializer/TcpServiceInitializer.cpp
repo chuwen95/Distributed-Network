@@ -47,11 +47,6 @@ int TcpServiceInitializer::init()
     return m_tcpService->init();
 }
 
-int TcpServiceInitializer::uninit()
-{
-    return m_tcpService->uninit();
-}
-
 int TcpServiceInitializer::start()
 {
     return m_tcpService->start();

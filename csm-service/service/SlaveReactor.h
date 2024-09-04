@@ -44,13 +44,6 @@ namespace csm
             int addClient(const int fd);
 
             /**
-             * @brief 设置心跳刷新回调
-             * @param handler
-             * @return
-             */
-            void setHeartbeatRefreshHandler(const std::function<int(const int fd)> handler);
-
-            /**
              * @brief 设置链接断开处理回调
              * @param handler
              */
@@ -100,11 +93,13 @@ namespace csm
             std::atomic_bool m_isTerminate{false};
             utilities::Thread m_thread;
 
+
+            // 用于退出的fd
+            int m_exitFd;
+            // epfd
             int m_epfd{-1};
             std::vector<char> m_recvBuffer;
 
-            // 心跳刷新回调
-            std::function<int(const int fd)> m_heartRefreshHandler;
             // 链接断开处理回调
             std::function<int(const int fd)> m_disconnectHandler;
             // 收到数据后对数据进行处理的回调

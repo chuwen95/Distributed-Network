@@ -44,7 +44,8 @@ namespace csm
 
             std::mutex x_mutex;
             std::condition_variable m_cv;
-            std::atomic_bool m_isRunning{false};
+
+            bool m_isRunning{false};
             std::unique_ptr<std::thread> m_thread;
         };
 

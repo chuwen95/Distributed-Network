@@ -47,6 +47,8 @@ namespace csm
             static int getSocketKernelRecvBufferSize(const int fd);
 
             static int setSocketKernelRecvBufferSize(const int fd, const int size);
+
+            static int setReuseAddr(const int fd);
         };
 
     } // componnets

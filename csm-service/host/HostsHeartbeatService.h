@@ -20,8 +20,11 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<HostsHeartbeatService>;
 
+            HostsHeartbeatService(const std::string &hostId, HostsInfoManager::Ptr hostsInfoManager);
+            ~HostsHeartbeatService() = default;
+
         public:
-            int init(const std::string &hostId, HostsInfoManager::Ptr hostsInfoManager);
+            int init();
 
             int start();
 

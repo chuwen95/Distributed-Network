@@ -33,11 +33,6 @@ int Rpc::init()
     return 0;
 }
 
-int Rpc::uninit()
-{
-    return 0;
-}
-
 int Rpc::start()
 {
     std::thread([this]() {

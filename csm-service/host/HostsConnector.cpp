@@ -14,9 +14,14 @@ using namespace csm::service;
 
 constexpr std::uint32_t c_connectTimeout{20 * 1000};
 
-int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
+HostsConnector::HostsConnector(HostsInfoManager::Ptr hostsInfoManager)
+    : m_hostsInfoManager(std::move(hostsInfoManager))
 {
-    m_hostsInfoManager = hostsInfoManager;
+}
+
+
+int HostsConnector::init()
+{
     const auto expression = [this]() {
         HostsInfoManager::Hosts hosts = m_hostsInfoManager->getHosts();
         for (auto &host: hosts)
@@ -57,25 +62,25 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "set socket recv buffer size failed, errno: ", errno, ", ", strerror(errno));
                 return -1;
             }
-            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "set socket recv buffer size to ", utilities::Socket::c_defaultSocketRecvBufferSize, "successfully");
+            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "set socket recv buffer size to ", utilities::Socket::c_defaultSocketRecvBufferSize, " successfully, fd: ", fd);
 
             // 添加host到正在连接
             {
                 std::unique_lock<std::mutex> ulock(x_connectingHosts);
                 m_connectingHosts.emplace(host.first, std::make_pair(fd, utilities::Timestamp::getCurrentTimestamp()));
             }
-            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "add host to connecting successfully");
+            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "add host to connecting successfully, fd: ", fd);
 
             utilities::Socket::setNonBlock(fd);
 
-            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "set socket non block successfully");
+            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "set socket non block successfully, fd: ", fd);
 
             int ret = utilities::Socket::connect(fd, host.first.ip(), host.first.port());
             if (0 == ret)
             {
                 // 一般情况下这个if不会走到，因为非阻塞io第一次connect不会立即返回0，后续又因为m_connectingHosts的原因不会再connect
 
-                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "connect successfully, host: ", host.first.host());
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "connect successfully, host: ", host.first.host(), ", fd: ", fd);
 
                 if (nullptr != m_connectHandler)
                 {
@@ -127,7 +132,7 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
             // TcpSession已经回调出去，由Reactor管理recv/send，此时正在等待ClientInfoReply包
             if (-1 == host.second.second)
             {
-                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "socket connect successfully, waiting ClientInfoReply payload");
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "socket connect successfully, waiting ClientInfoReply payload, fd: ", host.second.first);
                 continue;
             }
 
@@ -169,10 +174,10 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
                         continue;
                     }
 
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, fd is set");
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, fd is set, fd: ", fd);
                     if (nullptr != m_connectHandler)
                     {
-                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, callback TcpSession");
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, callback TcpSession, fd: ", fd);
 
                         TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(fd, service::c_tcpSessionReadBufferSize, service::c_tcpSessionWriteBufferSize);
                         tcpSession->init();
@@ -181,7 +186,7 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
                         // 将TcpSession回调出去，此时仍保留状态为连接中，即不处理m_connectingHosts，等到ClientInfoReply回来后再将fd从m_connectingHosts中移除
                         m_connectHandler(fd, tcpSession);
 
-                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " callback TcpSession finish");
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " callback TcpSession finish, fd: ", fd);
                     }
 
                     // 将时间戳设置为-1，表示已经连上，不需要再监测超时
@@ -216,11 +221,6 @@ int HostsConnector::init(HostsInfoManager::Ptr hostsInfoManager)
     };
     m_thread.init(expression, 500, "host_connector");
 
-    return 0;
-}
-
-int HostsConnector::uninit()
-{
     return 0;
 }
 

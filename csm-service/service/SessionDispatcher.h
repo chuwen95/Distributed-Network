@@ -33,8 +33,6 @@ namespace csm
         public:
             int init();
 
-            int uninit();
-
             int start();
 
             int stop();
@@ -72,10 +70,6 @@ namespace csm
             std::string m_id;
             std::size_t m_slaveReactorSize;
 
-            // 新上线客户端的信号
-            std::mutex x_tcpSessionsQueue;
-            std::condition_variable m_tcpSessionsQueueCv;
-
             // 新上线的客户端队列，等待分发到各个SlaveReactor
             struct SessionInfo
             {
@@ -87,7 +81,7 @@ namespace csm
                 int fd;
                 std::function<void(const std::size_t slaveReactorIndex)> callback;
             };
-            moodycamel::ReaderWriterQueue<SessionInfo::Ptr> m_tcpSessionsQueue;
+            moodycamel::BlockingReaderWriterQueue<SessionInfo::Ptr> m_tcpSessionsQueue;
 
             // 当前管理最少fd的SlaveReactor index（非实时刷新）
             std::size_t m_slaveReactorIndexWhichHasLeastFd{ 0 };

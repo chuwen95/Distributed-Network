@@ -70,7 +70,6 @@ int main(int argc, char* argv[])
     }
 
     initializer.stop();
-    initializer.uninit();
 
     return 0;
 }

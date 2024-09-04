@@ -37,10 +37,10 @@ void Thread::start()
         {
             m_threadFunc();
 
-            if (m_time >= 0)
+            if (m_time > 0)
             {
                 std::unique_lock<std::mutex> ulock(x_mutex);
-                m_cv.wait_for(ulock, std::chrono::milliseconds(m_time), [this]() { return false == m_isRunning; });
+                m_cv.wait_for(ulock, std::chrono::milliseconds(m_time));
             }
         }
     };

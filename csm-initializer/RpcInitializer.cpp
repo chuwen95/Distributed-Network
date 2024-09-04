@@ -18,11 +18,6 @@ int RpcInitializer::init()
     return m_rpc->init();
 }
 
-int RpcInitializer::uninit()
-{
-    return m_rpc->uninit();
-}
-
 int RpcInitializer::start()
 {
     return m_rpc->start();

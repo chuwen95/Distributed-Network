@@ -62,7 +62,7 @@ std::string PayloadClientInfo::handshakeUuid()
 
 int PayloadClientInfo::setNodeId(const std::string &nodeId)
 {
-    m_protoClientInfo.set_nodeid(std::string(nodeId));
+    m_protoClientInfo.set_nodeid(nodeId);
 
     return 0;
 }

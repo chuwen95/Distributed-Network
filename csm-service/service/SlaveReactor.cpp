@@ -31,7 +31,26 @@ int SlaveReactor::init()
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "create epoll fd failed, fd: ", m_epfd);
         return -1;
     }
-    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "create epoll fd successfully, fd: ", m_epfd);
+    LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "create epoll fd successfully, fd: ", m_epfd);
+
+    // 创建用于退出的事件套接字
+    m_exitFd = eventfd(0, EFD_NONBLOCK);
+    if(-1 == m_exitFd)
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "create eventfd failed, errno: ", errno, ", ", strerror(errno));
+        return -1;
+    }
+    LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "create eventfd successfully, m_exitFd: ", m_exitFd);
+
+    struct epoll_event event;
+    event.events = EPOLLIN;
+    event.data.fd = m_exitFd;
+    if(-1 == epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_exitFd, &event))
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add exit event fd to epoll failed, errno: ", errno, ", ", strerror(errno));
+        return -1;
+    }
+    LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "add exit event fd to epoll successfully");
 
     return 0;
 }
@@ -40,11 +59,14 @@ int SlaveReactor::start()
 {
     const auto expression = [this]()
     {
+        static int s_timeout{ 5000 };
+
         struct epoll_event ev[c_maxEvent];
-        int nready = epoll_wait(m_epfd, ev, c_maxEvent, 5000);
+        int nready = epoll_wait(m_epfd, ev, c_maxEvent, s_timeout);
 
         if (true == m_isTerminate)
         {
+            s_timeout = 1;
             return 0;
         }
 
@@ -92,11 +114,6 @@ int SlaveReactor::start()
                     }
 
                     continue;
-                }
-
-                if(nullptr != m_heartRefreshHandler)
-                {
-                    m_heartRefreshHandler(fd);
                 }
 
                 if(nullptr != m_sessionDataHandler)
@@ -185,7 +202,13 @@ int SlaveReactor::start()
 int SlaveReactor::stop()
 {
     m_isTerminate = true;
+
+    std::uint64_t num{ 1 };
+    write(m_exitFd, &num, sizeof(std::uint64_t));
     m_thread.stop();
+
+    close(m_exitFd);
+    close(m_epfd);
 
     return 0;
 }
@@ -212,19 +235,14 @@ int SlaveReactor::addClient(const int fd)
     return 0;
 }
 
-void SlaveReactor::setHeartbeatRefreshHandler(const std::function<int(const int)> handler)
-{
-    m_heartRefreshHandler = std::move(handler);
-}
-
 void SlaveReactor::setDisconnectHandler(const std::function<int(const int)> handler)
 {
-    m_disconnectHandler = std::move(handler);
+    m_disconnectHandler = handler;
 }
 
 void SlaveReactor::setSessionDataHandler(const std::function<int(const int, const char* data, const std::size_t dataLen)> handler)
 {
-    m_sessionDataHandler = std::move(handler);
+    m_sessionDataHandler = handler;
 }
 
 int SlaveReactor::sendData(const int fd, const char *data, const std::size_t size)

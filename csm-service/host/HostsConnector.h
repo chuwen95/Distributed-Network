@@ -22,10 +22,11 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<HostsConnector>;
 
-        public:
-            int init(HostsInfoManager::Ptr hostsInfoManager);
+            HostsConnector(HostsInfoManager::Ptr hostsInfoManager);
+            ~HostsConnector() = default;
 
-            int uninit();
+        public:
+            int init();
 
             int start();
 

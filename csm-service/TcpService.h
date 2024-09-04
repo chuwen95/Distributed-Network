@@ -27,12 +27,10 @@ namespace csm
             using Ptr = std::shared_ptr<TcpService>;
 
             TcpService(ServiceConfig::Ptr serviceConfig);
-            ~TcpService() = default;
+            ~TcpService();
 
         public:
             int init();
-
-            int uninit();
 
             int start();
 
@@ -62,8 +60,6 @@ namespace csm
             int initClient();
 
             int uninitServer();
-
-            int uninitClient();
 
             SlaveReactor::Ptr getSlaveReactorByFd(const int fd);
 

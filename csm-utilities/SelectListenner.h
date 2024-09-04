@@ -19,14 +19,13 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<SelectListenner>;
 
-            SelectListenner();
-
-            ~SelectListenner();
+            SelectListenner() = default;
+            ~SelectListenner() = default;
 
         public:
-            int init(const int fd);
+            void setListenFd(const int fd);
 
-            int uninit();
+            int init();
 
             int start();
 

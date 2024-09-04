@@ -18,13 +18,31 @@ int Logger::init(const bool enableFileLog, const std::string &path, const std::s
 
     if (true == enableFileLog)
     {
+        std::filesystem::create_directory(path);
+
         std::string logFilename = generateLogFilename();
-        std::string logFullFilename = path + "/" + logFilename;
+
+        std::string logFullFilename;
+        if(true == path.empty())
+        {
+            logFullFilename = "./" + logFilename;
+        }
+        else
+        {
+            if(path.back() == '/')
+            {
+                logFullFilename = path + logFilename;
+            }
+            else
+            {
+                logFullFilename = path + "/" + logFilename;
+            }
+        }
 
         m_file.open(logFullFilename, std::ios::out);
         if (false == m_file.is_open())
         {
-            std::cerr << "open log file failed: " << logFullFilename << ", error state: " << m_file.rdstate() << std::endl;
+            std::cerr << "open log file failed: " << logFullFilename << ", error state: " << m_file.rdstate() << ", errno: " << errno << ", " << strerror(errno)<< std::endl;
             return -1;
         }
 

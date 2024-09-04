@@ -7,16 +7,13 @@
 
 using namespace csm::utilities;
 
-SelectListenner::SelectListenner()
-{}
-
-SelectListenner::~SelectListenner()
-{}
-
-int SelectListenner::init(const int fd)
+void SelectListenner::setListenFd(const int fd)
 {
     m_listenfd = fd;
+}
 
+int SelectListenner::init()
+{
     const auto expression = [this]() {
         fd_set readfds;
 
@@ -47,11 +44,6 @@ int SelectListenner::init(const int fd)
     };
     m_thread.init(expression, 0, "main_reac");
 
-    return 0;
-}
-
-int SelectListenner::uninit()
-{
     return 0;
 }
 

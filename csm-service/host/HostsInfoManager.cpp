@@ -11,12 +11,17 @@
 
 using namespace csm::service;
 
-int HostsInfoManager::init(const std::string &configFile)
+HostsInfoManager::HostsInfoManager(const std::string &nodesFile) : m_nodesFile(nodesFile)
 {
-    std::ifstream nodeFile(configFile, std::ios::in);
+}
+
+
+int HostsInfoManager::init()
+{
+    std::ifstream nodeFile(m_nodesFile, std::ios::in);
     if (false == nodeFile.is_open())
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "open nodes config file failed: ", configFile);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "open nodes config file failed: ", m_nodesFile);
         return -1;
     }
     nodeFile.seekg(0, std::ios::end);
@@ -36,15 +41,15 @@ int HostsInfoManager::init(const std::string &configFile)
     bool ret = reader.parse(std::string(content.data(), content.size()), root);
     if (false == ret)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "parse nodes config file failed: ", configFile);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "parse nodes config file failed: ", m_nodesFile);
         return -1;
     }
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "parse nodes config file successfully: ", configFile);
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "parse nodes config file successfully: ", m_nodesFile);
 
     Json::Value &nodesValue = root["nodes"];
     if (false == nodesValue.isArray())
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "parse hosts config file failed: ", configFile);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "parse hosts config file failed: ", m_nodesFile);
         return -1;
     }
 
@@ -64,11 +69,6 @@ int HostsInfoManager::init(const std::string &configFile)
         m_hosts.emplace(HostEndPointInfo(ip, port), std::make_pair("", -1));
     }
 
-    return 0;
-}
-
-int HostsInfoManager::uninit()
-{
     return 0;
 }
 
@@ -220,7 +220,8 @@ bool HostsInfoManager::waitAtLeastOneNodeConnected(const int timeout)
     if (onlineClientSize() < 1)
     {
         return false;
-    } else
+    }
+    else
     {
         return true;
     }

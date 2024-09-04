@@ -33,6 +33,7 @@
 #include <sys/errno.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <fcntl.h>

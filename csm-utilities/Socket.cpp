@@ -113,3 +113,15 @@ int Socket::setSocketKernelRecvBufferSize(const int fd, const int size)
 
     return 0;
 }
+
+int Socket::setReuseAddr(const int fd)
+{
+    int opt = 1;
+    if(-1 == setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "set socket reuse addr failed, ", "errno: ", errno, ", ", strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}

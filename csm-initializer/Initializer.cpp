@@ -48,31 +48,6 @@ int Initializer::init()
     return 0;
 }
 
-int Initializer::uninit()
-{
-    if (-1 == m_rpcInitializer->uninit())
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "RpcInitializer uninit failed");
-        return -1;
-    }
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "RpcInitializer uninit successfully");
-
-    if (-1 == m_tcpServiceInitializer->uninit())
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "TcpServiceInitializer uninit failed");
-        return -1;
-    }
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "TcpServiceInitializer uninit successfully");
-
-    if (-1 == m_logInitializer->stop())
-    {
-        std::cerr << "LogInitializer stop failed" << std::endl;
-        return -1;
-    }
-
-    return 0;
-}
-
 int Initializer::start()
 {
     if (-1 == m_tcpServiceInitializer->start())
@@ -107,6 +82,13 @@ int Initializer::stop()
         return -1;
     }
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "TcpServiceInitializer stop successfully");
+
+    if (-1 == m_logInitializer->stop())
+    {
+        std::cerr << "LogInitializer stop failed" << std::endl;
+        return -1;
+    }
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "LogInitializer stop successfully");
 
     return 0;
 }

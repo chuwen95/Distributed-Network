@@ -14,6 +14,7 @@ int ClientAliveChecker::init()
 {
     const auto expression = [this]() {
         std::vector<int> offlinefds;
+
         {
             std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
 
@@ -33,7 +34,7 @@ int ClientAliveChecker::init()
             m_timeoutHandler(offlinefds);
         }
     };
-    m_thread.init(expression, c_aliveTimeout, "cli_check");
+    m_thread.init(expression, c_aliveTimeout, "cli_alive_chk");
 
     return 0;
 }
@@ -99,7 +100,7 @@ int ClientAliveChecker::refreshClientLastRecvTime(const int fd)
     auto iter = m_clientLastRecvTime.find(fd);
     if (m_clientLastRecvTime.end() == iter)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client not exist, fd: ", iter->first);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client not exist, fd: ", fd);
         return -1;
     }
     ++iter->second.second;

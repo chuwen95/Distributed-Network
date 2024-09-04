@@ -60,11 +60,7 @@ namespace csm
             std::mutex x_clientLastRecvTime;
             std::unordered_map<int, std::pair<std::uint32_t, std::uint32_t>> m_clientLastRecvTime;
 
-            // 每一次检查500个客户端心跳情况，上一次检查到哪里了
-            std::size_t m_lastCheckPos{ 0 };
-
             utilities::Thread m_thread;
-
             std::function<void(const std::vector<int> &)> m_timeoutHandler;
         };
 

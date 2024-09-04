@@ -3,12 +3,13 @@
 //
 
 #include "TcpSessionManager.h"
+#include "csm-utilities/Logger.h"
 
 using namespace csm::service;
 
 int TcpSessionManager::addTcpSession(const int fd, TcpSession::Ptr tcpSession)
 {
-    std::unique_lock<std::mutex> x_tcpSessions;
+    std::unique_lock<std::mutex> ulock(x_tcpSessions);
 
     if(m_tcpSessions.end() != m_tcpSessions.find(fd))
     {
@@ -22,7 +23,7 @@ int TcpSessionManager::addTcpSession(const int fd, TcpSession::Ptr tcpSession)
 
 int TcpSessionManager::removeTcpSession(const int fd)
 {
-    std::unique_lock<std::mutex> x_tcpSessions;
+    std::unique_lock<std::mutex> ulock(x_tcpSessions);
 
     auto iter = m_tcpSessions.find(fd);
     if(m_tcpSessions.end() == iter)
@@ -37,7 +38,7 @@ int TcpSessionManager::removeTcpSession(const int fd)
 
 TcpSession::Ptr TcpSessionManager::tcpSession(const int fd)
 {
-    std::unique_lock<std::mutex> x_tcpSessions;
+    std::unique_lock<std::mutex> ulock(x_tcpSessions);
 
     auto iter = m_tcpSessions.find(fd);
     if(m_tcpSessions.end() == iter)
@@ -50,14 +51,14 @@ TcpSession::Ptr TcpSessionManager::tcpSession(const int fd)
 
 bool TcpSessionManager::isTcpSessionExist(const int fd)
 {
-    std::unique_lock<std::mutex> x_tcpSessions;
+    std::unique_lock<std::mutex> ulock(x_tcpSessions);
 
     return m_tcpSessions.end() != m_tcpSessions.find(fd);
 }
 
 std::size_t TcpSessionManager::sessionSize()
 {
-    std::unique_lock<std::mutex> x_tcpSessions;
+    std::unique_lock<std::mutex> ulock(x_tcpSessions);
 
     return m_tcpSessions.size();
 }

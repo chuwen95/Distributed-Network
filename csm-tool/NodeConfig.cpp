@@ -231,7 +231,7 @@ int NodeConfig::parseLogConfig(inipp::Ini<char>& ini)
         std::cout << "log type parse error: must be trace/debug/info/warning/error" << std::endl;
         return -1;
     }
-    m_logPath = getValue(ini, "log", "path", m_logPath);
+    m_logPath = getValue(ini, "logger", "path", m_logPath);
 
     if(true == m_logPath.empty())
     {

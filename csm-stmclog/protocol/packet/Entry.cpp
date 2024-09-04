@@ -38,7 +38,7 @@ void Entry::setEntryType(const EntryType &entryType)
     m_rawEntry.set_type(static_cast<stmclog_proto::RawEntryType>(typeValue));
 }
 
-const std::vector<char> &Entry::data()
+const std::vector<char> Entry::data()
 {
     return std::vector<char>(m_rawEntry.data().begin(), m_rawEntry.data().end());
 }

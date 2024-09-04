@@ -50,15 +50,15 @@ int Acceptor::init(const int fd)
                     utilities::Socket::close(clientfd);
                     continue;
                 }
-                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "set socket recv buffer size to ", utilities::Socket::c_defaultSocketRecvBufferSize, "successfully");
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "set socket recv buffer size to ", utilities::Socket::c_defaultSocketRecvBufferSize, " successfully, fd: ", clientfd);
 
                 TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(clientfd, c_tcpSessionReadBufferSize, c_tcpSessionWriteBufferSize);
                 tcpSession->init();
-                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "create TcpSession successfully");
+                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "create TcpSession successfully, fd: ", clientfd);
 
                 if (nullptr != m_newClientCallback)
                 {
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send TcpSession to SessionDispatcher");
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send TcpSession to SessionDispatcher, fd: ", clientfd);
                     m_newClientCallback(clientfd, tcpSession);
                 }
             }
@@ -66,11 +66,6 @@ int Acceptor::init(const int fd)
     };
     m_thread.init(expression, 0, "acceptor");
 
-    return 0;
-}
-
-int Acceptor::uninit()
-{
     return 0;
 }
 
