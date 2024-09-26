@@ -2,8 +2,8 @@
 // Created by ChuWen on 10/11/23.
 //
 
-#ifndef TCPNETWORK_TCPSERVICEINITIALIZER_H
-#define TCPNETWORK_TCPSERVICEINITIALIZER_H
+#ifndef TCPNETWORK_P2PSERVICEINITIALIZER_H
+#define TCPNETWORK_P2PSERVICEINITIALIZER_H
 
 #include "csm-common/Common.h"
 
@@ -16,13 +16,13 @@ namespace csm
     namespace initializer
     {
 
-        class TcpServiceInitializer
+        class P2PServiceInitializer
         {
         public:
-            using Ptr = std::shared_ptr<TcpServiceInitializer>;
+            using Ptr = std::shared_ptr<P2PServiceInitializer>;
 
-            TcpServiceInitializer(tool::NodeConfig::Ptr nodeConfig);
-            ~TcpServiceInitializer() = default;
+            P2PServiceInitializer(tool::NodeConfig::Ptr nodeConfig);
+            ~P2PServiceInitializer() = default;
 
         public:
             int init();
@@ -41,4 +41,4 @@ namespace csm
 
 }
 
-#endif //TCPNETWORK_TCPSERVICEINITIALIZER_H
+#endif //TCPNETWORK_P2PSERVICEINITIALIZER_H

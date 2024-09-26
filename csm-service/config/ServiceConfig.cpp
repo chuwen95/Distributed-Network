@@ -10,13 +10,14 @@ using namespace csm::service;
 ServiceConfig::ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
                              TcpSessionManager::Ptr tcpSessionManager, ClientAliveChecker::Ptr clientAliveChecker, std::vector<SlaveReactor::Ptr> slaveReactors,
                              SessionDispatcher::Ptr sessionDispatcher, SessionDestroyer::Ptr sessionDestroyer, SessionDataProcessor::Ptr sessionDataProcessor,
-                             HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector, HostsHeartbeatService::Ptr hostsHeartbeatService) :
+                             const ServiceStartType serverStartType, HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector,
+                             HostsHeartbeatService::Ptr hostsHeartbeatService) :
         m_nodeConfig(std::move(nodeConfig)), m_listenner(std::move(listenner)), m_acceptor(std::move(acceptor)),
         m_tcpSessionManager(std::move(tcpSessionManager)), m_clientAliveChecker(std::move(clientAliveChecker)),
         m_slaveReactors(std::move(slaveReactors)), m_sessionDispatcher(std::move(sessionDispatcher)),
         m_sessionDestroyer(std::move(sessionDestroyer)), m_sessionDataProcessor(std::move(sessionDataProcessor)),
-        m_hostsInfoManager(std::move(hostsInfoManager)), m_hostsConnector(std::move(hostsConnector)),
-        m_hostsHeartbeatService(std::move(hostsHeartbeatService))
+        m_serviceStartType(serverStartType), m_hostsInfoManager(std::move(hostsInfoManager)),
+        m_hostsConnector(std::move(hostsConnector)), m_hostsHeartbeatService(std::move(hostsHeartbeatService))
 {}
 
 csm::tool::NodeConfig::Ptr ServiceConfig::nodeConfig()
@@ -62,6 +63,11 @@ SessionDestroyer::Ptr ServiceConfig::sessionDestroyer()
 SessionDataProcessor::Ptr ServiceConfig::sessionDataProcessor()
 {
     return m_sessionDataProcessor;
+}
+
+ServiceStartType ServiceConfig::serviceStartType() const
+{
+    return m_serviceStartType;
 }
 
 HostsInfoManager::Ptr ServiceConfig::hostsInfoManager()

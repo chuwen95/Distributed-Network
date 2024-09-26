@@ -7,13 +7,19 @@
 
 #include "csm-tool/NodeConfig.h"
 #include "csm-service/TcpService.h"
-#include "Rpc.h"
+#include "common/RpcServer.h"
 
 namespace csm
 {
 
     namespace rpc
     {
+
+        enum class RpcServerType
+        {
+            HttpRpcServer,
+            TcpRpcServer
+        };
 
         class RpcFactory
         {
@@ -24,7 +30,7 @@ namespace csm
             ~RpcFactory() = default;
 
         public:
-            Rpc::Ptr createRpc();
+            RpcServer::Ptr createRpc(const RpcServerType rpcServerType);
 
         private:
             tool::NodeConfig::Ptr m_nodeConfig;

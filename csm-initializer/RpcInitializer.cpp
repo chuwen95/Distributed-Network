@@ -10,25 +10,67 @@ using namespace csm::initializer;
 RpcInitializer::RpcInitializer(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService)
 {
     rpc::RpcFactory rpcFactory(nodeConfig, tcpService);
-    m_rpc = rpcFactory.createRpc();
+    m_httpRpcServer = rpcFactory.createRpc(rpc::RpcServerType::HttpRpcServer);
+#if 0
+    m_tcpRpcServer = rpcFactory.createRpc(rpc::RpcServerType::TcpRpcServer);
+#endif
 }
 
 int RpcInitializer::init()
 {
-    return m_rpc->init();
+    if(-1 == m_httpRpcServer->init())
+    {
+        return -1;
+    }
+#if 0
+    if(-1 == m_tcpRpcServer->init())
+    {
+        return -1;
+    }
+#endif
+
+    return 0;
 }
 
 int RpcInitializer::start()
 {
-    return m_rpc->start();
+    if(-1 == m_httpRpcServer->start())
+    {
+        return -1;
+    }
+#if 0
+    if(-1 == m_tcpRpcServer->start())
+    {
+        return -1;
+    }
+#endif
+
+    return 0;
 }
 
 int RpcInitializer::stop()
 {
-    return m_rpc->stop();
+    if(-1 == m_httpRpcServer->stop())
+    {
+        return -1;
+    }
+#if 0
+    if(-1 == m_tcpRpcServer->stop())
+    {
+        return -1;
+    }
+#endif
+
+    return 0;
 }
 
-csm::rpc::Rpc::Ptr RpcInitializer::rpc()
+csm::rpc::RpcServer::Ptr RpcInitializer::httpRpcServer()
 {
-    return m_rpc;
+    return m_httpRpcServer;
 }
+
+csm::rpc::RpcServer::Ptr RpcInitializer::tcpRpcServer()
+{
+    return m_tcpRpcServer;
+}
+

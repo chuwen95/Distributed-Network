@@ -18,22 +18,15 @@ TcpServiceFactory::TcpServiceFactory(tool::NodeConfig::Ptr nodeConfig) :
 {
 }
 
-TcpService::Ptr TcpServiceFactory::createTcpService()
+TcpService::Ptr TcpServiceFactory::createTcpService(const ServiceStartType serviceStartType)
 {
-    utilities::SelectListenner::Ptr listenner;
-    Acceptor::Ptr acceptor;
-    if (false == m_nodeConfig->startAsClient())
-    {
-        // 作为服务端需要
-        listenner = std::make_shared<utilities::SelectListenner>();
-        acceptor = std::make_shared<Acceptor>();
-    }
+    utilities::SelectListenner::Ptr listenner = std::make_shared<utilities::SelectListenner>();
+    Acceptor::Ptr acceptor = std::make_shared<Acceptor>();
     // 创建TcpSession管理器
     TcpSessionManager::Ptr tcpSessionManager = std::make_shared<TcpSessionManager>();
     // 创建心跳检查器
     ClientAliveChecker::Ptr clientAliveChecker = std::make_shared<ClientAliveChecker>();
-
-    // 服务端客户端都需要
+    // 创建子Reactor
     std::vector<SlaveReactor::Ptr> slaveReactors;
     for (int index = 0; index < m_nodeConfig->slaveReactorNum(); ++index)
     {
@@ -48,15 +41,31 @@ TcpService::Ptr TcpServiceFactory::createTcpService()
     SessionDataProcessor::Ptr sessionDataProcessor =
         std::make_shared<SessionDataProcessor>(tcpSessionManager, clientAliveChecker ,m_nodeConfig->sessionDataWorkerNum());
 
-    // 客户端需要
-    HostsInfoManager::Ptr hostsInfoManager = std::make_shared<HostsInfoManager>(m_nodeConfig->nodesFile());
-    HostsConnector::Ptr hostsConnector = std::make_shared<HostsConnector>(hostsInfoManager);
-    HostsHeartbeatService::Ptr hostsHeartbeatService = std::make_shared<HostsHeartbeatService>(m_nodeConfig->id(), hostsInfoManager);
+    ServiceConfig::Ptr serviceConfig{ nullptr };
+    if(ServiceStartType::Node == serviceStartType)
+    {
+        // 作为节点需要
+        HostsInfoManager::Ptr hostsInfoManager = std::make_shared<HostsInfoManager>(m_nodeConfig->nodesFile());
+        HostsConnector::Ptr hostsConnector = std::make_shared<HostsConnector>(hostsInfoManager);
+        HostsHeartbeatService::Ptr hostsHeartbeatService = std::make_shared<HostsHeartbeatService>(m_nodeConfig->id(), hostsInfoManager);
 
-    // 创建TcpServiceConfig
-    ServiceConfig::Ptr serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
-                                                                       tcpSessionManager, clientAliveChecker, slaveReactors,
-                                                                       sessionDispatcher, sessionDestroyer, sessionDataProcessor,
-                                                                       hostsInfoManager, hostsConnector, hostsHeartbeatService);
+        // 创建TcpServiceConfig
+         serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
+             tcpSessionManager, clientAliveChecker, slaveReactors,
+             sessionDispatcher, sessionDestroyer, sessionDataProcessor,
+             serviceStartType, hostsInfoManager, hostsConnector, hostsHeartbeatService);
+    }
+    else if(ServiceStartType::Server == serviceStartType)
+    {
+        // 创建TcpServiceConfig
+        serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
+            tcpSessionManager, clientAliveChecker, slaveReactors,
+            sessionDispatcher, sessionDestroyer, sessionDataProcessor,
+            serviceStartType);
+    }
+    else
+    {
+        return nullptr;
+    }
     return std::make_shared<TcpService>(serviceConfig);
 }

@@ -1,22 +1,21 @@
 //
-// Created by ChuWen on 10/19/23.
+// Created by Chu on 2024/9/4.
 //
 
-#include "Rpc.h"
+#include "HttpRpcServer.h"
 #include "csm-utilities/Logger.h"
 #include "csm-packetprocess/packet/PacketRawString.h"
-#include "csm-utilities/Timestamp.h"
 
 using namespace csm::rpc;
 
-Rpc::Rpc(RpcConfig::Ptr rpcConfig) : m_rpcConfig(rpcConfig)
+HttpRpcServer::HttpRpcServer(RpcConfig::Ptr rpcConfig) : RpcServer(std::move(rpcConfig))
 {
+    m_httpServer = std::make_shared<httplib::Server>();
 }
 
-int Rpc::init()
+int HttpRpcServer::init()
 {
-    m_rpcConfig->httpServer()->Post("/boardcastRawString", [this](const httplib::Request &req, httplib::Response &res) {
-
+    m_httpServer->Post("/boardcastRawString", [this](const httplib::Request &req, httplib::Response &res) {
         //LOG->write(utilities::LogType::Log_Info, FILE_INFO,
         //                                                             " recv raw string: : ", req.body);
 
@@ -33,18 +32,18 @@ int Rpc::init()
     return 0;
 }
 
-int Rpc::start()
+int HttpRpcServer::start()
 {
     std::thread([this]() {
-        m_rpcConfig->httpServer()->listen(m_rpcConfig->nodeConfig()->rpcIp(), m_rpcConfig->nodeConfig()->rpcPort());
+        m_httpServer->listen(m_rpcConfig->nodeConfig()->httpRpcIp(), m_rpcConfig->nodeConfig()->httpRpcPort());
     }).detach();
 
     return 0;
 }
 
-int Rpc::stop()
+int HttpRpcServer::stop()
 {
-    m_rpcConfig->httpServer()->stop();
+    m_httpServer->stop();
 
     return 0;
 }

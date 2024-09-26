@@ -17,11 +17,13 @@ namespace csm
         class TcpServiceFactory
         {
         public:
+            using Ptr = std::shared_ptr<TcpServiceFactory>;
+
             TcpServiceFactory(tool::NodeConfig::Ptr nodeConfig);
             ~TcpServiceFactory() = default;
 
         public:
-            TcpService::Ptr createTcpService();
+            TcpService::Ptr createTcpService(const ServiceStartType serviceStartType);
 
         private:
             tool::NodeConfig::Ptr m_nodeConfig;

@@ -28,7 +28,7 @@ int Initializer::init()
     }
 
     // 初始化TcpService
-    m_tcpServiceInitializer = std::make_shared<TcpServiceInitializer>(m_nodeConfig);
+    m_tcpServiceInitializer = std::make_shared<P2PServiceInitializer>(m_nodeConfig);
     if (-1 == m_tcpServiceInitializer->init())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "TcpServiceInitializer init failed");

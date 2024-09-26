@@ -9,7 +9,7 @@
 
 #include "StorageInitializer.h"
 #include "AppLogInitializer.h"
-#include "TcpServiceInitializer.h"
+#include "P2PServiceInitializer.h"
 #include "RpcInitializer.h"
 #include "ConsensusInitializer.h"
 
@@ -41,7 +41,7 @@ namespace csm
 
             StorageInitializer::Ptr m_storageInitializer;
             AppLogInitializer::Ptr m_logInitializer;
-            TcpServiceInitializer::Ptr m_tcpServiceInitializer;
+            P2PServiceInitializer::Ptr m_tcpServiceInitializer;
             RpcInitializer::Ptr m_rpcInitializer;
             ConsensusInitializer::Ptr m_consensusInitializer;
         };

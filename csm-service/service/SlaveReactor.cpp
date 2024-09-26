@@ -339,7 +339,13 @@ int SlaveReactor::sendData(const int fd, const std::vector<char> data)
 int SlaveReactor::removeClient(const int fd)
 {
     // 将客户端从epoll中移除
-    return epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, nullptr);
+    if(-1 == epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, nullptr))
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "remove fd from epoll failed, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
+        return -1;
+    }
+
+    return 0;
 }
 #if 0
 int SlaveReactor::disconnectClient(const int fd, const int flag)

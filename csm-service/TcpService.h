@@ -36,8 +36,7 @@ namespace csm
 
             int stop();
 
-            void registerModulePacketHandler(
-                    const std::int32_t moduleId, std::function<int(std::shared_ptr<std::vector<char>>)> packetHander);
+            void registerModulePacketHandler(const std::int32_t moduleId, std::function<int(std::shared_ptr<std::vector<char>>)> packetHander);
 
         public:
             /**
@@ -51,15 +50,12 @@ namespace csm
 
             int boardcastModuleMessage(const std::int32_t moduleId, std::shared_ptr<std::vector<char>> data);
 
-            int sendModuleMessageByNodeId(
-                    const std::string &nodeId, const std::int32_t moduleId, std::shared_ptr<std::vector<char>> data);
+            int sendModuleMessageByNodeId(const std::string &nodeId, const std::int32_t moduleId, std::shared_ptr<std::vector<char>> data);
 
         private:
             int initServer();
 
             int initClient();
-
-            int uninitServer();
 
             SlaveReactor::Ptr getSlaveReactorByFd(const int fd);
 

@@ -36,77 +36,82 @@ int NodeConfig::init(const std::string &configFile)
     return 0;
 }
 
-std::string NodeConfig::configFile()
+std::string NodeConfig::configFile() const
 {
     return m_configFile;
 }
 
-std::string NodeConfig::id()
+std::string NodeConfig::id() const
 {
     return m_id;
 }
 
-bool NodeConfig::startAsClient()
+std::string NodeConfig::httpRpcIp() const
 {
-    return m_startAsClient;
+    return m_httpRpcIp;
 }
 
-std::string NodeConfig::rpcIp()
+unsigned short NodeConfig::httpRpcPort() const
 {
-    return m_rpcIp;
+    return m_httpRpcPort;
 }
 
-unsigned short NodeConfig::rpcPort()
+std::string NodeConfig::tcpRpcIp() const
 {
-    return m_rpcPort;
+    return m_tcpRpcIp;
 }
 
-std::string NodeConfig::p2pIp()
+unsigned short NodeConfig::tcpRpcPort() const
+{
+    return m_tcpRpcPort;
+}
+
+std::string NodeConfig::p2pIp() const
 {
     return m_p2pIp;
 }
 
-unsigned short NodeConfig::p2pPort()
+unsigned short NodeConfig::p2pPort() const
 {
     return m_p2pPort;
 }
 
-std::string NodeConfig::nodesFile()
+std::string NodeConfig::nodesFile() const
 {
     return m_nodesFile;
 }
 
-std::size_t NodeConfig::slaveReactorNum()
+std::size_t NodeConfig::slaveReactorNum() const
 {
     return m_slaveReactorNum;
 }
 
-std::size_t NodeConfig::redispatchInterval()
+std::size_t NodeConfig::redispatchInterval() const
 {
     return m_redispatchInterval;
 }
 
-std::size_t NodeConfig::sessionDataWorkerNum()
+std::size_t NodeConfig::sessionDataWorkerNum() const
 {
     return m_sessionDataWorkerNum;
 }
 
-bool NodeConfig::enableFileLog()
+bool NodeConfig::enableFileLog() const
 {
     return m_enableFileLog;
 }
 
-bool NodeConfig::consoleOutput()
+bool NodeConfig::consoleOutput() const
 {
     return m_consoleOutput;
 }
 
-csm::utilities::LogType NodeConfig::logType()
+csm::utilities::LogType NodeConfig::logType() const
 {
     return m_logType;
 }
 
-std::string NodeConfig::logPath()
+std::string NodeConfig::logPath() const
 {
     return m_logPath;
 }
@@ -171,8 +176,11 @@ int NodeConfig::parseClusterConfig(inipp::Ini<char> &ini)
 
 int NodeConfig::parseRpcConfig(inipp::Ini<char>& ini)
 {
-    m_rpcIp = getValue(ini, "rpc", "ip", m_rpcIp);
-    m_rpcPort = getValue(ini, "rpc", "port", m_rpcPort);
+    m_httpRpcIp = getValue(ini, "rpc", "http_listen_ip", m_httpRpcIp);
+    m_httpRpcPort = getValue(ini, "rpc", "http_listen_port", m_httpRpcPort);
+
+    m_tcpRpcIp = getValue(ini, "rpc", "tcp_listen_ip", m_httpRpcIp);
+    m_tcpRpcPort = getValue(ini, "rpc", "tcp_listen_port", m_httpRpcPort);
 
     return 0;
 }
@@ -186,9 +194,6 @@ int NodeConfig::parseNetworkConfig(inipp::Ini<char>& ini)
 
     m_slaveReactorNum = getValue(ini, "reactor", "slave_reactor", m_slaveReactorNum);
     m_redispatchInterval = getValue(ini, "reactor", "redispatch_interval", m_redispatchInterval);
-
-
-    m_startAsClient = getValue(ini, "network", "start_as_client", m_startAsClient);
 
     if('/' != m_nodesFile[0])
     {

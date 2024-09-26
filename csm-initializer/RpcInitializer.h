@@ -28,10 +28,12 @@ namespace csm
 
             int stop();
 
-            rpc::Rpc::Ptr rpc();
+            rpc::RpcServer::Ptr httpRpcServer();
+            rpc::RpcServer::Ptr tcpRpcServer();
 
         private:
-            rpc::Rpc::Ptr m_rpc;
+            rpc::RpcServer::Ptr m_httpRpcServer;
+            rpc::RpcServer::Ptr m_tcpRpcServer;
         };
 
     } // initializer

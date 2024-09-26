@@ -6,7 +6,7 @@
 
 ## 更多文档
 1. [网络模块关键点介绍及UML类图](./resources/network_module_instruction/网络模块关键点解析.md)
-2. [关于处理重复连接的握手协议介绍](resources/two_node_one_connection/关于处理重复连接的握手协议介绍.md)
+2. [关于处理重复连接的握手协议介绍](./resources/two_node_one_connection/关于处理重复连接的握手协议介绍.md)
 
 ## Todo
 1. SlaveReactor发送线程使用锁太多，客户端掉线逻辑修改为专门的类中线程处理，send或者recv一旦返回客户端掉线，那么马上从epoll中移除，并加入到掉线处理类列表中，异步处理掉线，将fd和TcpSession的关系放在单独的类中，传入SlaveReactor中

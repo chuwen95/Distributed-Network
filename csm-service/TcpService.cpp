@@ -23,11 +23,8 @@ TcpService::TcpService(ServiceConfig::Ptr serviceConfig) : m_serviceConfig(std::
 
 TcpService::~TcpService()
 {
-    if (false == m_serviceConfig->nodeConfig()->startAsClient())
-    {
-        // 关闭套接字
-        utilities::Socket::close(m_fd);
-    }
+    // 关闭套接字
+    utilities::Socket::close(m_fd);
 }
 
 int TcpService::init()
@@ -57,22 +54,36 @@ int TcpService::init()
 
     // 当flag为0的时候，是因为socket发生错误而断开，如果是-1/-2/-3则是握手协议ClientInfoReply包的返回码
     m_serviceConfig->sessionDestroyer()->setHandler([this](const int fd, const int flag){
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start destory tcp session, fd: ", fd, ", flag: ", flag);
         // 获取TcpSession中的协议信息，移除负责共享一条连接协议的信息
         TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
         assert(nullptr != tcpSession);
+
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "set tcp session status to be waiting disconnect, fd: ", fd);
         tcpSession->setWaitingDisconnect(true);
 
         // 不再检查心跳
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remove tcp session from client alive checker, fd: ", fd);
         m_serviceConfig->clientAliveChecker()->removeClient(fd);
 
         // 将fd从子Reactor中移除
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remove fd from slave reactor, fd: ", fd);
         SlaveReactor::Ptr slaveReactor = getSlaveReactorByFd(fd);
         assert(nullptr != slaveReactor);
-        slaveReactor->removeClient(fd);
+        if(-1 == slaveReactor->removeClient(fd))
+        {
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "remove fd from slave reactor epoll failed, fd: ", fd);
+        }
 
-        disconnectClient(tcpSession->peerHostEndPointInfo(), tcpSession->getClientId(), tcpSession->handshakeUuid(), flag);
+        if(ServiceStartType::Node == m_serviceConfig->serviceStartType())
+        {
+            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "update connect info from host connector, fd: ", fd);
+            disconnectClient(tcpSession->peerHostEndPointInfo(), tcpSession->getClientId(), tcpSession->handshakeUuid(), flag);
+        }
 
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remote fd slave reactor relation, fd: ", fd);
         m_serviceConfig->sessionDispatcher()->removeFdSlaveReactorRelation(fd);
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remove tcp session from TcpSessionManager, fd: ", fd);
         m_serviceConfig->tcpSessionManager()->removeTcpSession(fd);
 
         utilities::Socket::close(fd);
@@ -130,12 +141,15 @@ int TcpService::init()
     }
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "init server successfully");
 
-    if (-1 == initClient())
+    if(ServiceStartType::Node == m_serviceConfig->serviceStartType())
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "init client failed");
-        return -1;
+        if (-1 == initClient())
+        {
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "init client failed");
+            return -1;
+        }
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "init client successfully");
     }
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "init client successfully");
 
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "****************************************TcpServer::init****************************************");
 
@@ -164,25 +178,25 @@ int TcpService::start()
     // Session销毁器
     m_serviceConfig->sessionDestroyer()->start();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start session destroyer successfully");
-    // 如果还启动服务端
-    if (false == m_serviceConfig->nodeConfig()->startAsClient())
+    // 启动主reactor的acceptor
+    m_serviceConfig->acceptor()->start();
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start acceptor successfully");
+    m_serviceConfig->listenner()->start();
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start listenner successfully");
+
+    if(ServiceStartType::Node == m_serviceConfig->serviceStartType())
     {
-        // 启动主reactor的acceptor
-        m_serviceConfig->acceptor()->start();
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start acceptor successfully");
-        m_serviceConfig->listenner()->start();
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start listenner successfully");
+        /*
+         * 本节点连接其他节点，对已经连上的节点发送心跳
+         * 被连接的节点作为服务端，服务端不向客户端发送心跳
+         */
+        // 启动host心跳发送服务
+        m_serviceConfig->hostsHeartbeatService()->start();
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start hosts heartbeat service successfully");
+        // 启动host连接服务
+        m_serviceConfig->hostsConnector()->start();
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start hosts connector successfully");
     }
-    /*
-     * 本节点连接其他节点，对已经连上的节点发送心跳
-     * 被连接的节点作为服务端，服务端不向客户端发送心跳
-     */
-    // 启动host心跳发送服务
-    m_serviceConfig->hostsHeartbeatService()->start();
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start hosts heartbeat service successfully");
-    // 启动host连接服务
-    m_serviceConfig->hostsConnector()->start();
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start hosts connector successfully");
 
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "****************************************TcpServer::start****************************************");
 
@@ -196,19 +210,19 @@ int TcpService::stop()
     m_serviceConfig->clientAliveChecker()->stop();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop client heartbeat checker successfully");
 
-    m_serviceConfig->hostsHeartbeatService()->stop();
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop hosts heartbeat service successfully");
-    m_serviceConfig->hostsConnector()->stop();
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop hosts connector successfully");
+    if(ServiceStartType::Node == m_serviceConfig->serviceStartType())
+    {
+        m_serviceConfig->hostsHeartbeatService()->stop();
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop hosts heartbeat service successfully");
+        m_serviceConfig->hostsConnector()->stop();
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop hosts connector successfully");
+    }
     m_serviceConfig->sessionDataProcessor()->stop();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop payload processor successfully");
-    if (false == m_serviceConfig->nodeConfig()->startAsClient())
-    {
-        m_serviceConfig->listenner()->stop();
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop listenner successfully");
-        m_serviceConfig->acceptor()->stop();
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop acceptor successfully");
-    }
+    m_serviceConfig->listenner()->stop();
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop listenner successfully");
+    m_serviceConfig->acceptor()->stop();
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop acceptor successfully");
     m_serviceConfig->sessionDestroyer()->stop();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop session destroyer successfully");
     m_serviceConfig->sessionDispatcher()->stop();
@@ -298,11 +312,6 @@ int TcpService::sendModuleMessageByNodeId(const std::string &nodeId, const std::
 
 int TcpService::initServer()
 {
-    if (true == m_serviceConfig->nodeConfig()->startAsClient())
-    {
-        return 0;
-    }
-
     // 创建监听套接字
     m_fd = utilities::Socket::create();
     if (-1 == m_fd)
@@ -329,13 +338,30 @@ int TcpService::initServer()
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "set socket reuse addr successfully");
 
     // 绑定监听地址端口
-    if (-1 == utilities::Socket::bind(m_fd, m_serviceConfig->nodeConfig()->p2pIp(), m_serviceConfig->nodeConfig()->p2pPort()))
+    std::string listenIp;
+    unsigned short listenPort;
+    if(ServiceStartType::Node == m_serviceConfig->serviceStartType())
+    {
+        listenIp = m_serviceConfig->nodeConfig()->p2pIp();
+        listenPort = m_serviceConfig->nodeConfig()->p2pPort();
+    }
+    else if(ServiceStartType::Server == m_serviceConfig->serviceStartType())
+    {
+        listenIp = m_serviceConfig->nodeConfig()->tcpRpcIp();
+        listenPort = m_serviceConfig->nodeConfig()->tcpRpcPort();
+    }
+    else
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "bind socket failed, errno: ", errno, ", ", strerror(errno));
+        return -1;
+    }
+    if (-1 == utilities::Socket::bind(m_fd, listenIp, listenPort))
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "bind socket failed, errno: ", errno, ", ", strerror(errno), ", listenIp: ", listenIp, ", listenPort:", listenPort);
         utilities::Socket::close(m_fd);
         return -1;
     }
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "bind socket successfully");
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "bind socket successfully", ", listenIp: ", listenIp, ", listenPort:", listenPort);
 
     // 设置套接字为被动监听及连接队列长度
     if (-1 == utilities::Socket::listen(m_fd, c_conQueueSize))
@@ -375,7 +401,7 @@ int TcpService::initServer()
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add new online client to ClientAliveChecker failed, fd: ", fd);
                 return;
             }
-            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add new online client to TcpSessionManager successfully, fd: ", fd);
+            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add new online client to ClientAliveChecker successfully, fd: ", fd);
 
             // 将fd和TcpSession添加到TcpSessionManager中
             if(-1 == m_serviceConfig->tcpSessionManager()->addTcpSession(fd, tcpSession))
@@ -488,6 +514,7 @@ int TcpService::initClient()
 
     // 客户端发送ClientInfo包表明自己的身份后，将id与fd绑定，一方面供判定重复连接使用，一方面发送数据的时候通过id查找fd
     m_serviceConfig->sessionDataProcessor()->registerPacketHandler(PacketType::PT_ClientInfo, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) {
+        // 收到ClientInfo包，是别人连自己的情况
         PayloadClientInfo::Ptr payloadClientInfo = std::dynamic_pointer_cast<PayloadClientInfo>(payload);
 
         TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
@@ -497,7 +524,6 @@ int TcpService::initClient()
             return -1;
         }
 
-        // 收到ClientInfo包，是别人连自己的情况
         std::string id = payloadClientInfo->nodeId();
         tcpSession->setClientId(id);
         tcpSession->setHandshakeUuid(payloadClientInfo->handshakeUuid());
@@ -515,28 +541,24 @@ int TcpService::initClient()
          * -3: DuplicateConnection
          */
         int replyResult{0};
-
         if (id == m_serviceConfig->nodeConfig()->id())
         {
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect self, set reply result to -2, then connection initiator will disconnect");
             replyResult = -2;
-        }
-        else if (true == m_serviceConfig->hostsInfoManager()->isHostIdExist(id))
-        {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                       "host already connected, return -3 then SlaveReactor will disconnect it, this is who connect me: ", localHostEndPointInfo.host());
-            replyResult = -3;
         }
         else
         {
             int ret = m_serviceConfig->hostsInfoManager()->addHostIdInfo(id, fd, payloadClientInfo->handshakeUuid());
             if (-1 == ret)
             {
-                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client already in HostInfoManager");
-                replyResult = -1;
+                LOG->write(utilities::LogType::Log_Error, FILE_INFO,
+                    "host already connected, return -3 then peer will disconnect it, this is who connect me: ", localHostEndPointInfo.host());
+                replyResult = -3;
             }
-
-            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add host id info to HostsInfoManager successfully, fd: ", fd, ", id: ", id);
+            else
+            {
+                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add host id info to HostsInfoManager successfully, fd: ", fd, ", id: ", id);
+            }
         }
 
         // 构造回应包
@@ -602,28 +624,29 @@ int TcpService::initClient()
         // 告知HostsConnector已经连接上，HostsConnector::setHostConnected内部操作将客户端从正在连接队列中移除
         if (-1 == m_serviceConfig->hostsConnector()->setHostConnected(peerHostEndPointInfo))
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "set host connected failed, host: ", peerHostEndPointInfo.host());
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "set host connected failed, host: ", peerHostEndPointInfo.host(), ", fd: ", fd);
             return -1;
         }
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "set host connected successfully, host: ", peerHostEndPointInfo.host());
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "set host connected successfully, host: ", peerHostEndPointInfo.host(), ", fd: ", fd);
 
         int anotherConnectionFd{ -1 };
         if (0 != result)
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "ClientInfoReply result: ", result);
+            LOG->write(utilities::LogType::Log_Warning, FILE_INFO, "ClientInfoReply result: ", result, ", fd: ", fd);
             if (-3 == result)
             {
                 anotherConnectionFd = m_serviceConfig->hostsInfoManager()->getHostFdById(id);
-                LOG->write(utilities::LogType::Log_Error, FILE_INFO,"get another connection fd: ", anotherConnectionFd);
+                LOG->write(utilities::LogType::Log_Warning, FILE_INFO,"get another connection fd: ", anotherConnectionFd, ", fd: ", fd);
                 assert(-1 != anotherConnectionFd);
 
                 TcpSession::Ptr anotherTcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(anotherConnectionFd);
                 assert(nullptr != anotherTcpSession);
                 anotherTcpSession->setPeerHostEndPointInfo(payloadClientInfoReply->peerHost());
 
-                LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                           "another connection fd: ", anotherConnectionFd, ", peer host: ", anotherTcpSession->peerHostEndPointInfo().host());
+                LOG->write(utilities::LogType::Log_Warning, FILE_INFO,
+                           "another connection fd: ", anotherConnectionFd, ", peer host: ", anotherTcpSession->peerHostEndPointInfo().host(), ", fd: ", fd);
             }
+            LOG->write(utilities::LogType::Log_Warning, FILE_INFO, "add tcp session to destoryer, fd: ", fd);
             m_serviceConfig->sessionDestroyer()->addSession(fd, payloadClientInfoReply->result());
             return -1;
         }
@@ -720,13 +743,6 @@ int TcpService::initClient()
         // 心跳发送失败就不管，如果是业务发送数据量过大，把缓冲区占满了，那服务端解业务包的时候也会刷新时间戳
         return sendData(fd, data);
     });
-
-    return 0;
-}
-
-int TcpService::uninitServer()
-{
-
 
     return 0;
 }

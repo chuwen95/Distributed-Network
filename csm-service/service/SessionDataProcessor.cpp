@@ -102,8 +102,8 @@ int SessionDataProcessor::processPackets(const int fd, std::vector<std::pair<Pac
             case PacketType::PT_None:
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "payload type is none, fd: ", fd);
                 break;
-            case PacketType::PT_ClientInfo:
-            case PacketType::PT_ClientInfoReply:
+            case PacketType::PT_ClientInfo:     // ServiceStartType为Server的时候，这个case不会走到
+            case PacketType::PT_ClientInfoReply:     // ServiceStartType为Server的时候，这个case不会走到
             case PacketType::PT_ModuleMessage:
             {
                 m_clientAliveChecker->refreshClientLastRecvTime(fd);

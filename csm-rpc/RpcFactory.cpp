@@ -4,17 +4,30 @@
 
 #include "RpcFactory.h"
 #include "config/RpcConfig.h"
+#include "http/HttpRpcServer.h"
+#include "tcp/TcpRpcServer.h"
 
 using namespace csm::rpc;
 
 RpcFactory::RpcFactory(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService) :
-        m_nodeConfig(nodeConfig), m_tcpService(tcpService)
+        m_nodeConfig(std::move(nodeConfig)), m_tcpService(std::move(tcpService))
 {}
 
-Rpc::Ptr RpcFactory::createRpc()
+RpcServer::Ptr RpcFactory::createRpc(const RpcServerType rpcServerType)
 {
     std::shared_ptr<httplib::Server> httpServer = std::make_shared<httplib::Server>();
     RpcConfig::Ptr rpcConfig = std::make_shared<RpcConfig>(m_nodeConfig, m_tcpService, httpServer);
 
-    return std::make_shared<Rpc>(rpcConfig);
+    if(RpcServerType::HttpRpcServer == rpcServerType)
+    {
+        return std::make_shared<HttpRpcServer>(rpcConfig);
+    }
+    else if(RpcServerType::TcpRpcServer == rpcServerType)
+    {
+        return std::make_shared<TcpRpcServer>(rpcConfig);
+    }
+    else
+    {
+        return nullptr;
+    }
 }

@@ -2,7 +2,7 @@
 // Created by ChuWen on 10/11/23.
 //
 
-#include "TcpServiceInitializer.h"
+#include "P2PServiceInitializer.h"
 
 #include "csm-utilities/Logger.h"
 #include "csm-service/TcpServiceFactory.h"
@@ -12,13 +12,13 @@ using namespace csm::initializer;
 
 std::atomic_int receiveNum{0};
 
-TcpServiceInitializer::TcpServiceInitializer(tool::NodeConfig::Ptr nodeConfig)
+P2PServiceInitializer::P2PServiceInitializer(tool::NodeConfig::Ptr nodeConfig)
 {
     service::TcpServiceFactory tcpServiceFactory(nodeConfig);
-    m_tcpService = tcpServiceFactory.createTcpService();
+    m_tcpService = tcpServiceFactory.createTcpService(service::ServiceStartType::Node);
 }
 
-int TcpServiceInitializer::init()
+int P2PServiceInitializer::init()
 {
     // 忽略SIGPIPE信号，防止向一个已经断开的socket发送数据时操作系统触发SIGPIPE信号退出该应用
     signal(SIGPIPE, SIG_IGN);
@@ -47,17 +47,17 @@ int TcpServiceInitializer::init()
     return m_tcpService->init();
 }
 
-int TcpServiceInitializer::start()
+int P2PServiceInitializer::start()
 {
     return m_tcpService->start();
 }
 
-int TcpServiceInitializer::stop()
+int P2PServiceInitializer::stop()
 {
     return m_tcpService->stop();
 }
 
-csm::service::TcpService::Ptr TcpServiceInitializer::tcpService()
+csm::service::TcpService::Ptr P2PServiceInitializer::tcpService()
 {
     return m_tcpService;
 }

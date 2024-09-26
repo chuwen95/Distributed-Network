@@ -30,6 +30,12 @@ namespace csm
     namespace service
     {
 
+        enum class ServiceStartType
+        {
+            Node,   // 作为节点启动，需要service模块全内容和host模块，节点相互连接
+            Server,     // 作为服务器启动，为Rpc模块所用，仅需要service模块部分功能（不包含握手协议部分）
+        };
+
         class ServiceConfig
         {
         public:
@@ -38,8 +44,8 @@ namespace csm
             ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
                           TcpSessionManager::Ptr tcpSessionManager, ClientAliveChecker::Ptr clientAliveChecker, std::vector<SlaveReactor::Ptr> slaveReactors,
                           SessionDispatcher::Ptr sessionDispatcher, SessionDestroyer::Ptr sessionDestroyer, SessionDataProcessor::Ptr sessionDataProcessor,
-                          HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector, HostsHeartbeatService::Ptr hostsHeartbeatService);
-
+                          const ServiceStartType serverStartType = ServiceStartType::Node, HostsInfoManager::Ptr hostsInfoManager = nullptr,
+                          HostsConnector::Ptr hostsConnector = nullptr, HostsHeartbeatService::Ptr hostsHeartbeatService = nullptr);
             ~ServiceConfig() = default;
 
         public:
@@ -55,6 +61,8 @@ namespace csm
             SessionDispatcher::Ptr sessionDispatcher();
             SessionDestroyer::Ptr sessionDestroyer();
             SessionDataProcessor::Ptr sessionDataProcessor();
+
+            ServiceStartType serviceStartType() const;
 
             HostsInfoManager::Ptr hostsInfoManager();
             HostsConnector::Ptr hostsConnector();
@@ -73,8 +81,9 @@ namespace csm
             SessionDispatcher::Ptr m_sessionDispatcher;
             SessionDestroyer::Ptr m_sessionDestroyer;
             SessionDataProcessor::Ptr m_sessionDataProcessor;
-
             utilities::ThreadPool::Ptr m_packetProcesser;
+
+            ServiceStartType m_serviceStartType;
 
             HostsInfoManager::Ptr m_hostsInfoManager;
             HostsConnector::Ptr m_hostsConnector;
