@@ -11,16 +11,25 @@ PayloadModuleMessage::PayloadModuleMessage()
     m_payload = std::make_shared<std::vector<char>>();
 }
 
-void PayloadModuleMessage::setPayload(const char *data, const std::size_t len)
+std::size_t PayloadModuleMessage::packetLength() const
 {
-    m_payload->resize(len);
-    memcpy(m_payload->data(), data, len);
+    return 0;
 }
 
-void PayloadModuleMessage::setPayload(const std::vector<char> &data)
+
+int PayloadModuleMessage::encode( char *data, const std::size_t len) const
 {
-    *m_payload = data;
+    return -1;
 }
+
+int PayloadModuleMessage::decode(const char *buffer, const std::size_t length)
+{
+    m_payload->resize(length);
+    memcpy(m_payload->data(), buffer, length);
+
+    return 0;
+}
+
 
 std::shared_ptr<std::vector<char>> PayloadModuleMessage::payload()
 {

@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.20)
 if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     find_package(Git REQUIRED)
     execute_process(COMMAND git submodule update --init --recursive -- vcpkg WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    execute_process(COMMAND git checkout master WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vcpkg")
     set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
 endif()
 

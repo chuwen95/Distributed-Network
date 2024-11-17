@@ -4,6 +4,8 @@
 
 #include "SlaveReactor.h"
 
+#include <google/protobuf/message.h>
+
 #include "csm-utilities/Socket.h"
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/Timestamp.h"
@@ -91,6 +93,7 @@ int SlaveReactor::start()
                 if(nullptr != m_disconnectHandler)
                 {
                     // 将客户端从epoll中移除
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add fd to session destoryer, fd: ", fd);
                     m_disconnectHandler(fd);
                 }
                 return -1;
@@ -108,8 +111,9 @@ int SlaveReactor::start()
                 {
                     LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client may be offline, fd: ", fd);
 
-                    if(nullptr != m_disconnectHandler)
+                    if(nullptr != m_disconnectHandler) [[likely]]
                     {
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add fd to session destoryer, fd: ", fd);
                         m_disconnectHandler(fd);
                     }
 
@@ -181,8 +185,9 @@ int SlaveReactor::start()
                         // 表明对端断开连接
                         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client maybe offline, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
 
-                        if(nullptr != m_disconnectHandler)
+                        if(nullptr != m_disconnectHandler) [[likely]]
                         {
+                            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add fd to session destoryer, fd: ", fd);
                             m_disconnectHandler(fd);
                         }
                     }
@@ -304,7 +309,7 @@ int SlaveReactor::sendData(const int fd, const char *data, const std::size_t siz
 
                 LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "send data successfully, fd: ", fd, ", sendlen: ", sendLen);
                 // 如果发送缓冲区中还有数据，但数据直接send完，表明无需等待EPOLLOUT事件
-                if (EAGAIN == errno || EWOULDBLOCK == errno)
+                if (EAGAIN == errno || EWOULDBLOCK == errno) [[likely]]
                 {
                     struct epoll_event ev;
                     memset(&ev, 0, sizeof(struct epoll_event));
@@ -314,13 +319,14 @@ int SlaveReactor::sendData(const int fd, const char *data, const std::size_t siz
 
                     LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "socket write kernel buffer full, wait for epollout, fd: ", fd);
                 }
-                else if (ECONNRESET == errno || EPIPE == errno)
+                else if (ECONNRESET == errno || EPIPE == errno) [[unlikely]]
                 {
                     // 表明对端断开连接
                     LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client maybe offline, fd: ", fd, ", errno: ", errno, ", ", strerror(errno));
 
-                    if(nullptr != m_disconnectHandler)
+                    if(nullptr != m_disconnectHandler) [[likely]]
                     {
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add fd to session destoryer, fd: ", fd);
                         m_disconnectHandler(fd);
                     }
                 }

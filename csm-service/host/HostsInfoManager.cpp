@@ -18,27 +18,16 @@ HostsInfoManager::HostsInfoManager(const std::string &nodesFile) : m_nodesFile(n
 
 int HostsInfoManager::init()
 {
-    std::ifstream nodeFile(m_nodesFile, std::ios::in);
-    if (false == nodeFile.is_open())
+    std::ifstream nodesJsonFile(m_nodesFile, std::ios::in);
+    if (false == nodesJsonFile.is_open())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "open nodes config file failed: ", m_nodesFile);
         return -1;
     }
-    nodeFile.seekg(0, std::ios::end);
-    auto length = nodeFile.tellg();
-    nodeFile.seekg(0, std::ios::beg);
-
-    std::vector<char> content;
-    content.resize(length);
-    nodeFile.read(content.data(), length);
-    nodeFile.close();
-
-    std::string jsonContent(content.data(), length);
-    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "nodes config file content: ", jsonContent);
 
     Json::Value root;
     Json::Reader reader;
-    bool ret = reader.parse(std::string(content.data(), content.size()), root);
+    bool ret = reader.parse(nodesJsonFile, root);
     if (false == ret)
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "parse nodes config file failed: ", m_nodesFile);

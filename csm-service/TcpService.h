@@ -6,14 +6,9 @@
 #define TCPSERVER_TCPSERVER_H
 
 #include "csm-common/Common.h"
-#include "csm-utilities/SelectListenner.h"
-#include "csm-utilities/ThreadPool.h"
 #include "config/ServiceConfig.h"
-#include "service/Acceptor.h"
 #include "service/SessionDispatcher.h"
 #include "host/HostsInfoManager.h"
-#include "host/HostsConnector.h"
-#include "host/HostsHeartbeatService.h"
 
 namespace csm
 {

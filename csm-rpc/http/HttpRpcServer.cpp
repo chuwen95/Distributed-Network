@@ -16,8 +16,7 @@ HttpRpcServer::HttpRpcServer(RpcConfig::Ptr rpcConfig) : RpcServer(std::move(rpc
 int HttpRpcServer::init()
 {
     m_httpServer->Post("/boardcastRawString", [this](const httplib::Request &req, httplib::Response &res) {
-        //LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-        //                                                             " recv raw string: : ", req.body);
+        // LOG->write(utilities::LogType::Log_Info, FILE_INFO, "recv raw string: : ", req.body);
 
         packetprocess::PacketRawString packetRawString;
         packetRawString.setContent(req.body);

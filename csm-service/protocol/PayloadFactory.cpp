@@ -8,6 +8,7 @@
 #include "payload/PayloadClientInfoReply.h"
 #include "payload/PayloadHeartBeat.h"
 #include "payload/PayloadHeartBeatReply.h"
+#include "payload/PayloadModuleMessage.h"
 
 using namespace csm::service;
 
@@ -23,6 +24,8 @@ PayloadBase::Ptr PayloadFactory::createPayload(const PacketType packetType)
             return std::make_shared<PayloadHeartBeat>();
         case PacketType::PT_HeartBeatReply:
             return std::make_shared<PayloadHeartBeatReply>();
+        case PacketType::PT_ModuleMessage:
+            return std::make_shared<PayloadModuleMessage>();
         default:
             return nullptr;
     }

@@ -23,13 +23,10 @@ namespace csm
             ~PayloadModuleMessage() = default;
 
         public:
-            /**
-             * 不必担心data被修改，data的数据将被复制
-             * @param data
-             * @param len
-             */
-            void setPayload(const char* data, const std::size_t len);
-            void setPayload(const std::vector<char>& data);
+            std::size_t packetLength() const override;
+
+            int encode(char *buffer, const std::size_t length) const override;
+            int decode(const char *buffer, const std::size_t length) override;
 
             std::shared_ptr<std::vector<char>> payload();
 

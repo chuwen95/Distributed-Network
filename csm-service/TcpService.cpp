@@ -57,7 +57,11 @@ int TcpService::init()
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start destory tcp session, fd: ", fd, ", flag: ", flag);
         // 获取TcpSession中的协议信息，移除负责共享一条连接协议的信息
         TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
-        assert(nullptr != tcpSession);
+        if(nullptr == tcpSession)
+        {
+            LOG->write(utilities::LogType::Log_Warning, FILE_INFO, "fd may already be removed, fd: ", fd);
+            return -1;
+        }
 
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "set tcp session status to be waiting disconnect, fd: ", fd);
         tcpSession->setWaitingDisconnect(true);
