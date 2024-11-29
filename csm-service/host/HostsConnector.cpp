@@ -215,7 +215,12 @@ int HostsConnector::init()
             }
         }
 
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "online node size: ", m_hostsInfoManager->onlineClientSize());
+        static char printCircle{ 0 };
+        if(0 == printCircle % 6)
+        {
+            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "online node size: ", m_hostsInfoManager->onlineClientSize());
+        }
+        printCircle = (printCircle + 1) % 6;
 
         return 0;
     };
