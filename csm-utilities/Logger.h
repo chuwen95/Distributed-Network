@@ -18,8 +18,6 @@ namespace csm
     namespace utilities
     {
 
-        constexpr std::size_t c_defaultBufferSize{ 32 * 1024 * 1024 };
-
         enum class LogType
         {
             Log_Trace,
@@ -28,6 +26,8 @@ namespace csm
             Log_Warning,
             Log_Error,
         };
+
+        constexpr std::size_t c_defaultBufferSize{ 32 * 1024 * 1024 };
 
         class Logger
         {
@@ -129,5 +129,59 @@ namespace csm
 }
 
 #define LOG csm::utilities::Singleton<csm::utilities::Logger>::instance()
+
+/*
+
+#include "concurrentqueue/concurrentqueue.h"
+
+namespace csm
+{
+
+    namespace utilities
+    {
+
+        enum class LogType
+        {
+            Log_Trace,
+            Log_Debug,
+            Log_Info,
+            Log_Warning,
+            Log_Error,
+        };
+
+        class Logger
+        {
+        public:
+            Logger(const bool enableFileLog, const std::string &path);
+            ~Logger() = default;
+
+        public:
+            int init();
+
+            int start();
+            int stop();
+
+        private:
+            std::string generateLogFilename();
+
+        private:
+            bool m_enableFileLog;
+            std::string m_path;
+
+            moodycamel::BlockingConcurrentQueue<std::string, 1024> m_logs;
+            std::ofstream m_file;
+
+            std::atomic_bool m_isTerminate{false};
+            Thread m_thread;
+
+            bool m_consoleOutput{false};
+            LogType m_logLevel{LogType::Log_Info};
+        };
+
+    }
+
+}
+
+*/
 
 #endif //TCPSERVER_LOGGER_H

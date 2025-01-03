@@ -54,6 +54,8 @@ int main(int argc, char* argv[])
     packetRawString.encode(data->data(), data->size());
 #endif
 
+    std::cout << "Initializer start successfully" << std::endl;
+
     ExitHandler exitHandler;
     signal(SIGTERM, &ExitHandler::exitHandler);
     signal(SIGABRT, &ExitHandler::exitHandler);

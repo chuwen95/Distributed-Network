@@ -17,7 +17,7 @@ int NodeConfig::init(const std::string &configFile)
     std::ifstream file(m_configFile);
     if(false == file.is_open())
     {
-        std::cout << "open config file failed" << std::endl;
+        std::cerr << "open config file failed, file: " << m_configFile << std::endl;
         return -1;
     }
 
@@ -124,7 +124,7 @@ int NodeConfig::loadLogConfig()
     std::ifstream file(m_configFile);
     if(false == file.is_open())
     {
-        std::cout << "open config file failed" << std::endl;
+        std::cerr << "open config file failed, file: " << m_configFile << std::endl;
         return -1;
     }
     ini.parse(file);

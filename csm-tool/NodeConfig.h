@@ -113,7 +113,7 @@ namespace csm
 
             // [log]
             bool m_enableFileLog{ true };
-            bool m_consoleOutput{ true };
+            bool m_consoleOutput{ false };
             csm::utilities::LogType m_logType{ csm::utilities::LogType::Log_Info };
             std::string m_logPath{ "./logs" };
         };
