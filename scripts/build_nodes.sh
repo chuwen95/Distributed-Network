@@ -235,9 +235,9 @@ generate_node_start_stop_scripts()
 {
     local output=$1
     local ps_cmd="ps aux | grep \$dis_net_node | grep -v grep | awk '{print \$2}'"
-    local start_cmd="nohup \$dis_net_node config.ini >> nohup.out 2>&1 &"
+    local start_cmd="nohup \$dis_net_node config.ini > nohup.out 2>&1 &"
     local stop_cmd="kill \$node_pid"
-    local log_cmd="tail -n20 nohup.out"
+    local log_cmd="tail -n20 \$shell_folder/nohup.out"
     local find_start_success_in_std_output_cmd="$log_cmd | grep \"Initializer start successfully\""
 
     generate_scripts_common_contents "$output/start.sh"
