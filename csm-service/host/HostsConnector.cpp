@@ -149,7 +149,8 @@ int HostsConnector::init()
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO, "select error, errno: ", errno, ", ", strerror(errno));
             return -1;
-        } else if (0 == ret)
+        }
+        else if (0 == ret)
         {}
         else
         {
@@ -260,4 +261,19 @@ int HostsConnector::setHostConnected(const service::HostEndPointInfo &hostEndPoi
     m_connectingHosts.erase(iter);
 
     return 0;
+}
+
+int HostsConnector::setHostConnectedByFd(const int fd)
+{
+    std::unique_lock<std::mutex> ulock(x_connectingHosts);
+    for (auto& host : m_connectingHosts)
+    {
+        if (host.second.first == fd)
+        {
+            m_connectingHosts.erase(host.first);
+            return 0;
+        }
+    }
+
+    return -1;
 }

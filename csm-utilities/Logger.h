@@ -65,12 +65,12 @@ namespace csm
                         m_buffer.insert(m_buffer.end(), '\n');
                     }
 
-                    m_bufferCv.notify_one();
+                    m_bufferCv.notify_all();
                 }
 
                 if (true == m_consoleOutput)
                 {
-                    printf("%s\n", result.c_str());
+                    std::cout << result << std::endl;
                 }
 
                 return 0;

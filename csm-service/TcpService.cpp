@@ -626,7 +626,7 @@ int TcpService::initClient()
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "set host id successfully, host: ", peerHostEndPointInfo.host(), ", id: ", id, ", fd: ", fd);
 
         // 告知HostsConnector已经连接上，HostsConnector::setHostConnected内部操作将客户端从正在连接队列中移除
-        if (-1 == m_serviceConfig->hostsConnector()->setHostConnected(peerHostEndPointInfo))
+        if (-1 == m_serviceConfig->hostsConnector()->setHostConnectedByFd(fd))
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO, "set host connected failed, host: ", peerHostEndPointInfo.host(), ", fd: ", fd);
             return -1;

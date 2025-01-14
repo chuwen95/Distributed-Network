@@ -71,6 +71,7 @@ int Logger::init(const bool enableFileLog, const std::string &path, const std::s
             }
 
             m_file.write(buffer.data(), buffer.size());
+            m_file.flush();
         };
         m_thread.init(expression, 1, "logger");
     }

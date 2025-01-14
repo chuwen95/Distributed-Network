@@ -36,6 +36,8 @@ namespace csm
 
             int setHostConnected(const HostEndPointInfo &hostEndPointInfo);
 
+            int setHostConnectedByFd(const int fd);
+
         private:
             std::mutex x_connectingHosts;
             // ip:port => pair<fd, start_connect_timestamp>
