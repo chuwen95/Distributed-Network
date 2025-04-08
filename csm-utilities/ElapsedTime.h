@@ -1,5 +1,5 @@
-#ifndef CELLTIMESTAMP_H
-#define CELLTIMESTAMP_H
+#ifndef ELAPSEDTIME_H
+#define ELAPSEDTIME_H
 
 #include "csm-common/Common.h"
 
@@ -9,15 +9,15 @@ namespace csm
     namespace utilities
     {
 
-        class Timestamp
+        class ElapsedTime
         {
         public:
-            using Ptr = std::shared_ptr<Timestamp>;
+            using Ptr = std::shared_ptr<ElapsedTime>;
 
-            Timestamp() = default;
+            ElapsedTime() = default;
+            ~ElapsedTime() = default;
 
-            ~Timestamp() = default;
-
+        public:
             void update()
             {
                 m_begin = std::chrono::high_resolution_clock::now();
@@ -50,11 +50,6 @@ namespace csm
 
 #endif
 
-            static std::uint64_t getCurrentTimestamp()
-            {
-                return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            }
-
         private:
             std::chrono::time_point<std::chrono::high_resolution_clock> m_begin{std::chrono::high_resolution_clock::now()};
         };
@@ -63,4 +58,4 @@ namespace csm
 
 }
 
-#endif // CELLTIMESTAMP_H
+#endif // ELAPSEDTIME_H

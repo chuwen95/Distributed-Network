@@ -7,8 +7,8 @@
 
 #include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
-#include "TcpSession.h"
-#include "TcpSessionManager.h"
+#include "P2PSession.h"
+#include "P2PSessionManager.h"
 
 namespace csm
 {
@@ -25,7 +25,7 @@ namespace csm
              * @brief 参数主要是用于设置线程名
              * @param id
              */
-            SlaveReactor(const int reactorId, const std::string& hostId, TcpSessionManager::Ptr tcpSessionManager);
+            SlaveReactor(const int reactorId, const std::string& hostId, P2PSessionManager::Ptr p2pSessionManager);
             ~SlaveReactor();
 
         public:
@@ -50,7 +50,7 @@ namespace csm
             void setDisconnectHandler(const std::function<int(const int fd)> handler);
 
             /**
-             * @brief 设置TcpSession有数据需要解码处理的回调函数
+             * @brief 设置P2PSession有数据需要解码处理的回调函数
              * @param handler
              */
             void setSessionDataHandler(const std::function<int(const int fd, const char* data, const std::size_t dataLen)> handler);
@@ -87,12 +87,11 @@ namespace csm
         private:
             // SlaveReactor的id
             int m_reactorId;
-            // TcpSession管理器
-            TcpSessionManager::Ptr m_tcpSessionManager;
+            // P2PSession管理器
+            P2PSessionManager::Ptr m_p2pSessionManager;
 
             std::atomic_bool m_isTerminate{false};
-            utilities::Thread m_thread;
-
+            utilities::Thread::Ptr m_thread;
 
             // 用于退出的fd
             int m_exitFd;

@@ -21,7 +21,7 @@
 #include "csm-service/host/HostsConnector.h"
 #include "csm-service/host/HostsHeartbeatService.h"
 
-#include "csm-service/service/TcpSessionManager.h"
+#include "csm-service/service/P2PSessionManager.h"
 #include "csm-service/service/ClientAliveChecker.h"
 
 namespace csm
@@ -29,6 +29,8 @@ namespace csm
 
     namespace service
     {
+
+        using ModulePacketHandler = std::function<int(std::shared_ptr<std::vector<char>>)>;
 
         enum class ServiceStartType
         {
@@ -42,7 +44,7 @@ namespace csm
             using Ptr = std::shared_ptr<ServiceConfig>;
 
             ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
-                          TcpSessionManager::Ptr tcpSessionManager, ClientAliveChecker::Ptr clientAliveChecker, std::vector<SlaveReactor::Ptr> slaveReactors,
+                          P2PSessionManager::Ptr p2pSessionManager, ClientAliveChecker::Ptr clientAliveChecker, std::vector<SlaveReactor::Ptr> slaveReactors,
                           SessionDispatcher::Ptr sessionDispatcher, SessionDestroyer::Ptr sessionDestroyer, SessionDataProcessor::Ptr sessionDataProcessor,
                           const ServiceStartType serverStartType = ServiceStartType::Node, HostsInfoManager::Ptr hostsInfoManager = nullptr,
                           HostsConnector::Ptr hostsConnector = nullptr, HostsHeartbeatService::Ptr hostsHeartbeatService = nullptr);
@@ -54,7 +56,7 @@ namespace csm
             utilities::SelectListenner::Ptr listenner();
             Acceptor::Ptr acceptor();
 
-            TcpSessionManager::Ptr tcpSessionManager();
+            P2PSessionManager::Ptr p2pSessionManager();
             ClientAliveChecker::Ptr clientAliveChecker();
 
             std::vector<SlaveReactor::Ptr>& slaveReactors();
@@ -68,13 +70,16 @@ namespace csm
             HostsConnector::Ptr hostsConnector();
             HostsHeartbeatService::Ptr hostsHeartbeatService();
 
+            void registerModulePacketHandler(const std::int32_t moduleId, ModulePacketHandler modulePacketHandler);
+            ModulePacketHandler getModulePacketHandler(const std::int32_t moduleId);
+
         private:
             tool::NodeConfig::Ptr m_nodeConfig;
 
             utilities::SelectListenner::Ptr m_listenner;
             Acceptor::Ptr m_acceptor;
 
-            TcpSessionManager::Ptr m_tcpSessionManager;
+            P2PSessionManager::Ptr m_p2pSessionManager;
             ClientAliveChecker::Ptr m_clientAliveChecker;
             std::vector<SlaveReactor::Ptr> m_slaveReactors;
 
@@ -88,6 +93,9 @@ namespace csm
             HostsInfoManager::Ptr m_hostsInfoManager;
             HostsConnector::Ptr m_hostsConnector;
             HostsHeartbeatService::Ptr m_hostsHeartbeatService;
+
+            std::mutex x_modulePacketHandler;
+            std::map<std::int32_t, std::function<int(std::shared_ptr<std::vector<char>>)>> m_modulePacketHandler;
         };
 
     } // server

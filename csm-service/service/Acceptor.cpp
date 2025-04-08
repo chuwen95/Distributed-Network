@@ -4,10 +4,12 @@
 
 #include "Acceptor.h"
 
+#include <google/protobuf/message.h>
+
 #include "csm-common/Common.h"
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/Socket.h"
-#include "TcpSessionFactory.h"
+#include "P2PSessionFactory.h"
 
 using namespace csm::service;
 
@@ -52,26 +54,26 @@ int Acceptor::init(const int fd)
                 }
                 LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "set socket recv buffer size to ", utilities::Socket::c_defaultSocketRecvBufferSize, " successfully, fd: ", clientfd);
 
-                TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(clientfd, c_tcpSessionReadBufferSize, c_tcpSessionWriteBufferSize);
-                tcpSession->init();
-                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "create TcpSession successfully, fd: ", clientfd);
+                P2PSession::Ptr p2pSession = P2PSessionFactory().create(clientfd, c_p2pSessionReadBufferSize, c_p2pSessionWriteBufferSize);
+                p2pSession->init();
+                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "create P2PSession successfully, fd: ", clientfd);
 
                 if (nullptr != m_newClientCallback)
                 {
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send TcpSession to SessionDispatcher, fd: ", clientfd);
-                    m_newClientCallback(clientfd, tcpSession);
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send P2PSession to SessionDispatcher, fd: ", clientfd);
+                    m_newClientCallback(clientfd, p2pSession);
                 }
             }
         } while (-1 != clientfd);
     };
-    m_thread.init(expression, 0, "acceptor");
+    m_thread = std::make_shared<utilities::Thread>(expression, 0, "acceptor");
 
     return 0;
 }
 
 int Acceptor::start()
 {
-    m_thread.start();
+    m_thread->start();
 
     return 0;
 }
@@ -80,7 +82,7 @@ int Acceptor::stop()
 {
     m_isTerminate = true;
     m_connectCv.notify_one();
-    m_thread.stop();
+    m_thread->stop();
 
     return 0;
 }
@@ -93,7 +95,7 @@ int Acceptor::onConnect()
     return 0;
 }
 
-void Acceptor::setNewClientCallback(std::function<void(int, TcpSession::Ptr)> newClientCallback)
+void Acceptor::setNewClientCallback(std::function<void(int, P2PSession::Ptr)> newClientCallback)
 {
     m_newClientCallback = newClientCallback;
 }

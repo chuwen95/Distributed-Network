@@ -5,7 +5,7 @@
 #include "TcpServiceFactory.h"
 
 #include "config/ServiceConfig.h"
-#include "service/TcpSessionManager.h"
+#include "service/P2PSessionManager.h"
 #include "service/ClientAliveChecker.h"
 #include "service/SessionDispatcher.h"
 #include "service/SessionDestroyer.h"
@@ -22,24 +22,24 @@ TcpService::Ptr TcpServiceFactory::createTcpService(const ServiceStartType servi
 {
     utilities::SelectListenner::Ptr listenner = std::make_shared<utilities::SelectListenner>();
     Acceptor::Ptr acceptor = std::make_shared<Acceptor>();
-    // 创建TcpSession管理器
-    TcpSessionManager::Ptr tcpSessionManager = std::make_shared<TcpSessionManager>();
+    // 创建P2PSession管理器
+    P2PSessionManager::Ptr p2pSessionManager = std::make_shared<P2PSessionManager>();
     // 创建心跳检查器
     ClientAliveChecker::Ptr clientAliveChecker = std::make_shared<ClientAliveChecker>();
     // 创建子Reactor
     std::vector<SlaveReactor::Ptr> slaveReactors;
     for (int index = 0; index < m_nodeConfig->slaveReactorNum(); ++index)
     {
-        slaveReactors.emplace_back(std::make_shared<SlaveReactor>(index, m_nodeConfig->id(), tcpSessionManager));
+        slaveReactors.emplace_back(std::make_shared<SlaveReactor>(index, m_nodeConfig->id(), p2pSessionManager));
     }
-    // TcpSession派发器
+    // P2PSession派发器
     SessionDispatcher::Ptr sessionDispatcher =
             std::make_shared<SessionDispatcher>(m_nodeConfig->redispatchInterval(), m_nodeConfig->id(), m_nodeConfig->slaveReactorNum());
-    // TcpSession销毁器
+    // P2PSession销毁器
     SessionDestroyer::Ptr sessionDestroyer = std::make_shared<SessionDestroyer>();
     // 包处理器
     SessionDataProcessor::Ptr sessionDataProcessor =
-        std::make_shared<SessionDataProcessor>(tcpSessionManager, clientAliveChecker ,m_nodeConfig->sessionDataWorkerNum());
+        std::make_shared<SessionDataProcessor>(p2pSessionManager, clientAliveChecker ,m_nodeConfig->sessionDataWorkerNum());
 
     ServiceConfig::Ptr serviceConfig{ nullptr };
     if(ServiceStartType::Node == serviceStartType)
@@ -51,7 +51,7 @@ TcpService::Ptr TcpServiceFactory::createTcpService(const ServiceStartType servi
 
         // 创建TcpServiceConfig
          serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
-             tcpSessionManager, clientAliveChecker, slaveReactors,
+             p2pSessionManager, clientAliveChecker, slaveReactors,
              sessionDispatcher, sessionDestroyer, sessionDataProcessor,
              serviceStartType, hostsInfoManager, hostsConnector, hostsHeartbeatService);
     }
@@ -59,7 +59,7 @@ TcpService::Ptr TcpServiceFactory::createTcpService(const ServiceStartType servi
     {
         // 创建TcpServiceConfig
         serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
-            tcpSessionManager, clientAliveChecker, slaveReactors,
+            p2pSessionManager, clientAliveChecker, slaveReactors,
             sessionDispatcher, sessionDestroyer, sessionDataProcessor,
             serviceStartType);
     }

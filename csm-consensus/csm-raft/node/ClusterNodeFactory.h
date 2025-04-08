@@ -7,8 +7,8 @@
 
 #include "csm-common/Common.h"
 
-#include "ClusterLocalServer.h"
-#include "ClusterPeerServer.h"
+#include "ClusterLocalNode.h"
+#include "ClusterPeerNode.h"
 
 namespace csm
 {
@@ -22,16 +22,16 @@ namespace csm
             Peer
         };
 
-        class ClusterServerFactory
+        class ClusterNodeFactory
         {
         public:
-            using Ptr = std::shared_ptr<ClusterServerFactory>;
+            using Ptr = std::shared_ptr<ClusterNodeFactory>;
 
-            ClusterServerFactory() = default;
-            ~ClusterServerFactory() = default;
+            ClusterNodeFactory() = default;
+            ~ClusterNodeFactory() = default;
 
         public:
-            ClusterServer::Ptr createClusterServer(const ClusterServerType type);
+            ClusterNode::Ptr createClusterServer(const ClusterServerType type);
         };
 
     }

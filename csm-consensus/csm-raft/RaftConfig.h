@@ -5,9 +5,13 @@
 #ifndef COPYSTATEMACHINE_RAFTCONFIG_H
 #define COPYSTATEMACHINE_RAFTCONFIG_H
 
-#include "csm-common/Common.h"
-#include "csm-stmclog/StateMachineLog.h"
+#include "csm-framework/consensus/raft/Common.h"
+#include "csm-service/TcpService.h"
+#include "state/PersistentState.h"
+#include "state/VolatileState.h"
+#include "state/LeaderState.h"
 #include "configuration/ClusterConfigurationManager.h"
+#include "csm-stmclog/StateMachineLog.h"
 
 namespace csm
 {
@@ -20,33 +24,63 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<RaftConfig>;
 
-            RaftConfig(const std::string &id, stmclog::StateMachineLog::Ptr stateMachineLog, ClusterConfigurationManager::Ptr clusterConfigurationManager);
+            RaftConfig(const NodeId &id, std::int32_t minElectionTimeout, std::int32_t maxElectionTimeout, service::TcpService::Ptr tcpService,
+                PersistentState::Ptr persistentState, VolatileState::Ptr volatileState, LeaderState::Ptr leaderState,
+                ClusterConfigurationManager::Ptr clusterConfigurationManager, stmclog::StateMachineLog::Ptr stateMachineLog);
             ~RaftConfig() = default;
 
-            /**
-             * 获取本服务器ID
-             * @return
-             */
-            const std::string& id();
+            // 获取本服务器ID
+            const NodeId& nodeId();
 
-            /**
-             *  获取StateMachineLog对象
-             * @return
-             */
-            stmclog::StateMachineLog::Ptr stateMachineLog();
+            // 最小选举超时
+            std::int32_t minElectionTimeout();
+            // 最大选举超时
+            std::int32_t maxElectionTimeout();
 
-            /**
-             * 获取集群配置管理器
-             * @return
-             */
+            // P2P模块
+            service::TcpService::Ptr tcpService();
+
+            // 持久化数据
+            PersistentState::Ptr persistentState();
+
+            // 易失性数据
+            VolatileState::Ptr volatileState();
+
+            // 仅为状态才会用到的数据
+            LeaderState::Ptr leaderState();
+
+            // 获取集群配置管理器
             ClusterConfigurationManager::Ptr clusterConfigurationManager();
 
-        private:
-            std::string m_id;
-            stmclog::StateMachineLog::Ptr m_stateMachineLog;
-            ClusterConfigurationManager::Ptr m_clusterConfigurationManager;
-        };
+            // 获取StateMachineLog对象
+            stmclog::StateMachineLog::Ptr stateMachineLog();
 
+        private:
+            // 本节点ID
+            NodeId m_id;
+            // 最小选举超时时间
+            std::int32_t m_minElectionTimeout;
+            // 最大选举超时时间
+            std::int32_t m_maxElectionTimeout;
+
+            // P2P模块
+            service::TcpService::Ptr m_tcpService;
+
+            /*
+             * Raft元数据
+             */
+            // 持久化数据
+            PersistentState::Ptr m_persistentState;
+            // 易失性数据
+            VolatileState::Ptr m_volatileState;
+            // 仅为状态才会用到的数据
+            LeaderState::Ptr m_leaderState;
+
+            // 集群配置
+            ClusterConfigurationManager::Ptr m_clusterConfigurationManager;
+            // 复制状态机日志
+            stmclog::StateMachineLog::Ptr m_stateMachineLog;
+        };
     }
 
 }

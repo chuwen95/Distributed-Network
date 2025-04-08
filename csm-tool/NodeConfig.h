@@ -35,6 +35,10 @@ namespace csm
             // 集群中所有的服务器id
             const std::vector<std::string>& clusterServerIds() const;
 
+            // [raft]
+            std::uint32_t minRandomVoteTimeout() const;
+            std::uint32_t maxRandomVoteTimeout() const;
+
             // [rpc]
             // 接收客户端连接的http rpc模块的监听地址
             std::string httpRpcIp() const;
@@ -91,6 +95,10 @@ namespace csm
             // [info]
             std::string m_id;
             std::vector<std::string> m_clusterServerIds;
+
+            // [raft]
+            std::uint32_t m_minRandomVoteTimeout;
+            std::uint32_t m_maxRandomVoteTimeout;
 
             // [rpc]
             std::string m_httpRpcIp{ "127.0.0.1" };

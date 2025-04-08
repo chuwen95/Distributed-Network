@@ -29,7 +29,9 @@ AppLogInitializer::AppLogInitializer(tool::NodeConfig::Ptr nodeConfig) : m_nodeC
 int AppLogInitializer::init()
 {
     // 设置Logger
-    if (-1 == LOG->init(m_nodeConfig->enableFileLog(), m_nodeConfig->logPath()))
+    LOG->setEnableFileLog(m_nodeConfig->enableFileLog());
+    LOG->setLogDirPath(m_nodeConfig->logPath());
+    if (-1 == LOG->init())
     {
         return -1;
     }

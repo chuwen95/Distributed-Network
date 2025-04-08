@@ -8,12 +8,13 @@
 #include <thread>
 #include <chrono>
 #include <vector>
+#include <stack>
 #include <queue>
-#include <deque>
 #include <array>
 #include <map>
 #include <unordered_map>
 #include <set>
+#include <random>
 #include <unordered_set>
 #include <future>
 #include <memory>

@@ -39,7 +39,7 @@ namespace csm
             std::function<int(const int fd, const int flag)> m_destoryHandler;
 
             std::atomic_int m_destroyInterval{ 5 };
-            utilities::Thread m_thread;
+            utilities::Thread::Ptr m_thread;
 
             std::mutex x_waitingDestroySessionInfos;
             std::condition_variable m_waitingDestroySessionInfosCv;

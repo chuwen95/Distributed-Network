@@ -9,7 +9,7 @@ using namespace csm::utilities;
 
 constexpr std::size_t c_reservedSpace{2};
 
-RingBuffer::RingBuffer()
+RingBuffer::RingBuffer(std::size_t size) : m_size(size)
 {
 }
 
@@ -17,9 +17,8 @@ RingBuffer::~RingBuffer()
 {
 }
 
-int RingBuffer::init(const std::size_t size)
+int RingBuffer::init()
 {
-    m_size = size;
     m_buffer.resize(m_size);
 
     return 0;

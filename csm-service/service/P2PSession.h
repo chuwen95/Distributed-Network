@@ -2,8 +2,8 @@
 // Created by ChuWen on 9/5/23.
 //
 
-#ifndef TCPSERVER_TCPSESSION_H
-#define TCPSERVER_TCPSESSION_H
+#ifndef P2PSESSION_H
+#define P2PSESSION_H
 
 #include "csm-common/Common.h"
 #include "csm-utilities/RingBuffer.h"
@@ -15,16 +15,16 @@ namespace csm
     namespace service
     {
 
-        constexpr std::size_t c_tcpSessionReadBufferSize{ 16 * 1024 };
-        constexpr std::size_t c_tcpSessionWriteBufferSize{ 16 * 1024 };
+        constexpr std::size_t c_p2pSessionReadBufferSize{ 16 * 1024 };
+        constexpr std::size_t c_p2pSessionWriteBufferSize{ 16 * 1024 };
 
-        class TcpSession
+        class P2PSession
         {
         public:
-            using Ptr = std::shared_ptr<TcpSession>;
+            using Ptr = std::shared_ptr<P2PSession>;
 
-            TcpSession(const int fd, utilities::RingBuffer::Ptr readBuffer, utilities::RingBuffer::Ptr writeBuffer);
-            ~TcpSession() = default;
+            P2PSession(const int fd, utilities::RingBuffer::Ptr readBuffer, utilities::RingBuffer::Ptr writeBuffer);
+            ~P2PSession() = default;
 
         public:
             int init();
@@ -105,4 +105,4 @@ namespace csm
 
 }
 
-#endif //TCPSERVER_TCPSESSION_H
+#endif //P2PSESSION_H

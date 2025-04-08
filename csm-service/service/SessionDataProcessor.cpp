@@ -7,8 +7,8 @@
 
 using namespace csm::service;
 
-SessionDataProcessor::SessionDataProcessor(TcpSessionManager::Ptr tcpSessionManager, ClientAliveChecker::Ptr clientAliveChecker, const std::size_t workerNum) :
-        m_tcpSessionManager(std::move(tcpSessionManager)),
+SessionDataProcessor::SessionDataProcessor(P2PSessionManager::Ptr p2pSessionManager, ClientAliveChecker::Ptr clientAliveChecker, std::size_t workerNum) :
+        m_p2pSessionManager(std::move(p2pSessionManager)),
         m_clientAliveChecker(std::move(clientAliveChecker)),
         m_worker(std::make_shared<utilities::ThreadPool>(workerNum, "sess_dt_work"))
 {}
@@ -35,14 +35,14 @@ int SessionDataProcessor::addSessionData(const int fd, const char* data, const s
     memcpy(buffer->data(), data, dataLen);
 
     const auto expression = [fd, buffer, this]() {
-        TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
-        if(nullptr == tcpSession)
+        P2PSession::Ptr p2pSession = m_p2pSessionManager->session(fd);
+        if(nullptr == p2pSession)
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find TcpSession failed, fd: ", fd);
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find P2PSession failed, fd: ", fd);
             return;
         }
 
-        if(true == tcpSession->isWaitingDisconnect())
+        if(true == p2pSession->isWaitingDisconnect())
         {
             return;
         }
@@ -50,10 +50,10 @@ int SessionDataProcessor::addSessionData(const int fd, const char* data, const s
         std::vector<std::pair<PacketHeader::Ptr, PayloadBase::Ptr>> packets;
 
         {
-            std::unique_lock<std::mutex> ulock(tcpSession->readBufferMutex());
+            std::unique_lock<std::mutex> ulock(p2pSession->readBufferMutex());
 
-            utilities::RingBuffer::Ptr readBuffer = tcpSession->readBuffer();
-            if (-1 == writeDataToTcpSessionReadBuffer(fd, readBuffer, buffer))
+            utilities::RingBuffer::Ptr readBuffer = p2pSession->readBuffer();
+            if (-1 == writeDataToP2PSessionReadBuffer(fd, readBuffer, buffer))
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "write data to buffer failed, fd: ", fd, ", data size: ", buffer->size());
                 return;
@@ -74,7 +74,7 @@ void SessionDataProcessor::registerPacketHandler(const PacketType packetType, st
     m_packetHandler.emplace(packetType, std::move(handler));
 }
 
-int SessionDataProcessor::writeDataToTcpSessionReadBuffer(const int fd, csm::utilities::RingBuffer::Ptr readBuffer, std::shared_ptr<std::vector<char>> buffer)
+int SessionDataProcessor::writeDataToP2PSessionReadBuffer(const int fd, csm::utilities::RingBuffer::Ptr readBuffer, std::shared_ptr<std::vector<char>> buffer)
 {
     int ret = readBuffer->writeData(buffer->data(), buffer->size());
     if (-1 == ret)

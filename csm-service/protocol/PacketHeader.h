@@ -13,7 +13,7 @@ namespace csm
     namespace service
     {
 
-        constexpr std::uint32_t c_magic{0x2cc98f5d};
+        constexpr std::uint32_t c_magic{ 0x2cc98f5d };
 
         enum class PacketType
         {
@@ -37,7 +37,6 @@ namespace csm
             using Ptr = std::shared_ptr<PacketHeader>;
 
             PacketHeader() = default;
-
             ~PacketHeader() = default;
 
         public:
@@ -62,7 +61,7 @@ namespace csm
             int decode(const char *buffer, const std::size_t length);
 
         private:
-            std::uint32_t m_magic{c_magic};
+            std::uint32_t m_magic{ c_magic };
             std::uint16_t m_packetType;
             std::int32_t m_moduleId;
             std::uint32_t m_payloadLength;

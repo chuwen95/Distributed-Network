@@ -25,6 +25,12 @@ namespace csm
 
         public:
             void addClusterConfiguration(const std::uint64_t index, ClusterConfiguration::Ptr clusterConfiguration);
+
+            ClusterConfiguration::Ptr lastConfiguration();
+
+        private:
+            std::mutex x_clusterConfigurations;
+            std::map<std::uint64_t, ClusterConfiguration::Ptr> m_clusterConfigurations;
         };
 
     }

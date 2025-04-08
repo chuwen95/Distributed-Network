@@ -7,7 +7,7 @@
 
 #include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
-#include "csm-service//service/TcpSession.h"
+#include "csm-service//service/P2PSession.h"
 #include "HostEndPointInfo.h"
 #include "HostsInfoManager.h"
 
@@ -32,7 +32,7 @@ namespace csm
 
             int stop();
 
-            int registerConnectHandler(std::function<void(const int, TcpSession::Ptr)> connectHandler);
+            int registerConnectHandler(std::function<void(const int, P2PSession::Ptr)> connectHandler);
 
             int setHostConnected(const HostEndPointInfo &hostEndPointInfo);
 
@@ -45,9 +45,9 @@ namespace csm
 
             HostsInfoManager::Ptr m_hostsInfoManager;
 
-            utilities::Thread m_thread;
+            utilities::Thread::Ptr m_thread;
 
-            std::function<void(const int, TcpSession::Ptr)> m_connectHandler;
+            std::function<void(const int, P2PSession::Ptr)> m_connectHandler;
         };
 
     } // service

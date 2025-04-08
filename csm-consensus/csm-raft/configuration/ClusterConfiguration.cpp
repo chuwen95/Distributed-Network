@@ -6,12 +6,17 @@
 
 using namespace csm::consensus;
 
-void ClusterConfiguration::setClusterServerIds(const std::vector<std::string> &serverIds)
+ClusterConfiguration::ClusterConfiguration(const std::vector<NodeId>& nodeIds)
 {
-    m_oldServers.serverIds = serverIds;
+    m_configurationInfo.nodeIds = nodeIds;
 }
 
-void ClusterConfiguration::setClusterServerById(const std::string &id, ClusterServer::Ptr clusterServer)
+void ClusterConfiguration::setClusterNodeIds(const std::vector<std::string> &nodeIds)
 {
-    m_oldServers.servers[id] = clusterServer;
+    m_configurationInfo.nodeIds = nodeIds;
+}
+
+void ClusterConfiguration::setClusterNodeById(const std::string &id, ClusterNode::Ptr clusterServer)
+{
+    m_configurationInfo.nodes[id] = clusterServer;
 }

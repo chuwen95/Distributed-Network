@@ -7,6 +7,7 @@
 
 #include "csm-common/Common.h"
 #include "StateMachineLogConfig.h"
+#include "protocol/packet/Entry.h"
 
 namespace csm
 {
@@ -49,10 +50,17 @@ namespace csm
             int buildInitialConfigurationLog();
 
             /**
-             * 获取集群节点ID
+             * 获取日志类型
              * @return
              */
-            const std::vector<std::string>& clusterServerIds();
+            EntryType getLogType(const std::uint64_t index) const;
+
+            /**
+             * 获取日志数据
+             * @param index
+             * @return
+             */
+            Entry::Ptr getLogEntry(const std::uint64_t index) const;
 
         private:
             /**

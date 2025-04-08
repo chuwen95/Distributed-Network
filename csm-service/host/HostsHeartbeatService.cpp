@@ -4,7 +4,8 @@
 
 #include "HostsHeartbeatService.h"
 
-#include "csm-utilities/Timestamp.h"
+#include "csm-utilities/TimeTools.h"
+#include "csm-utilities/ElapsedTime.h"
 #include "csm-service/protocol/PacketHeader.h"
 #include "csm-service/protocol/payload/PayloadHeartBeat.h"
 
@@ -28,7 +29,7 @@ int HostsHeartbeatService::init()
                 continue;
             }
 
-            std::int64_t curTimestamp = utilities::Timestamp::getCurrentTimestamp();
+            std::int64_t curTimestamp = utilities::TimeTools::getCurrentTimestamp();
             if (curTimestamp - host.second.second >= c_heartbeatInterval)
             {
                 PayloadHeartBeat packetHeartbeat;
@@ -54,21 +55,21 @@ int HostsHeartbeatService::init()
             }
         }
     };
-    m_thread.init(expression, c_heartbeatInterval, "host_heartbeat");
+    m_thread = std::make_shared<utilities::Thread>(expression, c_heartbeatInterval, "host_heartbeat");
 
     return 0;
 }
 
 int HostsHeartbeatService::start()
 {
-    m_thread.start();
+    m_thread->start();
 
     return 0;
 }
 
 int HostsHeartbeatService::stop()
 {
-    m_thread.stop();
+    m_thread->stop();
 
     return 0;
 }

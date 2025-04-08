@@ -5,8 +5,9 @@
 #include "HostsConnector.h"
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/Socket.h"
-#include "csm-utilities/Timestamp.h"
-#include "csm-service/service/TcpSessionFactory.h"
+#include "csm-utilities/TimeTools.h"
+#include "csm-utilities/ElapsedTime.h"
+#include "csm-service/service/P2PSessionFactory.h"
 
 #include <json/json.h>
 
@@ -67,7 +68,7 @@ int HostsConnector::init()
             // 添加host到正在连接
             {
                 std::unique_lock<std::mutex> ulock(x_connectingHosts);
-                m_connectingHosts.emplace(host.first, std::make_pair(fd, utilities::Timestamp::getCurrentTimestamp()));
+                m_connectingHosts.emplace(host.first, std::make_pair(fd, utilities::TimeTools::getCurrentTimestamp()));
             }
             LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "add host to connecting successfully, fd: ", fd);
 
@@ -84,12 +85,12 @@ int HostsConnector::init()
 
                 if (nullptr != m_connectHandler)
                 {
-                    TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(fd, service::c_tcpSessionReadBufferSize, service::c_tcpSessionWriteBufferSize);
-                    tcpSession->init();
-                    tcpSession->setPeerHostEndPointInfo(host.first);
+                    P2PSession::Ptr p2pSession = P2PSessionFactory().create(fd, service::c_p2pSessionReadBufferSize, service::c_p2pSessionWriteBufferSize);
+                    p2pSession->init();
+                    p2pSession->setPeerHostEndPointInfo(host.first);
 
-                    // 将TcpSession回调出去，此时仍保留状态为连接中，即不处理m_connectingHosts，等到ClientInfoReply回来后再将fd从m_connectingHosts中移除
-                    m_connectHandler(fd, tcpSession);
+                    // 将P2PSession回调出去，此时仍保留状态为连接中，即不处理m_connectingHosts，等到ClientInfoReply回来后再将fd从m_connectingHosts中移除
+                    m_connectHandler(fd, p2pSession);
                 }
 
                 // 将时间戳设置为-1，表示已经连上，不需要再监测超时
@@ -129,7 +130,7 @@ int HostsConnector::init()
         {
             LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "checking ", host.first.host(), " connect status");
             // 将时间戳设置为-1，表示已经连上，不需要再监测超时，
-            // TcpSession已经回调出去，由Reactor管理recv/send，此时正在等待ClientInfoReply包
+            // P2PSession已经回调出去，由Reactor管理recv/send，此时正在等待ClientInfoReply包
             if (-1 == host.second.second)
             {
                 LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "socket connect successfully, waiting ClientInfoReply payload, fd: ", host.second.first);
@@ -178,16 +179,16 @@ int HostsConnector::init()
                     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, fd is set, fd: ", fd);
                     if (nullptr != m_connectHandler)
                     {
-                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, callback TcpSession, fd: ", fd);
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, callback P2PSession, fd: ", fd);
 
-                        TcpSession::Ptr tcpSession = TcpSessionFactory().createTcpSession(fd, service::c_tcpSessionReadBufferSize, service::c_tcpSessionWriteBufferSize);
-                        tcpSession->init();
-                        tcpSession->setPeerHostEndPointInfo(iter->first);
+                        P2PSession::Ptr p2pSession = P2PSessionFactory().create(fd, service::c_p2pSessionReadBufferSize, service::c_p2pSessionWriteBufferSize);
+                        p2pSession->init();
+                        p2pSession->setPeerHostEndPointInfo(iter->first);
 
-                        // 将TcpSession回调出去，此时仍保留状态为连接中，即不处理m_connectingHosts，等到ClientInfoReply回来后再将fd从m_connectingHosts中移除
-                        m_connectHandler(fd, tcpSession);
+                        // 将P2PSession回调出去，此时仍保留状态为连接中，即不处理m_connectingHosts，等到ClientInfoReply回来后再将fd从m_connectingHosts中移除
+                        m_connectHandler(fd, p2pSession);
 
-                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " callback TcpSession finish, fd: ", fd);
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " callback 将P2PSession回调出去 finish, fd: ", fd);
                     }
 
                     // 将时间戳设置为-1，表示已经连上，不需要再监测超时
@@ -208,7 +209,7 @@ int HostsConnector::init()
                 continue;
             }
 
-            std::int64_t curTimestamp = utilities::Timestamp::getCurrentTimestamp();
+            std::int64_t curTimestamp = utilities::TimeTools::getCurrentTimestamp();
             if (curTimestamp - host.second.second >= c_connectTimeout)
             {
                 utilities::Socket::close(host.second.first);
@@ -225,24 +226,24 @@ int HostsConnector::init()
 
         return 0;
     };
-    m_thread.init(expression, 500, "host_connector");
+    m_thread = std::make_shared<utilities::Thread>(expression, 500, "host_connector");
 
     return 0;
 }
 
 int HostsConnector::start()
 {
-    m_thread.start();
+    m_thread->start();
     return 0;
 }
 
 int HostsConnector::stop()
 {
-    m_thread.stop();
+    m_thread->stop();
     return 0;
 }
 
-int HostsConnector::registerConnectHandler(std::function<void(const int, TcpSession::Ptr)> connectHandler)
+int HostsConnector::registerConnectHandler(std::function<void(const int, P2PSession::Ptr)> connectHandler)
 {
     m_connectHandler = std::move(connectHandler);
 

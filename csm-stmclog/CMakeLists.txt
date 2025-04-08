@@ -32,4 +32,4 @@ FILE(GLOB_RECURSE HEADERS *.h)
 
 add_library(stmclog ${SOURCES} ${PROTOBUF_SRCS} ${HEADERS})
 target_link_libraries(stmclog PUBLIC storage protobuf::libprotobuf)
-target_include_directories(stmclog BEFORE PRIVATE ${proto_output_path})
+target_include_directories(stmclog BEFORE PUBLIC ${proto_output_path})

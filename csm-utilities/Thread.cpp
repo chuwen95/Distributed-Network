@@ -5,7 +5,8 @@
 
 using namespace csm::utilities;
 
-Thread::Thread()
+Thread::Thread(const std::function<void()>& func, const std::uint32_t interval, const std::string_view threadName) :
+    m_threadFunc(func), m_interval(interval), m_threadName(threadName)
 {
 }
 
@@ -14,33 +15,28 @@ Thread::~Thread()
     stop();
 }
 
-int Thread::init(const std::function<void()> threadFunc, const int time, const std::string_view threadName)
-{
-    m_threadFunc = std::move(threadFunc);
-    m_time = time;
-    m_threadName = threadName;
-
-    return 0;
-}
-
 void Thread::start()
 {
+    std::unique_lock<std::mutex> ulock(x_startStop);
+
     if (true == m_isRunning)
     {
         return;
     }
 
     const auto expression = [this]() {
+#ifdef __linux__
         pthread_setname_np(pthread_self(), m_threadName.c_str());
+#endif
 
         while (true == m_isRunning)
         {
             m_threadFunc();
 
-            if (m_time > 0)
+            if (m_interval > 0)
             {
                 std::unique_lock<std::mutex> ulock(x_mutex);
-                m_cv.wait_for(ulock, std::chrono::milliseconds(m_time));
+                m_cv.wait_for(ulock, std::chrono::milliseconds(m_interval));
             }
         }
     };
@@ -50,6 +46,8 @@ void Thread::start()
 
 void Thread::stop()
 {
+    std::unique_lock<std::mutex> ulock(x_startStop);
+
     if (false == m_isRunning)
     {
         return;

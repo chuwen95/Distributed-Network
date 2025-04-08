@@ -5,8 +5,8 @@
 #ifndef CLUSTERCONFIGURATION_H
 #define CLUSTERCONFIGURATION_H
 
-#include "csm-common/Common.h"
-#include "csm-consensus/csm-raft/server/ClusterServer.h"
+#include "csm-framework/consensus/raft/Common.h"
+#include "csm-consensus/csm-raft/node/ClusterNode.h"
 
 namespace csm
 {
@@ -27,8 +27,8 @@ namespace csm
 
             struct ConfigurationInfo
             {
-                std::vector<std::string> serverIds;
-                std::map<std::string, ClusterServer::Ptr> servers;
+                std::vector<NodeId> nodeIds;
+                std::map<NodeId, ClusterNode::Ptr> nodes;
             private:
                 std::mutex m;
             };
@@ -37,17 +37,18 @@ namespace csm
             using Ptr = std::shared_ptr<ClusterConfiguration>;
 
             ClusterConfiguration() = default;
+            ClusterConfiguration(const std::vector<NodeId>& nodeIds);
             ~ClusterConfiguration() = default;
 
         public:
-            void setClusterServerIds(const std::vector<std::string>& serverIds);
+            void setClusterNodeIds(const std::vector<NodeId>& nodeIds);
 
-            void setClusterServerById(const std::string& id, ClusterServer::Ptr clusterServer);
-            ClusterServer::Ptr getClusterServerById(const std::string& id);
+            void setClusterNodeById(const NodeId& id, ClusterNode::Ptr clusterNode);
+            ClusterNode::Ptr getClusterNodeById(const NodeId& id);
 
         private:
-            ConfigurationInfo m_oldServers;
-            ConfigurationInfo m_newServers;
+            ConfigurationInfo m_configurationInfo;
+            ConfigurationInfo m_newConfigurationInfo;
         };
     }
 

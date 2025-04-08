@@ -7,7 +7,7 @@
 
 #include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
-#include "TcpSession.h"
+#include "P2PSession.h"
 
 namespace csm
 {
@@ -32,17 +32,17 @@ namespace csm
 
             int onConnect();
 
-            void setNewClientCallback(std::function<void(int, TcpSession::Ptr)> newClientCallback);
+            void setNewClientCallback(std::function<void(int, P2PSession::Ptr)> newClientCallback);
 
         private:
             std::mutex x_connect;
             std::condition_variable m_connectCv;
 
             // 客户端初始化完成回调
-            std::function<void(int, TcpSession::Ptr)> m_newClientCallback;
+            std::function<void(int, P2PSession::Ptr)> m_newClientCallback;
 
             std::atomic_bool m_isTerminate{false};
-            utilities::Thread m_thread;
+            utilities::Thread::Ptr m_thread;
         };
 
     }

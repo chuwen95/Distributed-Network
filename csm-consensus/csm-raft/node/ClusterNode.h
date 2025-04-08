@@ -13,13 +13,13 @@ namespace csm
     namespace consensus
     {
 
-        class ClusterServer
+        class ClusterNode
         {
         public:
-            using Ptr = std::shared_ptr<ClusterServer>;
+            using Ptr = std::shared_ptr<ClusterNode>;
 
-            ClusterServer() = default;
-            virtual ~ClusterServer() = default;
+            ClusterNode() = default;
+            virtual ~ClusterNode() = default;
         };
 
     }

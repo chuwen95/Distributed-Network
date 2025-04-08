@@ -37,14 +37,14 @@ int SessionDestroyer::init()
             std::this_thread::sleep_for(std::chrono::milliseconds(m_destroyInterval));
         }
     };
-    m_thread.init(expression, 0, "destoryer");
+    m_thread = std::make_shared<utilities::Thread>(expression, 0, "destoryer");
 
     return 0;
 }
 
 int SessionDestroyer::start()
 {
-    m_thread.start();
+    m_thread->start();
 
     return 0;
 }
@@ -53,7 +53,7 @@ int SessionDestroyer::stop()
 {
     m_destroyInterval = 0;
     m_waitingDestroySessionInfosCv.notify_all();
-    m_thread.stop();
+    m_thread->stop();
 
     return 0;
 }

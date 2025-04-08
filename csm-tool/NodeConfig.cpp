@@ -3,6 +3,10 @@
 //
 
 #include "NodeConfig.h"
+
+#include <json/value.h>
+#include <json/reader.h>
+
 #include "csm-utilities/StringTool.h"
 
 using namespace csm::tool;
@@ -44,6 +48,21 @@ std::string NodeConfig::configFile() const
 std::string NodeConfig::id() const
 {
     return m_id;
+}
+
+const std::vector<std::string> &NodeConfig::clusterServerIds() const
+{
+    return m_clusterServerIds;
+}
+
+std::uint32_t NodeConfig::minRandomVoteTimeout() const
+{
+    return m_minRandomVoteTimeout;
+}
+
+std::uint32_t NodeConfig::maxRandomVoteTimeout() const
+{
+    return m_maxRandomVoteTimeout;
 }
 
 std::string NodeConfig::httpRpcIp() const
@@ -156,19 +175,26 @@ T getValue(inipp::Ini<char>& ini, const std::string&sectionName, const std::stri
 
 int NodeConfig::parseClusterConfig(inipp::Ini<char> &ini)
 {
+    // 本节点ID
     m_id = getValue(ini, "cluster", "id", m_id);
-    m_clusterServerIds.emplace_back(m_id);
 
-    const std::string emptyServerId{ "__server_id_not_exist__" };
-    for(std::uint32_t i = 0; i < c_maxClusterServerNum; ++i)
+    // 集群中所有服务器ID
+    std::string servers = getValue(ini, "cluster", "servers", std::string());
+    Json::Value root;
+    if (false == Json::Reader().parse(servers, root))
     {
-        std::string key = "serverId_" + utilities::convertToString(i);
-        std::string serverId = getValue(ini, "cluster", "serverId", emptyServerId);
-        if(emptyServerId == serverId)
+        std::cerr << "parse config file failed, servers: " << servers << std::endl;
+        return -1;
+    }
+    for (auto iter = root.begin(); iter != root.end(); ++iter)
+    {
+        if (Json::ValueType::stringValue != iter->type())
         {
-            break;
+            std::cerr << "parse config file failed, servers are not composed of string: " << servers << std::endl;
+            return -1;
         }
-        m_clusterServerIds.emplace_back(serverId);
+
+        m_clusterServerIds.emplace_back(iter->asString());
     }
 
     return 0;
@@ -253,9 +279,4 @@ int NodeConfig::parseLogConfig(inipp::Ini<char>& ini)
     }
 
     return 0;
-}
-
-const std::vector<std::string> &NodeConfig::clusterServerIds() const
-{
-    return m_clusterServerIds;
 }

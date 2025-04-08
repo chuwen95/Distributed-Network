@@ -8,14 +8,14 @@
 
 #include "csm-utilities/Socket.h"
 #include "csm-utilities/Logger.h"
-#include "csm-utilities/Timestamp.h"
+#include "csm-utilities/ElapsedTime.h"
 
 using namespace csm::service;
 
 constexpr std::size_t c_maxEvent{ 500 };
 
-SlaveReactor::SlaveReactor(const int reactorId, const std::string& hostId, TcpSessionManager::Ptr tcpSessionManager) :
-        m_reactorId(reactorId), m_tcpSessionManager(std::move(tcpSessionManager))
+SlaveReactor::SlaveReactor(const int reactorId, const std::string& hostId, P2PSessionManager::Ptr p2pSessionManager) :
+        m_reactorId(reactorId), m_p2pSessionManager(std::move(p2pSessionManager))
 {
     m_recvBuffer.resize(utilities::Socket::c_defaultSocketRecvBufferSize);
 }
@@ -54,11 +54,6 @@ int SlaveReactor::init()
     }
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "add exit event fd to epoll successfully");
 
-    return 0;
-}
-
-int SlaveReactor::start()
-{
     const auto expression = [this]()
     {
         static int s_timeout{ 5000 };
@@ -127,20 +122,20 @@ int SlaveReactor::start()
             }
             if (ev[i].events & EPOLLOUT)
             {
-                TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
-                if(nullptr == tcpSession)
+                P2PSession::Ptr p2pSession = m_p2pSessionManager->session(fd);
+                if(nullptr == p2pSession)
                 {
-                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find TcpSession by fd failed, fd: ", fd);
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find P2PSession by fd failed, fd: ", fd);
                     continue;
                 }
 
-                if(true == tcpSession->isWaitingDisconnect())
+                if(true == p2pSession->isWaitingDisconnect())
                 {
-                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "TcpSession is waiting for disconnect, fd: ", fd);
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "P2PSession is waiting for disconnect, fd: ", fd);
                     continue;
                 }
 
-                utilities::RingBuffer::Ptr writeBuffer = tcpSession->writeBuffer();
+                utilities::RingBuffer::Ptr writeBuffer = p2pSession->writeBuffer();
                 assert(0 != writeBuffer->dataLength());
 
                 x_writeBuffer.lock();
@@ -198,8 +193,14 @@ int SlaveReactor::start()
         return 0;
     };
     std::string threadName = "slav_reac_" + std::to_string(m_reactorId);
-    m_thread.init(expression, 0, threadName.c_str());
-    m_thread.start();
+    m_thread = std::make_shared<utilities::Thread>(expression, 0, threadName.c_str());
+
+    return 0;
+}
+
+int SlaveReactor::start()
+{
+    m_thread->start();
 
     return 0;
 }
@@ -210,7 +211,7 @@ int SlaveReactor::stop()
 
     std::uint64_t num{ 1 };
     write(m_exitFd, &num, sizeof(std::uint64_t));
-    m_thread.stop();
+    m_thread->stop();
 
     close(m_exitFd);
     close(m_epfd);
@@ -252,7 +253,7 @@ void SlaveReactor::setSessionDataHandler(const std::function<int(const int, cons
 
 int SlaveReactor::sendData(const int fd, const char *data, const std::size_t size)
 {
-    if(size > c_tcpSessionWriteBufferSize)
+    if(size > c_p2pSessionWriteBufferSize)
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "data size must less than session write buffer size");
         return -1;
@@ -260,23 +261,23 @@ int SlaveReactor::sendData(const int fd, const char *data, const std::size_t siz
 
     LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "m_id: ", m_reactorId, ", fd: ", fd);
     //获取对应的writeBuffer
-    TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
-    if(nullptr == tcpSession)
+    P2PSession::Ptr p2pSession = m_p2pSessionManager->session(fd);
+    if(nullptr == p2pSession)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find TcpSession by fd failed, fd: ", fd);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find P2PSession by fd failed, fd: ", fd);
         return -1;
     }
 
-    if(true == tcpSession->isWaitingDisconnect())
+    if(true == p2pSession->isWaitingDisconnect())
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "TcpSession is waiting for disconnect, fd: ", fd);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "P2PSession is waiting for disconnect, fd: ", fd);
         return -1;
     }
 
     {
         x_writeBuffer.lock();
 
-        utilities::RingBuffer::Ptr writeBuffer = tcpSession->writeBuffer();
+        utilities::RingBuffer::Ptr writeBuffer = p2pSession->writeBuffer();
         if(0 == writeBuffer->dataLength())
         {
             int sendLen = send(fd, data, size, 0);
@@ -353,30 +354,3 @@ int SlaveReactor::removeClient(const int fd)
 
     return 0;
 }
-#if 0
-int SlaveReactor::disconnectClient(const int fd, const int flag)
-{
-    TcpSession::Ptr tcpSession = m_tcpSessionManager->tcpSession(fd);
-    if (nullptr == tcpSession)
-    {
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "client not exist, fd: ", fd);
-        return -1;
-    }
-
-    // 将客户端从在线监测中移除
-    m_clientAliveChecker.removeClient(fd);
-
-    // 关闭客户端fd
-    close(fd);
-
-    if (nullptr != m_disconnectHandler)
-    {
-        m_disconnectHandler(fd, tcpSession->peerHostEndPointInfo(), tcpSession->getClientId(), tcpSession->handshakeUuid(), flag);
-    }
-    m_tcpSessionManager->removeTcpSession(fd);
-
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "client disconnect finish, fd: ", fd);
-
-    return 0;
-}
-#endif

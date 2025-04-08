@@ -32,11 +32,17 @@ namespace csm
         class Logger
         {
         public:
-            Logger();
-            ~Logger();
+            Logger() = default;
+            ~Logger() = default;
 
         public:
-            int init(const bool enableFileLog, const std::string &path, const std::size_t bufferSize = c_defaultBufferSize);
+            void setEnableFileLog(bool enableFileLog);
+
+            void setLogDirPath(const std::string &logDirPath);
+
+            void setLogBufferSize(std::size_t bufferSize);
+
+            int init();
 
             int start();
 
@@ -108,9 +114,13 @@ namespace csm
 
         private:
             std::string generateLogFilename();
+            std::string generateLogFullFilename(const std::string& logDirPath, const std::string& logFilename);
 
         private:
-            bool m_enableFileLog;
+            bool m_enableFileLog{ true };
+            std::string m_logDirPath{ "./log" };
+            std::size_t m_bufferSize{ c_defaultBufferSize };
+
             std::ofstream m_file;
 
             std::mutex x_buffer;
@@ -118,7 +128,7 @@ namespace csm
             std::vector<char> m_buffer;
 
             std::atomic_bool m_isTerminate{false};
-            Thread m_thread;
+            Thread::Ptr m_thread;
 
             bool m_consoleOutput{false};
             LogType m_logLevel{LogType::Log_Info};

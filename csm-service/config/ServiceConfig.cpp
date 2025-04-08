@@ -8,12 +8,12 @@
 using namespace csm::service;
 
 ServiceConfig::ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
-                             TcpSessionManager::Ptr tcpSessionManager, ClientAliveChecker::Ptr clientAliveChecker, std::vector<SlaveReactor::Ptr> slaveReactors,
+                             P2PSessionManager::Ptr p2pSessionManager, ClientAliveChecker::Ptr clientAliveChecker, std::vector<SlaveReactor::Ptr> slaveReactors,
                              SessionDispatcher::Ptr sessionDispatcher, SessionDestroyer::Ptr sessionDestroyer, SessionDataProcessor::Ptr sessionDataProcessor,
                              const ServiceStartType serverStartType, HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector,
                              HostsHeartbeatService::Ptr hostsHeartbeatService) :
         m_nodeConfig(std::move(nodeConfig)), m_listenner(std::move(listenner)), m_acceptor(std::move(acceptor)),
-        m_tcpSessionManager(std::move(tcpSessionManager)), m_clientAliveChecker(std::move(clientAliveChecker)),
+        m_p2pSessionManager(std::move(p2pSessionManager)), m_clientAliveChecker(std::move(clientAliveChecker)),
         m_slaveReactors(std::move(slaveReactors)), m_sessionDispatcher(std::move(sessionDispatcher)),
         m_sessionDestroyer(std::move(sessionDestroyer)), m_sessionDataProcessor(std::move(sessionDataProcessor)),
         m_serviceStartType(serverStartType), m_hostsInfoManager(std::move(hostsInfoManager)),
@@ -35,9 +35,9 @@ Acceptor::Ptr ServiceConfig::acceptor()
     return m_acceptor;
 }
 
-TcpSessionManager::Ptr ServiceConfig::tcpSessionManager()
+P2PSessionManager::Ptr ServiceConfig::p2pSessionManager()
 {
-    return m_tcpSessionManager;
+    return m_p2pSessionManager;
 }
 
 ClientAliveChecker::Ptr ServiceConfig::clientAliveChecker()
@@ -83,4 +83,25 @@ HostsConnector::Ptr ServiceConfig::hostsConnector()
 HostsHeartbeatService::Ptr ServiceConfig::hostsHeartbeatService()
 {
     return m_hostsHeartbeatService;
+}
+
+void ServiceConfig::registerModulePacketHandler(const std::int32_t moduleId, ModulePacketHandler modulePacketHandler)
+{
+    std::unique_lock<std::mutex> ulock(x_modulePacketHandler);
+
+    m_modulePacketHandler[moduleId] = std::move(modulePacketHandler);
+}
+
+std::function<int(std::shared_ptr<std::vector<char>>)> ServiceConfig::getModulePacketHandler(const std::int32_t moduleId)
+{
+    std::unique_lock<std::mutex> ulock(x_modulePacketHandler);
+
+    auto iter = m_modulePacketHandler.find(moduleId);
+    if (m_modulePacketHandler.end() == iter)
+    {
+        LOG->write(csm::utilities::LogType::Log_Error, FILE_INFO, "not found module package handler, moduleId: ", moduleId);
+        return nullptr;
+    }
+
+    return iter->second;
 }

@@ -27,7 +27,7 @@ namespace csm
              * @param slaveReactors     要管理的子Reactor
              * @return
              */
-            SessionDispatcher(const std::size_t redispatchInterval, const std::string& id, const std::size_t slaveReactorSize);
+            SessionDispatcher(std::size_t redispatchInterval, const std::string& id, std::size_t slaveReactorSize);
             ~SessionDispatcher();
 
         public:
@@ -42,28 +42,6 @@ namespace csm
             int removeFdSlaveReactorRelation(const int fd);
 
             int getSlaveReactorIndexByFd(const int fd);
-
-#if 0
-            int sendData(const int fd, const std::vector<char> &data);
-
-            void registerClientInfoHandler(std::function<int(const HostEndPointInfo &localHostEndPointInfo,
-                                                             const HostEndPointInfo &peerHostEndPointInfo, const int fd, const std::string &id,
-                                                             const std::string &uuid)> clientInfoHandler);
-
-            void registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo &hostEndPointInfo,
-                                                                  const int fd, const std::string &id, const std::string &uuid, const int result,
-                                                                  int &anotherConnectionFd)> clientInfoReplyHandler);
-
-            void registerModuleMessageHandler(std::function<void(const int, const std::int32_t,
-                                                                 std::shared_ptr<std::vector<char>> &)> messageHandler);
-
-            void registerDisconnectHandler(
-                    std::function<void(const HostEndPointInfo &hostEndPointInfo, const std::string &id,
-                                       const std::string &uuid, const int flag)> disconnectHandler);
-
-            // Todo: TcpSessionDestoryer处理fd客户端断开的情况时，需要将SessionDispatcher中的fd也移除
-            int disconnectClient(const int fd);
-#endif
 
         private:
             std::size_t m_redispatchInterval;
@@ -81,7 +59,7 @@ namespace csm
                 int fd;
                 std::function<void(const std::size_t slaveReactorIndex)> callback;
             };
-            moodycamel::BlockingReaderWriterQueue<SessionInfo::Ptr> m_tcpSessionsQueue;
+            moodycamel::BlockingReaderWriterQueue<SessionInfo::Ptr> m_p2pSessionsQueue;
 
             // 当前管理最少fd的SlaveReactor index（非实时刷新）
             std::size_t m_slaveReactorIndexWhichHasLeastFd{ 0 };
@@ -93,7 +71,7 @@ namespace csm
             std::unordered_map<int, std::size_t> m_fdSlaveReactorIndex;
 
             std::atomic_bool m_isTerminate{false};
-            utilities::Thread m_thread;
+            utilities::Thread::Ptr m_thread;
         };
 
     } // service

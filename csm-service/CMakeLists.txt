@@ -27,12 +27,10 @@ endforeach ()
 
 find_package(Protobuf CONFIG REQUIRED)
 find_package(jsoncpp CONFIG REQUIRED)
-find_package(unofficial-concurrentqueue CONFIG REQUIRED)
 
 FILE(GLOB_RECURSE SOURCES *.cpp)
 FILE(GLOB_RECURSE HEADERS *.h)
 
-add_library(service ${SOURCES} ${PROTOBUF_SRCS} ${HEADERS}
-)
-target_link_libraries(service PUBLIC utilities tools readerwriterqueue JsonCpp::JsonCpp protobuf::libprotobuf unofficial::concurrentqueue::concurrentqueue)
-target_include_directories(service SYSTEM BEFORE PUBLIC ${proto_output_path})
+add_library(service ${SOURCES} ${PROTOBUF_SRCS} ${HEADERS})
+target_link_libraries(service PUBLIC utilities tools readerwriterqueue JsonCpp::JsonCpp protobuf::libprotobuf)
+target_include_directories(service SYSTEM BEFORE PUBLIC ${readerwriterqueue_SOURCE_DIR} ${proto_output_path})

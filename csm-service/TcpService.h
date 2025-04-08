@@ -70,7 +70,6 @@ namespace csm
             int m_fd;
 
             std::map<std::int32_t, std::function<int(std::shared_ptr<std::vector<char>>)>> m_modulePacketHandler;
-            std::function<void(const int, const std::string &)> m_disconnectHandler;
 
             ServiceConfig::Ptr m_serviceConfig;
         };

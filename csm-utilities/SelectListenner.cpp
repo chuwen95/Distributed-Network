@@ -7,7 +7,7 @@
 
 using namespace csm::utilities;
 
-void SelectListenner::setListenFd(const int fd)
+void SelectListenner::setListenFd(int fd)
 {
     m_listenfd = fd;
 }
@@ -42,21 +42,21 @@ int SelectListenner::init()
 
         return 0;
     };
-    m_thread.init(expression, 0, "main_reac");
+    m_thread = std::make_shared<Thread>(expression, 0, "main_reac");
 
     return 0;
 }
 
 int SelectListenner::start()
 {
-    m_thread.start();
+    m_thread->start();
 
     return 0;
 }
 
 int SelectListenner::stop()
 {
-    m_thread.stop();
+    m_thread->stop();
 
     return 0;
 }

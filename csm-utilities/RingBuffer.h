@@ -18,16 +18,15 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<RingBuffer>;
 
-            RingBuffer();
+            RingBuffer(std::size_t size);
             ~RingBuffer();
 
         public:
             /**
              * @brief   初始化环形缓冲区
-             * @param size
              * @return
              */
-            int init(const std::size_t size);
+            int init();
 
             /**
              * @brief   反初始化环形缓冲区

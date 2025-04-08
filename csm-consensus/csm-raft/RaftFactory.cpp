@@ -3,20 +3,32 @@
 //
 
 #include "RaftFactory.h"
+
+#include "state/PersistentState.h"
+#include "state/VolatileState.h"
+#include "state/LeaderState.h"
 #include "RaftConfig.h"
-#include "configuration/ClusterConfigurationManager.h"
 
 using namespace csm::consensus;
 
-RaftFactory::RaftFactory(const std::string& id, stmclog::StateMachineLog::Ptr stateMachineLog) :
-    m_id(id),
-    m_stateMachineLog(std::move(stateMachineLog))
+RaftFactory::RaftFactory(tool::NodeConfig::Ptr nodeConfig,
+    service::TcpService::Ptr tcpService, storage::Storage::Ptr storage, stmclog::StateMachineLog::Ptr stateMachineLog) :
+    m_nodeConfig(std::move(nodeConfig)),
+    m_tcpService(std::move(tcpService)), m_storage(std::move(storage)), m_stateMachineLog(std::move(stateMachineLog))
 { }
 
-csm::consensus::Raft::Ptr RaftFactory::createRaft()
+Raft::Ptr RaftFactory::createRaft()
 {
     ClusterConfigurationManager::Ptr clusterConfigurationManager = std::make_shared<ClusterConfigurationManager>();
-    RaftConfig::Ptr raftConfig = std::make_shared<RaftConfig>(m_id, m_stateMachineLog, clusterConfigurationManager);
+    RaftMetadataStorage::Ptr raftMetadataStorage = std::make_shared<RaftMetadataStorage>(m_storage);
+
+    PersistentState::Ptr persistentState = std::make_shared<PersistentState>(raftMetadataStorage);
+    VolatileState::Ptr volatileState = std::make_shared<VolatileState>();
+    LeaderState::Ptr leaderState = std::make_shared<LeaderState>();
+
+    RaftConfig::Ptr raftConfig = std::make_shared<RaftConfig>(m_nodeConfig->id(),
+        m_nodeConfig->minRandomVoteTimeout(), m_nodeConfig->maxRandomVoteTimeout(),
+        m_tcpService, persistentState, volatileState, leaderState, clusterConfigurationManager, m_stateMachineLog);
 
     return std::make_shared<Raft>(raftConfig);
 }

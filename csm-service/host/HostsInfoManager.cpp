@@ -5,7 +5,7 @@
 #include "HostsInfoManager.h"
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/StringTool.h"
-#include "csm-utilities/Timestamp.h"
+#include "csm-utilities/ElapsedTime.h"
 
 #include <json/json.h>
 
@@ -199,7 +199,7 @@ std::vector<std::pair<std::string, int>> HostsInfoManager::getAllOnlineClients()
 
 bool HostsInfoManager::waitAtLeastOneNodeConnected(const int timeout)
 {
-    utilities::Timestamp timestamp;
+    utilities::ElapsedTime timestamp;
     timestamp.update();
     while (onlineClientSize() < 1 && timestamp.getElapsedTimeInMilliSec() < timeout)
     {

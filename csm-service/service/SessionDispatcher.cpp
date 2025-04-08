@@ -6,7 +6,7 @@
 
 using namespace csm::service;
 
-SessionDispatcher::SessionDispatcher(const std::size_t redispatchInterval, const std::string &hostId, const std::size_t slaveReactorSize) :
+SessionDispatcher::SessionDispatcher(std::size_t redispatchInterval, const std::string& hostId, std::size_t slaveReactorSize) :
         m_redispatchInterval(redispatchInterval), m_id(hostId), m_slaveReactorSize(slaveReactorSize)
 {
     for(std::size_t i = 0; i < m_slaveReactorSize; ++i)
@@ -27,7 +27,7 @@ int SessionDispatcher::init()
         }
 
         SessionInfo::Ptr sessionInfo{nullptr};
-        m_tcpSessionsQueue.wait_dequeue(sessionInfo);
+        m_p2pSessionsQueue.wait_dequeue(sessionInfo);
 
         if(nullptr == sessionInfo)
         {
@@ -61,14 +61,14 @@ int SessionDispatcher::init()
             s_refreshTime = 0;
         }
     };
-    m_thread.init(expression, 1, "session_dispa");
+    m_thread = std::make_shared<utilities::Thread>(expression, 1, "session_dispa");
 
     return 0;
 }
 
 int SessionDispatcher::start()
 {
-    m_thread.start();
+    m_thread->start();
 
     return 0;
 }
@@ -76,15 +76,15 @@ int SessionDispatcher::start()
 int SessionDispatcher::stop()
 {
     m_isTerminate = true;
-    m_tcpSessionsQueue.emplace(nullptr);
-    m_thread.stop();
+    m_p2pSessionsQueue.emplace(nullptr);
+    m_thread->stop();
 
     return 0;
 }
 
 int SessionDispatcher::addSession(const int fd, std::function<void(const std::size_t slaveReactorIndex)> callback)
 {
-    m_tcpSessionsQueue.try_emplace(std::make_shared<SessionInfo>(fd, callback));
+    m_p2pSessionsQueue.try_emplace(std::make_shared<SessionInfo>(fd, callback));
 
     return 0;
 }
@@ -116,91 +116,3 @@ int SessionDispatcher::getSlaveReactorIndexByFd(const int fd)
 
     return iter->second;
 }
-
-#if 0
-int SessionDispatcher::sendData(const int fd, const std::vector<char> &data)
-{
-    SlaveReactor::Ptr slaveReactor;
-    {
-        std::unique_lock<std::mutex> ulock(x_clientSlaveReactors);
-
-        auto iter = m_clientSlaveReactors.find(fd);
-        if (m_clientSlaveReactors.end() == iter)
-        {
-            return 0;
-        }
-
-        slaveReactor = m_slaveReactors[iter->second];
-    }
-
-    return slaveReactor->sendData(fd, data.data(), data.size());
-}
-
-void SessionDispatcher::registerClientInfoHandler(std::function<int(const HostEndPointInfo &, const HostEndPointInfo &,
-                                                                    const int, const std::string &, const std::string &)> clientInfoHandler)
-{
-    for (auto &slaveReactor: m_slaveReactors)
-    {
-        slaveReactor->registerClientInfoHandler(clientInfoHandler);
-    }
-}
-
-void SessionDispatcher::registerClientInfoReplyHandler(std::function<int(const HostEndPointInfo &, const int,
-                                                                         const std::string &, const std::string &, const int, int &)> clientInfoReplyHandler)
-{
-    for (auto &slaveReactor: m_slaveReactors)
-    {
-        slaveReactor->registerClientInfoReplyHandler(clientInfoReplyHandler);
-    }
-}
-
-void SessionDispatcher::registerModuleMessageHandler(
-        std::function<void(const int, const std::int32_t, std::shared_ptr<std::vector<char>> &)> messageHandler)
-{
-    for (auto &slaveReactor: m_slaveReactors)
-    {
-        slaveReactor->registerModuleMessageHandler(messageHandler);
-    }
-}
-
-void SessionDispatcher::registerDisconnectHandler(std::function<void(const HostEndPointInfo &hostEndPointInfo,
-                                                                     const std::string &id, const std::string &uuid, const int flag)> disconnectHandler)
-{
-    for (auto &slaveReactor: m_slaveReactors)
-    {
-        slaveReactor->registerDisconnectHandler(
-            [disconnectHandler, this](const int fd, const HostEndPointInfo &hostEndPointInfo, const std::string &id, const std::string &uuid, const int flag)
-            {
-                {
-                    std::unique_lock<std::mutex> ulock(x_clientSlaveReactors);
-                    auto iter = m_clientSlaveReactors.find(fd);
-                    if (m_clientSlaveReactors.end() == iter)
-                    {
-                        return 0;
-                    }
-                    m_clientSlaveReactors.erase(iter);
-                }
-                disconnectHandler(hostEndPointInfo, id, uuid, flag);
-                return 0;
-            });
-    }
-}
-
-int SessionDispatcher::disconnectClient(const int fd)
-{
-    std::size_t slaveReactorIndex;
-
-    {
-        std::unique_lock<std::mutex> ulock(x_clientSlaveReactors);
-        auto iter = m_clientSlaveReactors.find(fd);
-        if (m_clientSlaveReactors.end() == iter)
-        {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client not exist");
-            return -1;
-        }
-        slaveReactorIndex = iter->second;
-    }
-
-    return m_slaveReactors[slaveReactorIndex]->disconnectClient(fd);
-}
-#endif

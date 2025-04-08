@@ -5,7 +5,7 @@
 #ifndef CLUSTERPEERSERVER_H
 #define CLUSTERPEERSERVER_H
 
-#include "ClusterServer.h"
+#include "ClusterNode.h"
 
 namespace csm
 {
@@ -13,11 +13,11 @@ namespace csm
     namespace consensus
     {
 
-        class ClusterPeerServer : public ClusterServer
+        class ClusterPeerNode : public ClusterNode
         {
         public:
-            ClusterPeerServer() = default;
-            ~ClusterPeerServer() = default;
+            ClusterPeerNode() = default;
+            ~ClusterPeerNode() = default;
         };
 
     }

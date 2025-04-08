@@ -8,47 +8,39 @@ using namespace csm::utilities;
 
 #if 1
 
-Logger::Logger()
-{}
-
-Logger::~Logger()
-{}
-
-int Logger::init(const bool enableFileLog, const std::string &path, const std::size_t bufferSize)
+void Logger::setEnableFileLog(bool enableFileLog)
 {
     m_enableFileLog = enableFileLog;
+}
 
-    if (true == enableFileLog)
+void Logger::setLogDirPath(const std::string& logDirPath)
+{
+    m_logDirPath = logDirPath;
+}
+
+void Logger::setLogBufferSize(std::size_t bufferSize)
+{
+    m_bufferSize = bufferSize;
+}
+
+int Logger::init()
+{
+    if (true == m_enableFileLog)
     {
-        std::filesystem::create_directory(path);
+        std::filesystem::create_directory(m_logDirPath);
 
         std::string logFilename = generateLogFilename();
-
-        std::string logFullFilename;
-        if(true == path.empty())
-        {
-            logFullFilename = "./" + logFilename;
-        }
-        else
-        {
-            if(path.back() == '/')
-            {
-                logFullFilename = path + logFilename;
-            }
-            else
-            {
-                logFullFilename = path + "/" + logFilename;
-            }
-        }
+        std::string logFullFilename = generateLogFullFilename(m_logDirPath, logFilename);
 
         m_file.open(logFullFilename, std::ios::out);
         if (false == m_file.is_open())
         {
-            std::cerr << "open log file failed: " << logFullFilename << ", error state: " << m_file.rdstate() << ", errno: " << errno << ", " << strerror(errno)<< std::endl;
+            std::cerr << "open log file failed: " << logFullFilename << ", error state: "
+                << m_file.rdstate() << ", errno: " << errno << ", " << strerror(errno)<< std::endl;
             return -1;
         }
 
-        m_buffer.resize(bufferSize);
+        m_buffer.resize(m_bufferSize);
 
         const auto expression = [this]() {
             if (true == m_isTerminate)
@@ -73,7 +65,7 @@ int Logger::init(const bool enableFileLog, const std::string &path, const std::s
             m_file.write(buffer.data(), buffer.size());
             m_file.flush();
         };
-        m_thread.init(expression, 1, "logger");
+        m_thread = std::make_shared<Thread>(expression, 1, "logger");
     }
 
     return 0;
@@ -83,7 +75,7 @@ int Logger::start()
 {
     if (true == m_enableFileLog)
     {
-        m_thread.start();
+        m_thread->start();
     }
 
     return 0;
@@ -95,7 +87,7 @@ int Logger::stop()
     {
         m_isTerminate = true;
         m_bufferCv.notify_one();
-        m_thread.stop();
+        m_thread->stop();
     }
 
     return 0;
@@ -127,6 +119,29 @@ std::string Logger::generateLogFilename()
     std::string logFilename = filenameStream.str();
 
     return logFilename;
+}
+
+std::string Logger::generateLogFullFilename(const std::string& logDirPath, const std::string& logFilename)
+{
+    std::string logFullFilename;
+
+    if(true == m_logDirPath.empty())
+    {
+        logFullFilename = "./" + logFilename;
+    }
+    else
+    {
+        if(m_logDirPath.back() == '/')
+        {
+            logFullFilename = m_logDirPath + logFilename;
+        }
+        else
+        {
+            logFullFilename = m_logDirPath + "/" + logFilename;
+        }
+    }
+
+    return logFullFilename;
 }
 
 #else

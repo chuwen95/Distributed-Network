@@ -1,5 +1,6 @@
 listen_ip="0.0.0.0"
 listen_port_start=(30300 20200 8500)
+cluster_all_servers=["node0","node1","node2","node3"]
 output_dir="./nodes"
 ip_param=
 binary_name="CopyStateMachine"
@@ -157,6 +158,7 @@ generate_node_ini_config()
     cat <<EOF > "${node_config_path}"
 [cluster]
 id=$node_id
+servers=$cluster_all_servers
 
 [rpc]
 http_listen_ip=${http_rpc_listen_ip}

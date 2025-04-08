@@ -6,7 +6,11 @@
 #define COPYSTATEMACHINE_RAFTFACTORY_H
 
 #include "csm-common/Common.h"
+
 #include "csm-consensus/csm-raft/Raft.h"
+#include "csm-tool/NodeConfig.h"
+#include "csm-service/TcpService.h"
+#include "csm-storage/Storage.h"
 #include "csm-stmclog/StateMachineLog.h"
 
 namespace csm
@@ -20,15 +24,17 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<RaftFactory>;
 
-            explicit RaftFactory(const std::string& id, stmclog::StateMachineLog::Ptr stateMachineLog);
+            explicit RaftFactory(tool::NodeConfig::Ptr nodeConfig,
+                service::TcpService::Ptr tcpService, storage::Storage::Ptr storage, stmclog::StateMachineLog::Ptr stateMachineLog);
             ~RaftFactory() = default;
 
         public:
             Raft::Ptr createRaft();
 
         private:
-            std::string m_id;
-            std::vector<std::string> m_clusterServerIds;
+            tool::NodeConfig::Ptr m_nodeConfig;
+            service::TcpService::Ptr m_tcpService;
+            storage::Storage::Ptr m_storage;
             stmclog::StateMachineLog::Ptr m_stateMachineLog;
         };
 

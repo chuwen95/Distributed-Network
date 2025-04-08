@@ -34,26 +34,26 @@ int ClientAliveChecker::init()
             m_timeoutHandler(offlinefds);
         }
     };
-    m_thread.init(expression, c_aliveTimeout, "cli_alive_chk");
+    m_thread = std::make_shared<utilities::Thread>(expression, c_aliveTimeout, "cli_alive_chk");
 
     return 0;
 }
 
 int ClientAliveChecker::start()
 {
-    m_thread.start();
+    m_thread->start();
 
     return 0;
 }
 
 int ClientAliveChecker::stop()
 {
-    m_thread.stop();
+    m_thread->stop();
 
     return 0;
 }
 
-void ClientAliveChecker::setTimeoutHandler(const std::function<void(const std::vector<int> &)> handler)
+void ClientAliveChecker::setTimeoutHandler(std::function<void(const std::vector<int> &)> handler)
 {
     m_timeoutHandler = std::move(handler);
 }

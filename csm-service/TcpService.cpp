@@ -4,11 +4,10 @@
 
 #include "TcpService.h"
 
-#include <utility>
-#include <ranges>
 #include "csm-utilities/Socket.h"
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/UUIDTool.h"
+#include "csm-utilities/TimeTools.h"
 #include "protocol/PacketHeader.h"
 #include "protocol/payload/PayloadClientInfo.h"
 #include "protocol/payload/PayloadClientInfoReply.h"
@@ -55,16 +54,16 @@ int TcpService::init()
     // 当flag为0的时候，是因为socket发生错误而断开，如果是-1/-2/-3则是握手协议ClientInfoReply包的返回码
     m_serviceConfig->sessionDestroyer()->setHandler([this](const int fd, const int flag){
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start destory tcp session, fd: ", fd, ", flag: ", flag);
-        // 获取TcpSession中的协议信息，移除负责共享一条连接协议的信息
-        TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
-        if(nullptr == tcpSession)
+        // 获取P2pPSession中的协议信息，移除负责共享一条连接协议的信息
+        P2PSession::Ptr p2pSession = m_serviceConfig->p2pSessionManager()->session(fd);
+        if(nullptr == p2pSession)
         {
             LOG->write(utilities::LogType::Log_Warning, FILE_INFO, "fd may already be removed, fd: ", fd);
             return -1;
         }
 
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "set tcp session status to be waiting disconnect, fd: ", fd);
-        tcpSession->setWaitingDisconnect(true);
+        p2pSession->setWaitingDisconnect(true);
 
         // 不再检查心跳
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remove tcp session from client alive checker, fd: ", fd);
@@ -82,13 +81,13 @@ int TcpService::init()
         if(ServiceStartType::Node == m_serviceConfig->serviceStartType())
         {
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "update connect info from host connector, fd: ", fd);
-            disconnectClient(tcpSession->peerHostEndPointInfo(), tcpSession->getClientId(), tcpSession->handshakeUuid(), flag);
+            disconnectClient(p2pSession->peerHostEndPointInfo(), p2pSession->getClientId(), p2pSession->handshakeUuid(), flag);
         }
 
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remote fd slave reactor relation, fd: ", fd);
         m_serviceConfig->sessionDispatcher()->removeFdSlaveReactorRelation(fd);
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remove tcp session from TcpSessionManager, fd: ", fd);
-        m_serviceConfig->tcpSessionManager()->removeTcpSession(fd);
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remove tcp session from P2PSessionManager, fd: ", fd);
+        m_serviceConfig->p2pSessionManager()->removeSession(fd);
 
         utilities::Socket::close(fd);
 
@@ -116,26 +115,26 @@ int TcpService::init()
 
     // 注册数据接收回调，SlaveReactor回调包类型和包负载二进制数据
     m_serviceConfig->sessionDataProcessor()->registerPacketHandler(PacketType::PT_ModuleMessage, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
-                std::uint64_t curTimestamp = utilities::Timestamp::getCurrentTimestamp();
-                // 获取fd对应的TcpSession
-                TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
+                std::uint64_t curTimestamp = utilities::TimeTools::getCurrentTimestamp();
+                // 获取fd对应的P2PSession
+                P2PSession::Ptr p2pSession = m_serviceConfig->p2pSessionManager()->session(fd);
                 // 若任务时间戳小于客户端上线时间戳，任务直接返回不处理，因为可能是客户端离线后新的客户端被分配的相同的fd
-                if(nullptr == tcpSession || curTimestamp < tcpSession->getClientOnlineTimestamp())
+                if(nullptr == p2pSession || curTimestamp < p2pSession->getClientOnlineTimestamp())
                 {
                     LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-                                   "online timestamp: ", tcpSession->getClientOnlineTimestamp(), ", curTimestamp: ", curTimestamp);
+                                   "online timestamp: ", p2pSession->getClientOnlineTimestamp(), ", curTimestamp: ", curTimestamp);
                     return -1;
                 }
 
                 PayloadModuleMessage::Ptr payloadModuleMessage = std::dynamic_pointer_cast<PayloadModuleMessage>(payload);
 
-                auto iter = m_modulePacketHandler.find(header->moduleId());
-                if (m_modulePacketHandler.end() == iter)
+                ModulePacketHandler packetHandler = m_serviceConfig->getModulePacketHandler(header->moduleId());
+                if (nullptr == packetHandler)
                 {
                     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "module handler not found, moduleId: ", header->moduleId());
                     return -1;
                 }
-                return iter->second(payloadModuleMessage->payload());
+                return packetHandler(payloadModuleMessage->payload());
             });
 
     if (-1 == initServer())
@@ -246,7 +245,7 @@ int TcpService::stop()
 void TcpService::registerModulePacketHandler(const std::int32_t moduleId,
                                              std::function<int(std::shared_ptr<std::vector<char>>)> packetHander)
 {
-    m_modulePacketHandler[moduleId] = std::move(packetHander);
+    m_serviceConfig->registerModulePacketHandler(moduleId, std::move(packetHander));
 }
 
 bool TcpService::waitAtLeastOneNodeConnected(const int timeout)
@@ -394,10 +393,10 @@ int TcpService::initServer()
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "select listenner init successfully");
 
     // 完成一个客户端的创建，将客户端分配到从reactor进行recv/send处理
-    m_serviceConfig->acceptor()->setNewClientCallback([this](const int fd, TcpSession::Ptr tcpSession) {
-        // 将fd添加到TcpSession派发器中，由TcpSessionManager决定TcpSession由哪个SlaveReactor管理
-        m_serviceConfig->sessionDispatcher()->addSession(fd, [this, fd, tcpSession](const std::size_t slaveReactorIndex){
-            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "will dispatch TcpSession to SlaveReactor index: ", slaveReactorIndex, ", fd: ", fd);
+    m_serviceConfig->acceptor()->setNewClientCallback([this](const int fd, P2PSession::Ptr p2pSession) {
+        // 将fd添加到P2PSession派发器中，由P2PSessionManager决定P2PSession由哪个SlaveReactor管理
+        m_serviceConfig->sessionDispatcher()->addSession(fd, [this, fd, p2pSession](const std::size_t slaveReactorIndex){
+            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "will dispatch P2PSession to SlaveReactor index: ", slaveReactorIndex, ", fd: ", fd);
 
             // 将fd添加到心跳检查器中
             if(-1 == m_serviceConfig->clientAliveChecker()->addClient(fd))
@@ -407,18 +406,18 @@ int TcpService::initServer()
             }
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add new online client to ClientAliveChecker successfully, fd: ", fd);
 
-            // 将fd和TcpSession添加到TcpSessionManager中
-            if(-1 == m_serviceConfig->tcpSessionManager()->addTcpSession(fd, tcpSession))
+            // 将fd和P2PSession添加到P2PSessionManager中
+            if(-1 == m_serviceConfig->p2pSessionManager()->addSession(fd, p2pSession))
             {
-                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add new online client to TcpSessionManager failed, fd: ", fd);
+                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add new online client to P2PSessionManager failed, fd: ", fd);
                 return;
             }
-            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add new online client to TcpSessionManager successfully, fd: ", fd);
+            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add new online client to P2PSessionManager successfully, fd: ", fd);
 
             if(-1 == m_serviceConfig->slaveReactors()[slaveReactorIndex]->addClient(fd))
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add new online client to SlaveReactor failed, fd: ", fd);
-                m_serviceConfig->tcpSessionManager()->removeTcpSession(fd);
+                m_serviceConfig->p2pSessionManager()->removeSession(fd);
                 return;
             }
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add new online client to SlaveReactor ", slaveReactorIndex, " successfully, fd: ", fd);
@@ -454,42 +453,42 @@ int TcpService::initClient()
     }
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "HostsHeartbeatService init successfully");
 
-    m_serviceConfig->hostsConnector()->registerConnectHandler([this](const int fd, TcpSession::Ptr tcpSession) {
+    m_serviceConfig->hostsConnector()->registerConnectHandler([this](const int fd, P2PSession::Ptr p2pSession) {
         LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-                   "connect ", tcpSession->peerHostEndPointInfo().host(), " successfully, ready to dispatch TcpSession to SlaveReactor, fd: ", tcpSession->fd());
+                   "connect ", p2pSession->peerHostEndPointInfo().host(), " successfully, ready to dispatch P2PSession to SlaveReactor, fd: ", p2pSession->fd());
 
         std::string uuid = utilities::UUIDTool::generate();
-        tcpSession->setHandshakeUuid(uuid);
+        p2pSession->setHandshakeUuid(uuid);
 
-        // 因为SlaveReactorManager分配TcpSession到各个SlaveReactor是异步的，所以这里要等待分配完成后发送ClientInfo包
-        std::promise<std::size_t> addTcpSessionPromise;
-        m_serviceConfig->sessionDispatcher()->addSession(fd, [this, tcpSession, &addTcpSessionPromise](const int slaveReactorIndex) {
-            addTcpSessionPromise.set_value(slaveReactorIndex);
+        // 因为SlaveReactorManager分配P2PSession到各个SlaveReactor是异步的，所以这里要等待分配完成后发送ClientInfo包
+        std::promise<std::size_t> addP2PSessionPromise;
+        m_serviceConfig->sessionDispatcher()->addSession(fd, [this, p2pSession, &addP2PSessionPromise](const int slaveReactorIndex) {
+            addP2PSessionPromise.set_value(slaveReactorIndex);
         });
-        std::size_t slaveReactorIndex = addTcpSessionPromise.get_future().get();
+        std::size_t slaveReactorIndex = addP2PSessionPromise.get_future().get();
 
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "will dispatch TcpSession to SlaveReactor index: ", slaveReactorIndex, ", fd: ", fd);
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "will dispatch P2PSession to SlaveReactor index: ", slaveReactorIndex, ", fd: ", fd);
 
         if(-1 == m_serviceConfig->clientAliveChecker()->addClient(fd))
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add TcpSession to ClientAliveChecker failed", ", fd: ", fd);
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add P2PSession to ClientAliveChecker failed", ", fd: ", fd);
             return;
         }
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add TcpSession to ClientAliveChecker successfully", ", fd: ", fd);
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add P2PSession to ClientAliveChecker successfully", ", fd: ", fd);
 
-        if(-1 == m_serviceConfig->tcpSessionManager()->addTcpSession(fd, tcpSession))
+        if(-1 == m_serviceConfig->p2pSessionManager()->addSession(fd, p2pSession))
         {
-            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add TcpSession to TcpSessionManager failed", ", fd: ", fd);
+            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add P2PSession to P2PSessionManager failed", ", fd: ", fd);
             return;
         }
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add TcpSession to TcpSessionManager successfully", ", fd: ", fd);
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add P2PSession to P2PSessionManager successfully", ", fd: ", fd);
 
         if(-1 == m_serviceConfig->slaveReactors()[slaveReactorIndex]->addClient(fd))
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add session to SlaveReactor, fd: ", fd);
             return;
         }
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add TcpSession to SlaveReactor index: ", slaveReactorIndex, " successfully, fd: ", fd);
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add P2PSession to SlaveReactor index: ", slaveReactorIndex, " successfully, fd: ", fd);
 
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send ClientInfo payload, fd: ", fd);
 
@@ -497,7 +496,7 @@ int TcpService::initClient()
         PayloadClientInfo clientInfoPacket;
         clientInfoPacket.setLocalHost(m_serviceConfig->nodeConfig()->p2pIp() + ":" +
                                       csm::utilities::convertToString(m_serviceConfig->nodeConfig()->p2pPort()));
-        clientInfoPacket.setPeerHost(tcpSession->peerHostEndPointInfo().host());
+        clientInfoPacket.setPeerHost(p2pSession->peerHostEndPointInfo().host());
         clientInfoPacket.setHandshakeUuid(uuid);
         clientInfoPacket.setNodeId(m_serviceConfig->nodeConfig()->id());
         int payloadLength = clientInfoPacket.packetLength();
@@ -521,17 +520,17 @@ int TcpService::initClient()
         // 收到ClientInfo包，是别人连自己的情况
         PayloadClientInfo::Ptr payloadClientInfo = std::dynamic_pointer_cast<PayloadClientInfo>(payload);
 
-        TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
-        if(nullptr == tcpSession)
+        P2PSession::Ptr p2pSession = m_serviceConfig->p2pSessionManager()->session(fd);
+        if(nullptr == p2pSession)
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find TcpSession failed, fd: ", fd);
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find P2PSession failed, fd: ", fd);
             return -1;
         }
 
         std::string id = payloadClientInfo->nodeId();
-        tcpSession->setClientId(id);
-        tcpSession->setHandshakeUuid(payloadClientInfo->handshakeUuid());
-        tcpSession->setClientOnlineTimestamp(utilities::Timestamp::getCurrentTimestamp());
+        p2pSession->setClientId(id);
+        p2pSession->setHandshakeUuid(payloadClientInfo->handshakeUuid());
+        p2pSession->setClientOnlineTimestamp(utilities::TimeTools::getCurrentTimestamp());
 
         HostEndPointInfo localHostEndPointInfo(payloadClientInfo->localHost());
         HostEndPointInfo peerHostEndPointInfo(payloadClientInfo->peerHost());
@@ -601,17 +600,17 @@ int TcpService::initClient()
     m_serviceConfig->sessionDataProcessor()->registerPacketHandler(PacketType::PT_ClientInfoReply, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
         PayloadClientInfoReply::Ptr payloadClientInfoReply = std::dynamic_pointer_cast<PayloadClientInfoReply>(payload);
 
-        TcpSession::Ptr tcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(fd);
-        if(nullptr == tcpSession)
+        P2PSession::Ptr p2pSession = m_serviceConfig->p2pSessionManager()->session(fd);
+        if(nullptr == p2pSession)
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find TcpSession failed, fd: ", fd);
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find P2PSession failed, fd: ", fd);
             return -1;
         }
 
-        tcpSession->setClientId(payloadClientInfoReply->nodeId());
-        tcpSession->setClientOnlineTimestamp(utilities::Timestamp::getCurrentTimestamp());
+        p2pSession->setClientId(payloadClientInfoReply->nodeId());
+        p2pSession->setClientOnlineTimestamp(utilities::TimeTools::getCurrentTimestamp());
 
-        HostEndPointInfo peerHostEndPointInfo(tcpSession->peerHostEndPointInfo());
+        HostEndPointInfo peerHostEndPointInfo(p2pSession->peerHostEndPointInfo());
         std::string id = payloadClientInfoReply->nodeId();
         int result = payloadClientInfoReply->result();
 
@@ -643,12 +642,12 @@ int TcpService::initClient()
                 LOG->write(utilities::LogType::Log_Warning, FILE_INFO,"get another connection fd: ", anotherConnectionFd, ", fd: ", fd);
                 assert(-1 != anotherConnectionFd);
 
-                TcpSession::Ptr anotherTcpSession = m_serviceConfig->tcpSessionManager()->tcpSession(anotherConnectionFd);
-                assert(nullptr != anotherTcpSession);
-                anotherTcpSession->setPeerHostEndPointInfo(payloadClientInfoReply->peerHost());
+                P2PSession::Ptr anotherP2PSession = m_serviceConfig->p2pSessionManager()->session(anotherConnectionFd);
+                assert(nullptr != anotherP2PSession);
+                anotherP2PSession->setPeerHostEndPointInfo(payloadClientInfoReply->peerHost());
 
                 LOG->write(utilities::LogType::Log_Warning, FILE_INFO,
-                           "another connection fd: ", anotherConnectionFd, ", peer host: ", anotherTcpSession->peerHostEndPointInfo().host(), ", fd: ", fd);
+                           "another connection fd: ", anotherConnectionFd, ", peer host: ", anotherP2PSession->peerHostEndPointInfo().host(), ", fd: ", fd);
             }
             LOG->write(utilities::LogType::Log_Warning, FILE_INFO, "add tcp session to destoryer, fd: ", fd);
             m_serviceConfig->sessionDestroyer()->addSession(fd, payloadClientInfoReply->result());

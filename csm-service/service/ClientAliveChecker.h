@@ -7,7 +7,7 @@
 
 #include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
-#include "csm-utilities/Timestamp.h"
+#include "csm-utilities/ElapsedTime.h"
 
 namespace csm
 {
@@ -60,7 +60,7 @@ namespace csm
             std::mutex x_clientLastRecvTime;
             std::unordered_map<int, std::pair<std::uint32_t, std::uint32_t>> m_clientLastRecvTime;
 
-            utilities::Thread m_thread;
+            utilities::Thread::Ptr m_thread;
             std::function<void(const std::vector<int> &)> m_timeoutHandler;
         };
 

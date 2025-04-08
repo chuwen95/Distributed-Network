@@ -23,13 +23,7 @@ namespace csm
             ~SelectListenner() = default;
 
         public:
-            void setListenFd(const int fd);
-
-            int init();
-
-            int start();
-
-            int stop();
+            void setListenFd(int fd);
 
             /**
              * @brief   注册连接事件回调
@@ -38,11 +32,17 @@ namespace csm
              */
             void registerConnectHandler(std::function<void()> connectHandler);
 
+            int init();
+
+            int start();
+
+            int stop();
+
         private:
             int m_listenfd;
             std::function<void()> m_connectHandler;
 
-            Thread m_thread;
+            Thread::Ptr m_thread;
         };
 
     } // components
