@@ -16,8 +16,14 @@ namespace csm
         class ClusterPeerNode : public ClusterNode
         {
         public:
+            using Ptr = std::shared_ptr<ClusterPeerNode>;
+
             ClusterPeerNode() = default;
-            ~ClusterPeerNode() = default;
+            ~ClusterPeerNode() override = default;
+
+        public:
+            void setIsVote(const bool isVote) override;
+            bool isVote() const override;
         };
 
     }

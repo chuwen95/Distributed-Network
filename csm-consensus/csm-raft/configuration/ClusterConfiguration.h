@@ -43,8 +43,8 @@ namespace csm
         public:
             void setClusterNodeIds(const std::vector<NodeId>& nodeIds);
 
-            void setClusterNodeById(const NodeId& id, ClusterNode::Ptr clusterNode);
-            ClusterNode::Ptr getClusterNodeById(const NodeId& id);
+            void setClusterNode(const NodeId& id, ClusterNode::Ptr clusterNode);
+            ClusterNode::Ptr clusterNode(const NodeId& id);
 
         private:
             ConfigurationInfo m_configurationInfo;

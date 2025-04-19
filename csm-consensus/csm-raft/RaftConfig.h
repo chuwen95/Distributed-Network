@@ -6,7 +6,7 @@
 #define COPYSTATEMACHINE_RAFTCONFIG_H
 
 #include "csm-framework/consensus/raft/Common.h"
-#include "csm-service/TcpService.h"
+#include "csm-service/P2PService.h"
 #include "state/PersistentState.h"
 #include "state/VolatileState.h"
 #include "state/LeaderState.h"
@@ -24,13 +24,17 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<RaftConfig>;
 
-            RaftConfig(const NodeId &id, std::int32_t minElectionTimeout, std::int32_t maxElectionTimeout, service::TcpService::Ptr tcpService,
+            RaftConfig(const NodeId &nodeId, std::int32_t minElectionTimeout, std::int32_t maxElectionTimeout, service::P2PService::Ptr p2pService,
                 PersistentState::Ptr persistentState, VolatileState::Ptr volatileState, LeaderState::Ptr leaderState,
                 ClusterConfigurationManager::Ptr clusterConfigurationManager, stmclog::StateMachineLog::Ptr stateMachineLog);
             ~RaftConfig() = default;
 
-            // 获取本服务器ID
+            // 获取本节点ID
             const NodeId& nodeId();
+            // 设置节点在节点列表中的index
+            void setNodeIndex(std::uint32_t nodeIndex);
+            // 获取节点在节点列表中的index
+            std::uint32_t nodeIndex() const;
 
             // 最小选举超时
             std::int32_t minElectionTimeout();
@@ -38,7 +42,7 @@ namespace csm
             std::int32_t maxElectionTimeout();
 
             // P2P模块
-            service::TcpService::Ptr tcpService();
+            service::P2PService::Ptr p2pService();
 
             // 持久化数据
             PersistentState::Ptr persistentState();
@@ -57,14 +61,16 @@ namespace csm
 
         private:
             // 本节点ID
-            NodeId m_id;
+            NodeId m_nodeId;
+            // 本节点在节点列表中的index
+            std::uint32_t m_nodeIndex;
             // 最小选举超时时间
             std::int32_t m_minElectionTimeout;
             // 最大选举超时时间
             std::int32_t m_maxElectionTimeout;
 
             // P2P模块
-            service::TcpService::Ptr m_tcpService;
+            service::P2PService::Ptr m_p2pService;
 
             /*
              * Raft元数据

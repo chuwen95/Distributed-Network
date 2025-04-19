@@ -2,8 +2,8 @@
 // Created by ChuWen on 2024/6/12.
 //
 
-#ifndef SERVER_H
-#define SERVER_H
+#ifndef CLUSTERNODE_H
+#define CLUSTERNODE_H
 
 #include "csm-common/Common.h"
 
@@ -20,10 +20,17 @@ namespace csm
 
             ClusterNode() = default;
             virtual ~ClusterNode() = default;
+
+        public:
+            virtual void setIsVote(const bool isVote) = 0;
+            virtual bool isVote() const = 0;
+
+        protected:
+            bool m_isVote{ false };
         };
 
     }
 
 }
 
-#endif //SERVER_H
+#endif //CLUSTERNODE_H

@@ -8,8 +8,9 @@ using namespace csm::rpc;
 
 TcpRpcServer::TcpRpcServer(RpcConfig::Ptr rpcConfig) : RpcServer(std::move(rpcConfig))
 {
-    service::TcpServiceFactory::Ptr tcpServiceFactory = std::make_shared<service::TcpServiceFactory>(m_rpcConfig->nodeConfig());
-    m_tcpService = tcpServiceFactory->createTcpService(service::ServiceStartType::Server);
+    service::P2PServiceFactory::Ptr tcpServiceFactory =
+        std::make_shared<service::P2PServiceFactory>(m_rpcConfig->nodeConfig(), service::ServiceStartType::Server);
+    m_tcpService = tcpServiceFactory->create();
 }
 
 int TcpRpcServer::init()

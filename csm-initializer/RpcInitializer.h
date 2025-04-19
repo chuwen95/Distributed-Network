@@ -18,7 +18,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<RpcInitializer>;
 
-            RpcInitializer(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService);
+            RpcInitializer(tool::NodeConfig::Ptr nodeConfig, service::P2PService::Ptr tcpService);
             ~RpcInitializer() = default;
 
         public:

@@ -35,14 +35,14 @@ std::uint32_t PacketHeader::payloadLength() const
     return m_payloadLength;
 }
 
-int PacketHeader::setModuleId(const std::int32_t moduleId)
+int PacketHeader::setModuleId(protocol::ModuleID moduleId)
 {
     m_moduleId = moduleId;
 
     return 0;
 }
 
-std::int32_t PacketHeader::moduleId() const
+csm::protocol::ModuleID PacketHeader::moduleId() const
 {
     return m_moduleId;
 }
@@ -61,9 +61,8 @@ int PacketHeader::encode(char *buffer, const std::size_t length)
 
     *(reinterpret_cast<std::uint32_t *>(buffer)) = htonl(m_magic);
     *(reinterpret_cast<std::uint16_t *>(buffer + sizeof(m_magic))) = htons(m_packetType);
-    *(reinterpret_cast<std::int32_t *>(buffer + sizeof(m_magic) + sizeof(m_packetType))) = htonl(m_moduleId);
-    *(reinterpret_cast<std::uint32_t *>(buffer + sizeof(m_magic) + sizeof(m_packetType) + sizeof(m_moduleId))) = htonl(
-            m_payloadLength);
+    *(reinterpret_cast<std::int32_t *>(buffer + sizeof(m_magic) + sizeof(m_packetType))) = htonl(static_cast<std::int32_t>(m_moduleId));
+    *(reinterpret_cast<std::uint32_t *>(buffer + sizeof(m_magic) + sizeof(m_packetType) + sizeof(m_moduleId))) = htonl(m_payloadLength);
 
     return 0;
 }
@@ -77,11 +76,10 @@ int PacketHeader::decode(const char *buffer, const std::size_t length)
 
     m_magic = ntohl(*(reinterpret_cast<std::uint32_t *>(const_cast<char *>(buffer))));
     m_packetType = ntohs(*(reinterpret_cast<std::uint16_t *>(const_cast<char *>(buffer + sizeof(m_magic)))));
-    m_moduleId = ntohl(
-            *(reinterpret_cast<std::int32_t *>(const_cast<char *>(buffer + sizeof(m_magic) + sizeof(m_packetType)))));
+    m_moduleId = static_cast<protocol::ModuleID>(
+        ntohl(*(reinterpret_cast<std::int32_t *>(const_cast<char *>(buffer + sizeof(m_magic) + sizeof(m_packetType))))));
     m_payloadLength = ntohl(
-            *(reinterpret_cast<std::uint32_t *>(const_cast<char *>(buffer + sizeof(m_magic) + sizeof(m_packetType) +
-                                                                   sizeof(m_moduleId)))));
+            *(reinterpret_cast<std::uint32_t *>(const_cast<char *>(buffer + sizeof(m_magic) + sizeof(m_packetType) + sizeof(m_moduleId)))));
 
     return 0;
 }

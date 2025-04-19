@@ -5,8 +5,9 @@
 #include "P2PServiceInitializer.h"
 
 #include "csm-utilities/Logger.h"
-#include "csm-service/TcpServiceFactory.h"
+#include "csm-service/P2PServiceFactory.h"
 #include "csm-packetprocess/packet/PacketRawString.h"
+#include "csm-framework/protocol/Protocol.h"
 
 using namespace csm::initializer;
 
@@ -14,8 +15,8 @@ std::atomic_int receiveNum{0};
 
 P2PServiceInitializer::P2PServiceInitializer(tool::NodeConfig::Ptr nodeConfig)
 {
-    service::TcpServiceFactory tcpServiceFactory(nodeConfig);
-    m_tcpService = tcpServiceFactory.createTcpService(service::ServiceStartType::Node);
+    service::P2PServiceFactory p2pServiceFactory(nodeConfig, service::ServiceStartType::Node);
+    m_p2pService = p2pServiceFactory.create();
 }
 
 int P2PServiceInitializer::init()
@@ -23,7 +24,7 @@ int P2PServiceInitializer::init()
     // 忽略SIGPIPE信号，防止向一个已经断开的socket发送数据时操作系统触发SIGPIPE信号退出该应用
     signal(SIGPIPE, SIG_IGN);
 
-    m_tcpService->registerModulePacketHandler(1, [&](std::shared_ptr<std::vector<char>> data) -> int {
+    m_p2pService->registerModulePacketHandler(protocol::ModuleID::rpc, [&](std::shared_ptr<std::vector<char>> data) -> int {
         packetprocess::PacketRawString packetRawString;
         packetRawString.decode(data->data(), data->size());
 
@@ -44,20 +45,20 @@ int P2PServiceInitializer::init()
         return 0;
     });
 
-    return m_tcpService->init();
+    return m_p2pService->init();
 }
 
 int P2PServiceInitializer::start()
 {
-    return m_tcpService->start();
+    return m_p2pService->start();
 }
 
 int P2PServiceInitializer::stop()
 {
-    return m_tcpService->stop();
+    return m_p2pService->stop();
 }
 
-csm::service::TcpService::Ptr P2PServiceInitializer::tcpService()
+csm::service::P2PService::Ptr P2PServiceInitializer::p2pService()
 {
-    return m_tcpService;
+    return m_p2pService;
 }

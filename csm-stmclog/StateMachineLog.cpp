@@ -111,7 +111,6 @@ int StateMachineLog::buildInitialConfigurationLog()
     entry.setData(jsonString);
 
     // 编码Entry
-
     std::vector<char> data = entry.encode();
 
     // 将类型写入到数据前面，占据1个字节

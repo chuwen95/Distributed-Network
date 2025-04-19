@@ -85,14 +85,14 @@ HostsHeartbeatService::Ptr ServiceConfig::hostsHeartbeatService()
     return m_hostsHeartbeatService;
 }
 
-void ServiceConfig::registerModulePacketHandler(const std::int32_t moduleId, ModulePacketHandler modulePacketHandler)
+void ServiceConfig::registerModulePacketHandler(protocol::ModuleID moduleId, ModulePacketHandler modulePacketHandler)
 {
     std::unique_lock<std::mutex> ulock(x_modulePacketHandler);
 
     m_modulePacketHandler[moduleId] = std::move(modulePacketHandler);
 }
 
-std::function<int(std::shared_ptr<std::vector<char>>)> ServiceConfig::getModulePacketHandler(const std::int32_t moduleId)
+std::function<int(std::shared_ptr<std::vector<char>>)> ServiceConfig::getModulePacketHandler(protocol::ModuleID moduleId)
 {
     std::unique_lock<std::mutex> ulock(x_modulePacketHandler);
 

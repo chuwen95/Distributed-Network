@@ -27,9 +27,9 @@ int Initializer::init()
         return -1;
     }
 
-    // 初始化TcpService
-    m_tcpServiceInitializer = std::make_shared<P2PServiceInitializer>(m_nodeConfig);
-    if (-1 == m_tcpServiceInitializer->init())
+    // 初始化P2PService
+    m_p2pServiceInitializer = std::make_shared<P2PServiceInitializer>(m_nodeConfig);
+    if (-1 == m_p2pServiceInitializer->init())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "TcpServiceInitializer init failed");
         return -1;
@@ -37,7 +37,7 @@ int Initializer::init()
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "TcpServiceInitializer init successfully");
 
     // 初始化Rpc
-    m_rpcInitializer = std::make_shared<RpcInitializer>(m_nodeConfig, m_tcpServiceInitializer->tcpService());
+    m_rpcInitializer = std::make_shared<RpcInitializer>(m_nodeConfig, m_p2pServiceInitializer->p2pService());
     if (-1 == m_rpcInitializer->init())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "RpcInitializer init failed");
@@ -50,7 +50,7 @@ int Initializer::init()
 
 int Initializer::start()
 {
-    if (-1 == m_tcpServiceInitializer->start())
+    if (-1 == m_p2pServiceInitializer->start())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "TcpServiceInitializer start failed");
         return -1;
@@ -76,7 +76,7 @@ int Initializer::stop()
     }
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "RpcInitializer stop successfully");
 
-    if (-1 == m_tcpServiceInitializer->stop())
+    if (-1 == m_p2pServiceInitializer->stop())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "TcpServiceInitializer stop failed");
         return -1;

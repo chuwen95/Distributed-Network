@@ -7,9 +7,9 @@
 
 using namespace csm::initializer;
 
-RpcInitializer::RpcInitializer(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService)
+RpcInitializer::RpcInitializer(tool::NodeConfig::Ptr nodeConfig, service::P2PService::Ptr p2pService)
 {
-    rpc::RpcFactory rpcFactory(nodeConfig, tcpService);
+    rpc::RpcFactory rpcFactory(nodeConfig, p2pService);
     m_httpRpcServer = rpcFactory.createRpc(rpc::RpcServerType::HttpRpcServer);
 #if 0
     m_tcpRpcServer = rpcFactory.createRpc(rpc::RpcServerType::TcpRpcServer);

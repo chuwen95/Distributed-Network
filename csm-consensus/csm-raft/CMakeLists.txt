@@ -5,7 +5,7 @@ set(module_path ${CMAKE_CURRENT_SOURCE_DIR})
 set(proto_output_path ${CMAKE_CURRENT_BINARY_DIR})
 
 # 填充.proto文件
-set(proto_files configuration/protocol/configuration.proto protocol/pb/Message.proto protocol/pb/RequestVote.proto)
+set(proto_files configuration/protocol/configuration.proto protocol/pb/RaftMessage.proto protocol/pb/RequestVote.proto)
 # 获取csm-raft文件夹的绝对路径
 get_filename_component(module_absolute_path ${module_path} ABSOLUTE)
 # 遍历.proto文件
@@ -33,6 +33,11 @@ find_package(Protobuf CONFIG REQUIRED)
 FILE(GLOB_RECURSE SOURCES *.cpp)
 FILE(GLOB_RECURSE HEADERS *.h)
 
-add_library(raft ${PROTOBUF_SRCS} ${SOURCES} ${HEADERS})
+add_library(raft ${PROTOBUF_SRCS} ${SOURCES} ${HEADERS}
+        protocol/packet/RaftMessagePack.cpp
+        protocol/packet/RaftMessagePack.h
+        protocol/packet/MessageBase.h
+        protocol/packet/RequestVoteMessageReply.cpp
+        protocol/packet/RequestVoteMessageReply.h)
 target_link_libraries(raft PUBLIC protobuf::libprotobuf stmclog readerwriterqueue)
 target_include_directories(raft SYSTEM BEFORE PUBLIC ${proto_output_path})

@@ -6,7 +6,7 @@
 #define CLUSTERCONFIGURATIONSERIALIZER_H
 
 #include "csm-common/Common.h"
-#include "csm-consensus/csm-raft/configuration/ClusterConfiguration.h"
+#include "csm-framework/consensus/raft/Common.h"
 
 namespace csm
 {
@@ -23,8 +23,8 @@ namespace csm
             ~ClusterConfigurationSerializer() = default;
 
         public:
-            static std::string serialize(const std::vector<std::string>& clusterServers);
-            static std::vector<std::string> deserialize(const std::string& json);
+            static std::string serialize(const consensus::NodeIds& clusterServers);
+            static std::shared_ptr<consensus::NodeIds> deserialize(const std::string& json);
         };
 
     }

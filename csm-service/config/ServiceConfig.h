@@ -7,7 +7,6 @@
 
 #include "csm-common/Common.h"
 #include "inipp.h"
-#include "csm-utilities/Logger.h"
 #include "csm-tool/NodeConfig.h"
 
 #include "csm-utilities/SelectListenner.h"
@@ -23,6 +22,8 @@
 
 #include "csm-service/service/P2PSessionManager.h"
 #include "csm-service/service/ClientAliveChecker.h"
+
+#include "csm-framework/protocol/Protocol.h"
 
 namespace csm
 {
@@ -70,8 +71,8 @@ namespace csm
             HostsConnector::Ptr hostsConnector();
             HostsHeartbeatService::Ptr hostsHeartbeatService();
 
-            void registerModulePacketHandler(const std::int32_t moduleId, ModulePacketHandler modulePacketHandler);
-            ModulePacketHandler getModulePacketHandler(const std::int32_t moduleId);
+            void registerModulePacketHandler(protocol::ModuleID moduleId, ModulePacketHandler modulePacketHandler);
+            ModulePacketHandler getModulePacketHandler(protocol::ModuleID moduleId);
 
         private:
             tool::NodeConfig::Ptr m_nodeConfig;
@@ -95,7 +96,7 @@ namespace csm
             HostsHeartbeatService::Ptr m_hostsHeartbeatService;
 
             std::mutex x_modulePacketHandler;
-            std::map<std::int32_t, std::function<int(std::shared_ptr<std::vector<char>>)>> m_modulePacketHandler;
+            std::map<protocol::ModuleID, std::function<int(std::shared_ptr<std::vector<char>>)>> m_modulePacketHandler;
         };
 
     } // server

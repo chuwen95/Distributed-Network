@@ -19,7 +19,6 @@ namespace csm
             using Ptr = std::shared_ptr<PacketRawString>;
 
             PacketRawString() = default;
-
             ~PacketRawString() = default;
 
         public:
@@ -34,7 +33,7 @@ namespace csm
             int decode(const char *buffer, const std::size_t length);
 
         private:
-            protocol::RawString m_protoRawString;
+            packetprocess::RawString m_protoRawString;
         };
 
     } // packetprocess

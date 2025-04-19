@@ -2,13 +2,15 @@
 // Created by ChuWen on 9/5/23.
 //
 
-#ifndef TCPSERVER_TCPSERVER_H
-#define TCPSERVER_TCPSERVER_H
+#ifndef P2PSERVER_H
+#define P2PSERVER_H
 
 #include "csm-common/Common.h"
 #include "config/ServiceConfig.h"
+#include "csm-framework/consensus/raft/Common.h"
 #include "service/SessionDispatcher.h"
 #include "host/HostsInfoManager.h"
+#include "csm-framework/protocol/Protocol.h"
 
 namespace csm
 {
@@ -16,13 +18,13 @@ namespace csm
     namespace service
     {
 
-        class TcpService
+        class P2PService
         {
         public:
-            using Ptr = std::shared_ptr<TcpService>;
+            using Ptr = std::shared_ptr<P2PService>;
 
-            TcpService(ServiceConfig::Ptr serviceConfig);
-            ~TcpService();
+            explicit P2PService(ServiceConfig::Ptr serviceConfig);
+            ~P2PService();
 
         public:
             int init();
@@ -31,7 +33,7 @@ namespace csm
 
             int stop();
 
-            void registerModulePacketHandler(const std::int32_t moduleId, std::function<int(std::shared_ptr<std::vector<char>>)> packetHander);
+            void registerModulePacketHandler(protocol::ModuleID moduleId, std::function<int(std::shared_ptr<std::vector<char>>)> packetHander);
 
         public:
             /**
@@ -41,11 +43,11 @@ namespace csm
              * @return 如果有超时时间内有节点上线，则返回true
              *               如果超时时间内没有节点上线，则返回false
              */
-            bool waitAtLeastOneNodeConnected(const int timeout);
+            bool waitAtLeastOneNodeConnected(int timeout);
 
-            int boardcastModuleMessage(const std::int32_t moduleId, std::shared_ptr<std::vector<char>> data);
+            int boardcastModuleMessage(protocol::ModuleID moduleId, const std::vector<char>& data);
 
-            int sendModuleMessageByNodeId(const std::string &nodeId, const std::int32_t moduleId, std::shared_ptr<std::vector<char>> data);
+            int sendModuleMessageByNodeId(const std::string &nodeId, protocol::ModuleID moduleId, const std::vector<char>& data);
 
         private:
             int initServer();
@@ -78,4 +80,4 @@ namespace csm
 
 }
 
-#endif //TCPSERVER_TCPSERVER_H
+#endif //P2PSERVER_H

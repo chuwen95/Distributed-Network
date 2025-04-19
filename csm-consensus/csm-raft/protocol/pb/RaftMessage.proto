@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package csm.consensus;
+
+enum RaftMessageType
+{
+    RequestVote = 0;
+    RequestVoteReply = 1;
+}
+
+message RawRaftMessage
+{
+    RaftMessageType messageType = 1;
+    uint32 nodeIndex = 2;
+    bytes payload = 3;
+}

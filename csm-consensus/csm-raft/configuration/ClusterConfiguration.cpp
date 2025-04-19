@@ -16,7 +16,18 @@ void ClusterConfiguration::setClusterNodeIds(const std::vector<std::string> &nod
     m_configurationInfo.nodeIds = nodeIds;
 }
 
-void ClusterConfiguration::setClusterNodeById(const std::string &id, ClusterNode::Ptr clusterServer)
+void ClusterConfiguration::setClusterNode(const std::string &id, ClusterNode::Ptr clusterServer)
 {
     m_configurationInfo.nodes[id] = clusterServer;
+}
+
+ClusterNode::Ptr ClusterConfiguration::clusterNode(const NodeId& id)
+{
+    auto iter = m_configurationInfo.nodes.find(id);
+    if (m_configurationInfo.nodes.end() == iter)
+    {
+        return nullptr;
+    }
+
+    return iter->second;
 }

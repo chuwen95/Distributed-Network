@@ -6,7 +6,7 @@
 #define TCPNETWORK_RPCFACTORY_H
 
 #include "csm-tool/NodeConfig.h"
-#include "csm-service/TcpService.h"
+#include "csm-service/P2PService.h"
 #include "common/RpcServer.h"
 
 namespace csm
@@ -26,7 +26,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<RpcFactory>;
 
-            RpcFactory(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService);
+            RpcFactory(tool::NodeConfig::Ptr nodeConfig, service::P2PService::Ptr tcpService);
             ~RpcFactory() = default;
 
         public:
@@ -34,7 +34,7 @@ namespace csm
 
         private:
             tool::NodeConfig::Ptr m_nodeConfig;
-            service::TcpService::Ptr m_tcpService;
+            service::P2PService::Ptr m_tcpService;
         };
 
     } // rpc

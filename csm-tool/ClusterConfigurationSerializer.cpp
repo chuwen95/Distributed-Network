@@ -10,7 +10,7 @@
 
 using namespace csm::tool;
 
-std::string ClusterConfigurationSerializer::serialize(const std::vector<std::string>& clusterServerIds)
+std::string ClusterConfigurationSerializer::serialize(const consensus::NodeIds& clusterServerIds)
 {
     Json::Value root;
     for(const std::string& serverId : clusterServerIds)
@@ -24,27 +24,28 @@ std::string ClusterConfigurationSerializer::serialize(const std::vector<std::str
     return jsonString;
 }
 
-std::vector<std::string> ClusterConfigurationSerializer::deserialize(const std::string& json)
+std::shared_ptr<csm::consensus::NodeIds> ClusterConfigurationSerializer::deserialize(const std::string& json)
 {
+    std::shared_ptr<consensus::NodeIds> clusterServerIds = std::make_shared<consensus::NodeIds>();
+
     Json::Value root;
     Json::Reader reader;
     if (false == reader.parse(json, root))
     {
-        LOG->write(csm::utilities::LogType::Log_Error, FILE_INFO, "parse cluster servers failed");
-        return std::vector<std::string>();
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "parse cluster servers failed");
+        return clusterServerIds;
     }
 
     Json::Value clusterServerIdObj;
-    if (-1 == csm::utilities::JsonExtractHelper<Json::Value>::extract(root, "clusterServerIds", clusterServerIdObj))
+    if (-1 == utilities::JsonExtractHelper<Json::Value>::extract(root, "clusterServerIds", clusterServerIdObj))
     {
-        LOG->write(csm::utilities::LogType::Log_Error, FILE_INFO, "parse cluster servers failed");
-        return std::vector<std::string>();
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "parse cluster servers failed");
+        return clusterServerIds;
     }
 
-    std::vector<std::string> clusterServerIds;
     for (auto iter = clusterServerIdObj.begin(); iter != clusterServerIdObj.end(); ++iter)
     {
-        clusterServerIds.emplace_back(iter->asString());
+        clusterServerIds->emplace_back(iter->asString());
     }
 
     return clusterServerIds;

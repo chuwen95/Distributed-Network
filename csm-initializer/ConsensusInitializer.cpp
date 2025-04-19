@@ -9,7 +9,7 @@
 using namespace csm::initializer;
 
 ConsensusInitializer::ConsensusInitializer(tool::NodeConfig::Ptr nodeConfig,
-    service::TcpService::Ptr tcpService, storage::Storage::Ptr storage, stmclog::StateMachineLog::Ptr stateMachineLog)
+    service::P2PService::Ptr tcpService, storage::Storage::Ptr storage, stmclog::StateMachineLog::Ptr stateMachineLog)
 {
     consensus::RaftFactory::Ptr raftFactory = std::make_shared<consensus::RaftFactory>(
             std::move(nodeConfig), tcpService, storage, stateMachineLog);

@@ -27,31 +27,25 @@ namespace csm
             std::size_t packetLength() const override;
 
             int setSeq(const std::uint32_t seq);
-
             std::uint32_t seq();
 
             int setLocalHost(const std::string &host);
-
             std::string localHost();
 
             int setPeerHost(const std::string &host);
-
             std::string peerHost();
 
             int setHandshakeUuid(const std::string &uuid);
-
             std::string handshakeUuid();
 
             int setNodeId(const std::string &id);
-
             std::string nodeId();
 
             int encode(char *buffer, const std::size_t length) const;
-
             int decode(const char *buffer, const std::size_t length);
 
         private:
-            protocol::ClientInfo m_protoClientInfo;
+            service::ClientInfo m_protoClientInfo;
         };
 
     } // service

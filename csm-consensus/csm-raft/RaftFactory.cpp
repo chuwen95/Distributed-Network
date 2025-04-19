@@ -12,7 +12,7 @@
 using namespace csm::consensus;
 
 RaftFactory::RaftFactory(tool::NodeConfig::Ptr nodeConfig,
-    service::TcpService::Ptr tcpService, storage::Storage::Ptr storage, stmclog::StateMachineLog::Ptr stateMachineLog) :
+    service::P2PService::Ptr tcpService, storage::Storage::Ptr storage, stmclog::StateMachineLog::Ptr stateMachineLog) :
     m_nodeConfig(std::move(nodeConfig)),
     m_tcpService(std::move(tcpService)), m_storage(std::move(storage)), m_stateMachineLog(std::move(stateMachineLog))
 { }

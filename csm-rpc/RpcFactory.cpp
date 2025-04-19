@@ -9,7 +9,7 @@
 
 using namespace csm::rpc;
 
-RpcFactory::RpcFactory(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService) :
+RpcFactory::RpcFactory(tool::NodeConfig::Ptr nodeConfig, service::P2PService::Ptr tcpService) :
         m_nodeConfig(std::move(nodeConfig)), m_tcpService(std::move(tcpService))
 {}
 

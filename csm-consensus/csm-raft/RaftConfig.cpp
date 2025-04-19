@@ -6,17 +6,27 @@
 
 using namespace csm::consensus;
 
-RaftConfig::RaftConfig(const NodeId &id, std::int32_t minElectionTimeout, std::int32_t maxElectionTimeout, service::TcpService::Ptr service,
+RaftConfig::RaftConfig(const NodeId &nodeId, std::int32_t minElectionTimeout, std::int32_t maxElectionTimeout, service::P2PService::Ptr p2pService,
     PersistentState::Ptr persistentState, VolatileState::Ptr volatileState, LeaderState::Ptr leaderState,
     ClusterConfigurationManager::Ptr clusterConfigurationManager, stmclog::StateMachineLog::Ptr stateMachineLog) :
-    m_id(id), m_minElectionTimeout(minElectionTimeout), m_maxElectionTimeout(maxElectionTimeout), m_tcpService(std::move(service)),
+    m_nodeId(nodeId), m_minElectionTimeout(minElectionTimeout), m_maxElectionTimeout(maxElectionTimeout), m_p2pService(std::move(p2pService)),
     m_persistentState(std::move(persistentState)), m_volatileState(std::move(volatileState)), m_leaderState(std::move(leaderState)),
     m_clusterConfigurationManager(std::move(clusterConfigurationManager)), m_stateMachineLog(std::move(stateMachineLog))
 { }
 
 const NodeId& RaftConfig::nodeId()
 {
-    return m_id;
+    return m_nodeId;
+}
+
+void RaftConfig::setNodeIndex(std::uint32_t nodeIndex)
+{
+    m_nodeIndex = nodeIndex;
+}
+
+std::uint32_t RaftConfig::nodeIndex() const
+{
+    return m_nodeIndex;
 }
 
 std::int32_t RaftConfig::minElectionTimeout()
@@ -29,9 +39,9 @@ std::int32_t RaftConfig::maxElectionTimeout()
     return m_maxElectionTimeout;
 }
 
-csm::service::TcpService::Ptr RaftConfig::tcpService()
+csm::service::P2PService::Ptr RaftConfig::p2pService()
 {
-    return m_tcpService;
+    return m_p2pService;
 }
 
 PersistentState::Ptr RaftConfig::persistentState()

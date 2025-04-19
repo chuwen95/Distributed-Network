@@ -41,7 +41,7 @@ namespace csm
 
             StorageInitializer::Ptr m_storageInitializer;
             AppLogInitializer::Ptr m_logInitializer;
-            P2PServiceInitializer::Ptr m_tcpServiceInitializer;
+            P2PServiceInitializer::Ptr m_p2pServiceInitializer;
             RpcInitializer::Ptr m_rpcInitializer;
             ConsensusInitializer::Ptr m_consensusInitializer;
         };

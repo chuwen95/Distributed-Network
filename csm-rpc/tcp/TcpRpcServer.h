@@ -6,7 +6,7 @@
 #define TCPRPCSERVER_H
 
 #include "csm-rpc/common/RpcServer.h"
-#include "csm-service/TcpServiceFactory.h"
+#include "csm-service/P2PServiceFactory.h"
 
 namespace csm
 {
@@ -30,7 +30,7 @@ namespace csm
             int stop() override;
 
         private:
-            service::TcpService::Ptr m_tcpService;
+            service::P2PService::Ptr m_tcpService;
         };
 
     }

@@ -33,7 +33,7 @@ namespace csm
             int decode(const char *buffer, const std::size_t length);
 
         private:
-            protocol::RawStringReply m_protoRawStringReply;
+            packetprocess::RawStringReply m_protoRawStringReply;
             std::vector<char> m_buffer;
         };
 

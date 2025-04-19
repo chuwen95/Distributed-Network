@@ -13,6 +13,8 @@
 #include "state/VolatileState.h"
 #include "state/LeaderState.h"
 
+#include "protocol/packet/RequestVoteMessage.h"
+
 namespace csm
 {
 
@@ -34,9 +36,13 @@ namespace csm
 
             int stop();
 
+            int handleMessage(const std::vector<char>& messageData);
+
         private:
             // 初始化集群配置
             int initClusterConfiguration();
+            // 更新节点Index
+            void updateNodeIndex(const NodeId& nodeId, const std::shared_ptr<NodeIds>& nodeIds);
             // 初始化状态
             int initState();
             // 初始化投票线程
@@ -46,6 +52,14 @@ namespace csm
             int generateRandomElectionTimeout();
             // 开始选举流程
             int startElection();
+
+            // 构建RequestVote消息
+            RequestVoteMessage::Ptr generateRequestVoteMessage();
+            // 广播消息给所有其他节点
+            int boardcastMessage(MessageBase::Ptr message);
+
+            // 处理RequestVote消息
+            int handleRequestVoteMessage(const std::uint32_t fromNodeIndex, RequestVoteMessage::Ptr msg);
 
         private:
             RaftConfig::Ptr m_raftConfig;
@@ -58,10 +72,8 @@ namespace csm
             };
             std::atomic<NodeIdentity> m_nodeIdentity{ NodeIdentity::Follower };
 
-            std::mutex x_election;
-            std::condition_variable m_electionCv;
             // 选举超时时间点
-            double m_electionTimeoutPoint;
+            std::atomic<double> m_electionTimeoutPoint;
             // 选举线程
             utilities::Thread::Ptr m_electionThread;
         };

@@ -2,7 +2,7 @@
 // Created by ChuWen on 10/11/23.
 //
 
-#include "TcpServiceFactory.h"
+#include "P2PServiceFactory.h"
 
 #include "config/ServiceConfig.h"
 #include "service/P2PSessionManager.h"
@@ -13,12 +13,12 @@
 
 using namespace csm::service;
 
-TcpServiceFactory::TcpServiceFactory(tool::NodeConfig::Ptr nodeConfig) :
-        m_nodeConfig(std::move(nodeConfig))
+P2PServiceFactory::P2PServiceFactory(tool::NodeConfig::Ptr nodeConfig, ServiceStartType serviceStartType) :
+    m_nodeConfig(std::move(nodeConfig)), m_serviceStartType(serviceStartType)
 {
 }
 
-TcpService::Ptr TcpServiceFactory::createTcpService(const ServiceStartType serviceStartType)
+P2PService::Ptr P2PServiceFactory::create()
 {
     utilities::SelectListenner::Ptr listenner = std::make_shared<utilities::SelectListenner>();
     Acceptor::Ptr acceptor = std::make_shared<Acceptor>();
@@ -42,7 +42,7 @@ TcpService::Ptr TcpServiceFactory::createTcpService(const ServiceStartType servi
         std::make_shared<SessionDataProcessor>(p2pSessionManager, clientAliveChecker ,m_nodeConfig->sessionDataWorkerNum());
 
     ServiceConfig::Ptr serviceConfig{ nullptr };
-    if(ServiceStartType::Node == serviceStartType)
+    if(ServiceStartType::Node == m_serviceStartType)
     {
         // 作为节点需要
         HostsInfoManager::Ptr hostsInfoManager = std::make_shared<HostsInfoManager>(m_nodeConfig->nodesFile());
@@ -53,19 +53,20 @@ TcpService::Ptr TcpServiceFactory::createTcpService(const ServiceStartType servi
          serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
              p2pSessionManager, clientAliveChecker, slaveReactors,
              sessionDispatcher, sessionDestroyer, sessionDataProcessor,
-             serviceStartType, hostsInfoManager, hostsConnector, hostsHeartbeatService);
+             m_serviceStartType, hostsInfoManager, hostsConnector, hostsHeartbeatService);
     }
-    else if(ServiceStartType::Server == serviceStartType)
+    else if(ServiceStartType::Server == m_serviceStartType)
     {
         // 创建TcpServiceConfig
         serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
             p2pSessionManager, clientAliveChecker, slaveReactors,
             sessionDispatcher, sessionDestroyer, sessionDataProcessor,
-            serviceStartType);
+            m_serviceStartType);
     }
     else
     {
         return nullptr;
     }
-    return std::make_shared<TcpService>(serviceConfig);
+
+    return std::make_shared<P2PService>(serviceConfig);
 }

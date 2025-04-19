@@ -7,7 +7,7 @@
 
 #include "csm-common/Common.h"
 #include "csm-tool/NodeConfig.h"
-#include "csm-service/TcpService.h"
+#include "csm-service/P2PService.h"
 #include "csm-stmclog/StateMachineLog.h"
 #include "csm-consensus/csm-raft/RaftFactory.h"
 
@@ -23,7 +23,7 @@ namespace csm
             using Ptr = std::shared_ptr<ConsensusInitializer>;
 
             explicit ConsensusInitializer(tool::NodeConfig::Ptr nodeConfig,
-                service::TcpService::Ptr tcpService, storage::Storage::Ptr storage, stmclog::StateMachineLog::Ptr stateMachineLog);
+                service::P2PService::Ptr tcpService, storage::Storage::Ptr storage, stmclog::StateMachineLog::Ptr stateMachineLog);
             ~ConsensusInitializer() = default;
 
             int init();

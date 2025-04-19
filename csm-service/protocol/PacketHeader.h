@@ -7,6 +7,8 @@
 
 #include "csm-common/Common.h"
 
+#include "csm-framework/protocol/Protocol.h"
+
 namespace csm
 {
 
@@ -43,27 +45,23 @@ namespace csm
             bool isMagicMatch();
 
             int setType(PacketType type);
-
             PacketType type() const;
 
             int setPayloadLength(std::uint32_t payloadLength);
-
             std::uint32_t payloadLength() const;
 
-            int setModuleId(const std::int32_t moduleId);
-
-            std::int32_t moduleId() const;
+            int setModuleId(protocol::ModuleID moduleId);
+            protocol::ModuleID moduleId() const;
 
             std::size_t headerLength();
 
             int encode(char *buffer, const std::size_t length);
-
             int decode(const char *buffer, const std::size_t length);
 
         private:
             std::uint32_t m_magic{ c_magic };
             std::uint16_t m_packetType;
-            std::int32_t m_moduleId;
+            protocol::ModuleID m_moduleId;
             std::uint32_t m_payloadLength;
         };
 

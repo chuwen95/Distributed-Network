@@ -4,6 +4,7 @@
 
 #include "HttpRpcServer.h"
 #include "csm-utilities/Logger.h"
+#include "csm-framework/protocol/Protocol.h"
 #include "csm-packetprocess/packet/PacketRawString.h"
 
 using namespace csm::rpc;
@@ -21,11 +22,10 @@ int HttpRpcServer::init()
         packetprocess::PacketRawString packetRawString;
         packetRawString.setContent(req.body);
 
-        std::shared_ptr<std::vector<char>> data = std::make_shared<std::vector<char>>();
-        data->resize(packetRawString.packetLength());
-        packetRawString.encode(data->data(), data->size());
+        std::vector<char> data(packetRawString.packetLength());
+        packetRawString.encode(data.data(), data.size());
 
-        m_rpcConfig->tcpService()->boardcastModuleMessage(1, data);
+        m_rpcConfig->p2pService()->boardcastModuleMessage(protocol::ModuleID::rpc, data);
     });
 
     return 0;

@@ -2,7 +2,7 @@
 // Created by ChuWen on 9/5/23.
 //
 
-#include "TcpService.h"
+#include "P2PService.h"
 
 #include "csm-utilities/Socket.h"
 #include "csm-utilities/Logger.h"
@@ -17,16 +17,16 @@ using namespace csm::service;
 
 constexpr std::size_t c_conQueueSize{ 500 };
 
-TcpService::TcpService(ServiceConfig::Ptr serviceConfig) : m_serviceConfig(std::move(serviceConfig))
+P2PService::P2PService(ServiceConfig::Ptr serviceConfig) : m_serviceConfig(std::move(serviceConfig))
 {}
 
-TcpService::~TcpService()
+P2PService::~P2PService()
 {
     // 关闭套接字
     utilities::Socket::close(m_fd);
 }
 
-int TcpService::init()
+int P2PService::init()
 {
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "****************************************TcpServer::init****************************************");
 
@@ -114,28 +114,29 @@ int TcpService::init()
     m_serviceConfig->clientAliveChecker()->init();
 
     // 注册数据接收回调，SlaveReactor回调包类型和包负载二进制数据
-    m_serviceConfig->sessionDataProcessor()->registerPacketHandler(PacketType::PT_ModuleMessage, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
-                std::uint64_t curTimestamp = utilities::TimeTools::getCurrentTimestamp();
-                // 获取fd对应的P2PSession
-                P2PSession::Ptr p2pSession = m_serviceConfig->p2pSessionManager()->session(fd);
-                // 若任务时间戳小于客户端上线时间戳，任务直接返回不处理，因为可能是客户端离线后新的客户端被分配的相同的fd
-                if(nullptr == p2pSession || curTimestamp < p2pSession->getClientOnlineTimestamp())
-                {
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-                                   "online timestamp: ", p2pSession->getClientOnlineTimestamp(), ", curTimestamp: ", curTimestamp);
-                    return -1;
-                }
+    m_serviceConfig->sessionDataProcessor()->registerPacketHandler(PacketType::PT_ModuleMessage,
+        [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
+            std::uint64_t curTimestamp = utilities::TimeTools::getCurrentTimestamp();
+            // 获取fd对应的P2PSession
+            P2PSession::Ptr p2pSession = m_serviceConfig->p2pSessionManager()->session(fd);
+            // 若任务时间戳小于客户端上线时间戳，任务直接返回不处理，因为可能是客户端离线后新的客户端被分配的相同的fd
+            if(nullptr == p2pSession || curTimestamp < p2pSession->getClientOnlineTimestamp())
+            {
+                LOG->write(utilities::LogType::Log_Info, FILE_INFO,
+                    "online timestamp: ", p2pSession->getClientOnlineTimestamp(), ", curTimestamp: ", curTimestamp);
+                return -1;
+            }
 
-                PayloadModuleMessage::Ptr payloadModuleMessage = std::dynamic_pointer_cast<PayloadModuleMessage>(payload);
+            PayloadModuleMessage::Ptr payloadModuleMessage = std::dynamic_pointer_cast<PayloadModuleMessage>(payload);
 
-                ModulePacketHandler packetHandler = m_serviceConfig->getModulePacketHandler(header->moduleId());
-                if (nullptr == packetHandler)
-                {
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "module handler not found, moduleId: ", header->moduleId());
-                    return -1;
-                }
-                return packetHandler(payloadModuleMessage->payload());
-            });
+            ModulePacketHandler packetHandler = m_serviceConfig->getModulePacketHandler(header->moduleId());
+            if (nullptr == packetHandler)
+            {
+                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "module handler not found, moduleId: ", header->moduleId());
+                return -1;
+            }
+            return packetHandler(payloadModuleMessage->payload());
+    });
 
     if (-1 == initServer())
     {
@@ -159,7 +160,7 @@ int TcpService::init()
     return 0;
 }
 
-int TcpService::start()
+int P2PService::start()
 {
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "****************************************TcpServer::start****************************************");
 
@@ -206,7 +207,7 @@ int TcpService::start()
     return 0;
 }
 
-int TcpService::stop()
+int P2PService::stop()
 {
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "****************************************TcpServer::stop****************************************");
 
@@ -242,29 +243,29 @@ int TcpService::stop()
     return 0;
 }
 
-void TcpService::registerModulePacketHandler(const std::int32_t moduleId,
+void P2PService::registerModulePacketHandler(protocol::ModuleID moduleId,
                                              std::function<int(std::shared_ptr<std::vector<char>>)> packetHander)
 {
     m_serviceConfig->registerModulePacketHandler(moduleId, std::move(packetHander));
 }
 
-bool TcpService::waitAtLeastOneNodeConnected(const int timeout)
+bool P2PService::waitAtLeastOneNodeConnected(const int timeout)
 {
     return m_serviceConfig->hostsInfoManager()->waitAtLeastOneNodeConnected(timeout);
 }
 
-int TcpService::boardcastModuleMessage(const std::int32_t moduleId, std::shared_ptr<std::vector<char>> data)
+int P2PService::boardcastModuleMessage(protocol::ModuleID moduleId, const std::vector<char>& data)
 {
     PacketHeader packetHeader;
     packetHeader.setType(PacketType::PT_ModuleMessage);
     packetHeader.setModuleId(moduleId);
-    packetHeader.setPayloadLength(data->size());
+    packetHeader.setPayloadLength(data.size());
 
     // 编码包为待发送数据
     std::vector<char> buffer;
-    buffer.resize(packetHeader.headerLength() + data->size());
+    buffer.resize(packetHeader.headerLength() + data.size());
     packetHeader.encode(buffer.data(), packetHeader.headerLength());
-    memcpy(buffer.data() + packetHeader.headerLength(), data->data(), data->size());
+    memcpy(buffer.data() + packetHeader.headerLength(), data.data(), data.size());
 
     // 发送给所有在线的节点
     std::vector<std::pair<std::string, int>> allOnlineClients = m_serviceConfig->hostsInfoManager()->getAllOnlineClients();
@@ -279,19 +280,19 @@ int TcpService::boardcastModuleMessage(const std::int32_t moduleId, std::shared_
     return 0;
 }
 
-int TcpService::sendModuleMessageByNodeId(const std::string &nodeId, const std::int32_t moduleId,
-                                          std::shared_ptr<std::vector<char>> data)
+int P2PService::sendModuleMessageByNodeId(const std::string &nodeId, protocol::ModuleID moduleId,
+                                          const std::vector<char>& data)
 {
     PacketHeader packetHeader;
     packetHeader.setType(PacketType::PT_ModuleMessage);
     packetHeader.setModuleId(moduleId);
-    packetHeader.setPayloadLength(data->size());
+    packetHeader.setPayloadLength(data.size());
 
     // 编码包为待发送数据
     std::vector<char> buffer;
-    buffer.resize(packetHeader.headerLength() + data->size());
+    buffer.resize(packetHeader.headerLength() + data.size());
     packetHeader.encode(buffer.data(), packetHeader.headerLength());
-    memcpy(buffer.data() + packetHeader.headerLength(), data->data(), data->size());
+    memcpy(buffer.data() + packetHeader.headerLength(), data.data(), data.size());
 
     // 发送给所有在线的节点
     int fd = m_serviceConfig->hostsInfoManager()->getHostFdById(nodeId);
@@ -313,7 +314,7 @@ int TcpService::sendModuleMessageByNodeId(const std::string &nodeId, const std::
 }
 
 
-int TcpService::initServer()
+int P2PService::initServer()
 {
     // 创建监听套接字
     m_fd = utilities::Socket::create();
@@ -430,7 +431,7 @@ int TcpService::initServer()
     return 0;
 }
 
-int TcpService::initClient()
+int P2PService::initClient()
 {
     if (-1 == m_serviceConfig->hostsInfoManager()->init())
     {
@@ -750,7 +751,7 @@ int TcpService::initClient()
     return 0;
 }
 
-SlaveReactor::Ptr TcpService::getSlaveReactorByFd(const int fd)
+SlaveReactor::Ptr P2PService::getSlaveReactorByFd(const int fd)
 {
     int slaveReactorIndex = m_serviceConfig->sessionDispatcher()->getSlaveReactorIndexByFd(fd);
     if(-1 == slaveReactorIndex)
@@ -762,7 +763,7 @@ SlaveReactor::Ptr TcpService::getSlaveReactorByFd(const int fd)
     return m_serviceConfig->slaveReactors()[slaveReactorIndex];
 }
 
-int TcpService::sendData(const int fd, const std::vector<char> &data)
+int P2PService::sendData(const int fd, const std::vector<char> &data)
 {
     SlaveReactor::Ptr slaveReactor = getSlaveReactorByFd(fd);
     if(nullptr == slaveReactor)
@@ -782,7 +783,7 @@ int TcpService::sendData(const int fd, const std::vector<char> &data)
     return 0;
 }
 
-int TcpService::disconnectClient(const HostEndPointInfo &hostEndPointInfo, const std::string &id, const std::string &uuid, const int flag)
+int P2PService::disconnectClient(const HostEndPointInfo &hostEndPointInfo, const std::string &id, const std::string &uuid, const int flag)
 {
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "id: ", id, ", flag: ", flag, ", hostEndPointInfo: ", hostEndPointInfo.host());
     if (0 == flag || -1 == flag)

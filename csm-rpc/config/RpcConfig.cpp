@@ -6,8 +6,8 @@
 
 using namespace csm::rpc;
 
-RpcConfig::RpcConfig(tool::NodeConfig::Ptr nodeConfig, service::TcpService::Ptr tcpService, std::shared_ptr<httplib::Server> httpServer) :
-        m_nodeConfig(std::move(nodeConfig)), m_tcpService(std::move(tcpService))
+RpcConfig::RpcConfig(tool::NodeConfig::Ptr nodeConfig, service::P2PService::Ptr p2pService, std::shared_ptr<httplib::Server> httpServer) :
+        m_nodeConfig(std::move(nodeConfig)), m_p2pService(std::move(p2pService))
 {}
 
 csm::tool::NodeConfig::Ptr RpcConfig::nodeConfig()
@@ -15,7 +15,7 @@ csm::tool::NodeConfig::Ptr RpcConfig::nodeConfig()
     return m_nodeConfig;
 }
 
-csm::service::TcpService::Ptr RpcConfig::tcpService()
+csm::service::P2PService::Ptr RpcConfig::p2pService()
 {
-    return m_tcpService;
+    return m_p2pService;
 }

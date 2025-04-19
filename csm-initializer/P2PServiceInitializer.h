@@ -8,7 +8,7 @@
 #include "csm-common/Common.h"
 
 #include "csm-tool/NodeConfig.h"
-#include "csm-service/TcpService.h"
+#include "csm-service/P2PService.h"
 
 namespace csm
 {
@@ -31,10 +31,10 @@ namespace csm
 
             int stop();
 
-            service::TcpService::Ptr tcpService();
+            service::P2PService::Ptr p2pService();
 
         private:
-            service::TcpService::Ptr m_tcpService;
+            service::P2PService::Ptr m_p2pService;
         };
 
     } // initializer

@@ -9,7 +9,7 @@
 
 #include "csm-consensus/csm-raft/Raft.h"
 #include "csm-tool/NodeConfig.h"
-#include "csm-service/TcpService.h"
+#include "csm-service/P2PService.h"
 #include "csm-storage/Storage.h"
 #include "csm-stmclog/StateMachineLog.h"
 
@@ -25,7 +25,7 @@ namespace csm
             using Ptr = std::shared_ptr<RaftFactory>;
 
             explicit RaftFactory(tool::NodeConfig::Ptr nodeConfig,
-                service::TcpService::Ptr tcpService, storage::Storage::Ptr storage, stmclog::StateMachineLog::Ptr stateMachineLog);
+                service::P2PService::Ptr tcpService, storage::Storage::Ptr storage, stmclog::StateMachineLog::Ptr stateMachineLog);
             ~RaftFactory() = default;
 
         public:
@@ -33,7 +33,7 @@ namespace csm
 
         private:
             tool::NodeConfig::Ptr m_nodeConfig;
-            service::TcpService::Ptr m_tcpService;
+            service::P2PService::Ptr m_tcpService;
             storage::Storage::Ptr m_storage;
             stmclog::StateMachineLog::Ptr m_stateMachineLog;
         };
