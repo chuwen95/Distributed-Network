@@ -18,21 +18,27 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<Thread>;
 
-            Thread(const std::function<void()>& func, std::uint32_t interval = 0, std::string_view threadName = "");
+            Thread() = default;
             ~Thread();
 
         public:
-            void start();
+            void setFunc(std::function<void()> func);
+
+            void setInterval(std::uint32_t interval);
+
+            void setName(std::string_view name);
+
+            int start();
 
             void stop();
 
         private:
-            // 线程名
-            std::string m_threadName;
+            // 线程体
+            std::function<void()> m_func;
             // 每次执行线程体的间隔时间
             int m_interval;
-            // 线程体
-            std::function<void()> m_threadFunc;
+            // 线程名
+            std::string m_name;
 
             std::mutex x_startStop;
 

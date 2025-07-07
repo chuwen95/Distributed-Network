@@ -24,9 +24,9 @@ int P2PServiceInitializer::init()
     // 忽略SIGPIPE信号，防止向一个已经断开的socket发送数据时操作系统触发SIGPIPE信号退出该应用
     signal(SIGPIPE, SIG_IGN);
 
-    m_p2pService->registerModulePacketHandler(protocol::ModuleID::rpc, [&](std::shared_ptr<std::vector<char>> data) -> int {
+    m_p2pService->registerModulePacketHandler(protocol::ModuleID::rpc, [&](const NodeId& nodeId, const std::vector<char>& data) -> int {
         packetprocess::PacketRawString packetRawString;
-        packetRawString.decode(data->data(), data->size());
+        packetRawString.decode(data.data(), data.size());
 
 #if 0
         LOG->write(utilities::LogType::Log_Info, FILE_INFO,

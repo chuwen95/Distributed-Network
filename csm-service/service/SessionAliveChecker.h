@@ -2,12 +2,11 @@
 // Created by ChuWen on 9/9/23.
 //
 
-#ifndef TCPNETWORK_CLIENTALIVECHECKER_H
-#define TCPNETWORK_CLIENTALIVECHECKER_H
+#ifndef SESSIONALIVECHECKER_H
+#define SESSIONALIVECHECKER_H
 
 #include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
-#include "csm-utilities/ElapsedTime.h"
 
 namespace csm
 {
@@ -15,13 +14,13 @@ namespace csm
     namespace service
     {
 
-        class ClientAliveChecker
+        class SessionAliveChecker
         {
         public:
-            using Ptr = std::shared_ptr<ClientAliveChecker>;
+            using Ptr = std::shared_ptr<SessionAliveChecker>;
 
-            ClientAliveChecker() = default;
-            ~ClientAliveChecker() = default;
+            SessionAliveChecker() = default;
+            ~SessionAliveChecker() = default;
 
         public:
             int init();
@@ -68,4 +67,4 @@ namespace csm
 
 }
 
-#endif //TCPNETWORK_CLIENTALIVECHECKER_H
+#endif //SESSIONALIVECHECKER_H

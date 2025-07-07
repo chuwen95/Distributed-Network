@@ -37,7 +37,9 @@ int SessionDestroyer::init()
             std::this_thread::sleep_for(std::chrono::milliseconds(m_destroyInterval));
         }
     };
-    m_thread = std::make_shared<utilities::Thread>(expression, 0, "destoryer");
+    m_thread = std::make_shared<utilities::Thread>();
+    m_thread->setFunc(expression);
+    m_thread->setName("destoryer");
 
     return 0;
 }

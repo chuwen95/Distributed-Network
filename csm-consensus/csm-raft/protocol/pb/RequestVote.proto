@@ -5,7 +5,7 @@ package csm.consensus;
 message RawRequestVote
 {
     uint64 term = 1;    // 候选人的任期
-    uint32 candidateId = 2;     // 发起投票的候选人的ID
+    string candidateId = 2;     // 发起投票的候选人的ID
     uint64 lastLogIndex = 3;        // 候选者最后一个日志条目的索引
     uint64 lastLogTerm = 4;     // 候选者最后一个日至条目是在哪个任期产生的
 }

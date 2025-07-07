@@ -27,9 +27,6 @@ namespace csm
             void setMessageType(RaftMessageType type);
             RaftMessageType messageType() const;
 
-            void setNodeIndex(const std::uint32_t nodeIndex);
-            std::uint32_t nodeIndex() const;
-
             void setPayloadSize(size_t size);
             std::size_t payloadSize() const;
             char* payloadRawPointer();

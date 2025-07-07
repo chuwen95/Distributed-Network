@@ -5,7 +5,7 @@
 #ifndef LEADERSTATE_H
 #define LEADERSTATE_H
 
-#include "csm-framework/consensus/raft/Common.h"
+#include "csm-framework/cluster/Common.h"
 
 namespace csm
 {

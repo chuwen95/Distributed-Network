@@ -10,7 +10,7 @@
 #include "Singleton.h"
 #include "StringTool.h"
 
-#define FILE_INFO "[", std::string(__FILE__).substr(std::string(__FILE__).find_last_of("/") + 1), " ", __FUNCTION__, " ", __LINE__, "]    "
+#define FILE_INFO "[", __FILE__ , " ", __FUNCTION__, " ", __LINE__, "]    "
 
 namespace csm
 {

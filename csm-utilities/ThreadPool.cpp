@@ -7,7 +7,7 @@
 
 using namespace csm::utilities;
 
-ThreadPool::ThreadPool(const int size, const std::string_view threadName) :
+ThreadPool::ThreadPool(const std::size_t size, const std::string_view threadName) :
     m_threadNum(size), m_threadName(threadName)
 {}
 
@@ -18,8 +18,6 @@ int ThreadPool::init()
         return -1;
     }
 
-    m_taskQueues.resize(m_threadNum);
-
     return 0;
 }
 
@@ -29,12 +27,14 @@ int ThreadPool::start()
 
     const auto expression = [this](const int id) {
         std::string tname = m_threadName + "-" + std::to_string(id);
+#ifdef __linux__
         pthread_setname_np(pthread_self(), tname.c_str());
+#endif
 
         while (false == isTerminate())
         {
             ThreadPoolTask task;
-            m_taskQueues[id].wait_dequeue(task);
+            m_tasks.wait_dequeue(task);
             task();
         }
     };
@@ -58,11 +58,6 @@ int ThreadPool::stop()
     }
 
     setIsTerminate(true);
-
-    for (int i = 0; i < m_threadNum; ++i)
-    {
-        m_taskQueues[i].enqueue([]() {});
-    }
 
     for (auto &thread: m_threads)
     {

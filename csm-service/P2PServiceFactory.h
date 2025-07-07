@@ -26,6 +26,13 @@ namespace csm
             P2PService::Ptr create();
 
         private:
+            SessionDataDecoder::Ptr createSessionDataDecoder(
+                P2PSessionManager::Ptr p2pSessionManager, std::size_t workerNum);
+            SessionServiceDataProcessor::Ptr createServiceDataProcessor();
+            SessionModuleDataProcessor::Ptr createModuleDataProcessor(
+                P2PSessionManager::Ptr p2pSessionManager, std::size_t workerNum);
+
+        private:
             tool::NodeConfig::Ptr m_nodeConfig;
             ServiceStartType m_serviceStartType;
         };

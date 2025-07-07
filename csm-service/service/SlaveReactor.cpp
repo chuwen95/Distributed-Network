@@ -192,8 +192,9 @@ int SlaveReactor::init()
 
         return 0;
     };
-    std::string threadName = "slav_reac_" + std::to_string(m_reactorId);
-    m_thread = std::make_shared<utilities::Thread>(expression, 0, threadName.c_str());
+    m_thread = std::make_shared<utilities::Thread>();
+    m_thread->setFunc(expression);
+    m_thread->setName("slav_reac_" + std::to_string(m_reactorId));
 
     return 0;
 }

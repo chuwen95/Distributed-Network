@@ -170,6 +170,7 @@ tcp_listen_port=${tcp_rpc_listen_port}
 ip=${p2p_listen_ip}
 port=${p2p_listen_port}
 nodes_file=nodes.json
+packet_decode_worker_num=4
 packet_process_worker_num=8
 
 [reactor]

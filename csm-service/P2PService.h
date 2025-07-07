@@ -7,7 +7,7 @@
 
 #include "csm-common/Common.h"
 #include "config/ServiceConfig.h"
-#include "csm-framework/consensus/raft/Common.h"
+#include "csm-framework/cluster/Common.h"
 #include "service/SessionDispatcher.h"
 #include "host/HostsInfoManager.h"
 #include "csm-framework/protocol/Protocol.h"
@@ -33,7 +33,7 @@ namespace csm
 
             int stop();
 
-            void registerModulePacketHandler(protocol::ModuleID moduleId, std::function<int(std::shared_ptr<std::vector<char>>)> packetHander);
+            void registerModulePacketHandler(const protocol::ModuleID moduleId, ModulePacketHandler packetHander);
 
         public:
             /**
@@ -45,14 +45,16 @@ namespace csm
              */
             bool waitAtLeastOneNodeConnected(int timeout);
 
-            int boardcastModuleMessage(protocol::ModuleID moduleId, const std::vector<char>& data);
+            int boardcastModuleMessage(const protocol::ModuleID moduleId, const std::vector<char>& data);
 
-            int sendModuleMessageByNodeId(const std::string &nodeId, protocol::ModuleID moduleId, const std::vector<char>& data);
+            int sendModuleMessageByNodeId(const NodeId &nodeId, protocol::ModuleID moduleId, const std::vector<char>& data);
 
         private:
             int initServer();
 
             int initClient();
+
+            int initPacketHandler();
 
             SlaveReactor::Ptr getSlaveReactorByFd(const int fd);
 
@@ -69,7 +71,7 @@ namespace csm
             int disconnectClient(const HostEndPointInfo &hostEndPointInfo, const std::string &id, const std::string &uuid, const int flag);
 
         private:
-            int m_fd;
+            int m_fd{ -1 };
 
             std::map<std::int32_t, std::function<int(std::shared_ptr<std::vector<char>>)>> m_modulePacketHandler;
 

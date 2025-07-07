@@ -42,7 +42,9 @@ int SelectListenner::init()
 
         return 0;
     };
-    m_thread = std::make_shared<Thread>(expression, 0, "main_reac");
+    m_thread = std::make_shared<Thread>();
+    m_thread->setFunc(expression);
+    m_thread->setName("main_reac");
 
     return 0;
 }

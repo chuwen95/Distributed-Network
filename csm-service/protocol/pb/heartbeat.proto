@@ -4,14 +4,15 @@ package csm.service;
 
 message HeartBeat
 {
-    string id = 1;
-    uint32 timestamp = 2;
+    string nodeId = 1;
+    uint64 seq = 2;
+    uint32 timestamp = 3;
 }
 
 message HeartBeatReply
 {
-    string id = 1;
-    uint32 sendTimestamp = 2;
-    uint32 recvTimestamp = 3;
+    string nodeId = 1;
+    uint64 seq = 2;
+    uint32 transferTime = 3;
 }
 

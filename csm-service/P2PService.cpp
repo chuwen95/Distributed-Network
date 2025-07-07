@@ -11,6 +11,8 @@
 #include "protocol/PacketHeader.h"
 #include "protocol/payload/PayloadClientInfo.h"
 #include "protocol/payload/PayloadClientInfoReply.h"
+#include "protocol/payload/PayloadHeartBeat.h"
+#include "protocol/payload/PayloadHeartBeatReply.h"
 #include "protocol/payload/PayloadModuleMessage.h"
 
 using namespace csm::service;
@@ -29,13 +31,6 @@ P2PService::~P2PService()
 int P2PService::init()
 {
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "****************************************TcpServer::init****************************************");
-
-    if(-1 == m_serviceConfig->sessionDataProcessor()->init())
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session data processor init failed");
-        return -1;
-    }
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session data processor init successfully");
 
     if (-1 == m_serviceConfig->sessionDispatcher()->init())
     {
@@ -67,7 +62,7 @@ int P2PService::init()
 
         // 不再检查心跳
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remove tcp session from client alive checker, fd: ", fd);
-        m_serviceConfig->clientAliveChecker()->removeClient(fd);
+        m_serviceConfig->sessionAliveChecker()->removeClient(fd);
 
         // 将fd从子Reactor中移除
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remove fd from slave reactor, fd: ", fd);
@@ -81,7 +76,7 @@ int P2PService::init()
         if(ServiceStartType::Node == m_serviceConfig->serviceStartType())
         {
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "update connect info from host connector, fd: ", fd);
-            disconnectClient(p2pSession->peerHostEndPointInfo(), p2pSession->getClientId(), p2pSession->handshakeUuid(), flag);
+            disconnectClient(p2pSession->peerHostEndPointInfo(), p2pSession->clientId(), p2pSession->handshakeUuid(), flag);
         }
 
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remote fd slave reactor relation, fd: ", fd);
@@ -94,7 +89,7 @@ int P2PService::init()
         return 0;
     });
 
-    for(SlaveReactor::Ptr slaveReactor : m_serviceConfig->slaveReactors())
+    for(const SlaveReactor::Ptr& slaveReactor : m_serviceConfig->slaveReactors())
     {
         if(-1 == slaveReactor->init())
         {
@@ -105,38 +100,54 @@ int P2PService::init()
 
         slaveReactor->setDisconnectHandler([this](const int fd) { return m_serviceConfig->sessionDestroyer()->addSession(fd); });
         slaveReactor->setSessionDataHandler([this](const int fd, const char* data, const std::size_t dataLen) {
-            return m_serviceConfig->sessionDataProcessor()->addSessionData(fd, data, dataLen); });
+            return m_serviceConfig->sessionDataDecoder()->addSessionData(fd, data, dataLen);
+        });
     }
 
-    m_serviceConfig->clientAliveChecker()->setTimeoutHandler([this](const std::vector<int>& fds){
+    m_serviceConfig->sessionAliveChecker()->setTimeoutHandler([this](const std::vector<int>& fds){
         std::ranges::for_each(fds, [this](const int fd){ m_serviceConfig->sessionDestroyer()->addSession(fd, 0); });
     });
-    m_serviceConfig->clientAliveChecker()->init();
+    m_serviceConfig->sessionAliveChecker()->init();
 
-    // 注册数据接收回调，SlaveReactor回调包类型和包负载二进制数据
-    m_serviceConfig->sessionDataProcessor()->registerPacketHandler(PacketType::PT_ModuleMessage,
+    // 注册网络模块数据接收回调
+    if (0 != m_serviceConfig->sessionServiceDataProcessor()->init())
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session service data processor init failed");
+        return -1;
+    }
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session service data processor init successfully");
+
+    // 注册其他模块数据接收回调，SlaveReactor回调包类型和包负载二进制数据
+    m_serviceConfig->sessionModuleDataProcessor()->registerPacketHandler(PacketType::PT_ModuleMessage,
         [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
             std::uint64_t curTimestamp = utilities::TimeTools::getCurrentTimestamp();
             // 获取fd对应的P2PSession
             P2PSession::Ptr p2pSession = m_serviceConfig->p2pSessionManager()->session(fd);
             // 若任务时间戳小于客户端上线时间戳，任务直接返回不处理，因为可能是客户端离线后新的客户端被分配的相同的fd
-            if(nullptr == p2pSession || curTimestamp < p2pSession->getClientOnlineTimestamp())
+            if(nullptr == p2pSession || curTimestamp < p2pSession->clientOnlineTimestamp())
             {
                 LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-                    "online timestamp: ", p2pSession->getClientOnlineTimestamp(), ", curTimestamp: ", curTimestamp);
+                    "online timestamp: ", p2pSession->clientOnlineTimestamp(), ", curTimestamp: ", curTimestamp);
                 return -1;
             }
 
             PayloadModuleMessage::Ptr payloadModuleMessage = std::dynamic_pointer_cast<PayloadModuleMessage>(payload);
 
-            ModulePacketHandler packetHandler = m_serviceConfig->getModulePacketHandler(header->moduleId());
-            if (nullptr == packetHandler)
+            ModulePacketHandler packetHandler;
+            if (0 != m_serviceConfig->modulePacketHandler(header->moduleId(), packetHandler))
             {
                 LOG->write(utilities::LogType::Log_Info, FILE_INFO, "module handler not found, moduleId: ", header->moduleId());
                 return -1;
             }
-            return packetHandler(payloadModuleMessage->payload());
+            return packetHandler(p2pSession->clientId(), payloadModuleMessage->payload());
     });
+
+    if(-1 == m_serviceConfig->sessionModuleDataProcessor()->init())
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session module data processor init failed");
+        return -1;
+    }
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session module data processor init successfully");
 
     if (-1 == initServer())
     {
@@ -164,8 +175,10 @@ int P2PService::start()
 {
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "****************************************TcpServer::start****************************************");
 
-    // 包处理线程池
-    m_serviceConfig->sessionDataProcessor()->start();
+    // 网络模块包处理器
+    m_serviceConfig->sessionServiceDataProcessor()->start();
+    // 其它模组包处理器
+    m_serviceConfig->sessionModuleDataProcessor()->start();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start session data processor successfully");
     std::vector<SlaveReactor::Ptr> slaveReactors = m_serviceConfig->slaveReactors();
     for (SlaveReactor::Ptr &slaveReactor: slaveReactors)
@@ -174,7 +187,7 @@ int P2PService::start()
     }
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start all slave reactor successfully");
     // 心跳检查器
-    m_serviceConfig->clientAliveChecker()->start();
+    m_serviceConfig->sessionAliveChecker()->start();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start client alive checker successfully");
     // Session派发器
     m_serviceConfig->sessionDispatcher()->start();
@@ -211,7 +224,7 @@ int P2PService::stop()
 {
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "****************************************TcpServer::stop****************************************");
 
-    m_serviceConfig->clientAliveChecker()->stop();
+    m_serviceConfig->sessionAliveChecker()->stop();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop client heartbeat checker successfully");
 
     if(ServiceStartType::Node == m_serviceConfig->serviceStartType())
@@ -221,8 +234,10 @@ int P2PService::stop()
         m_serviceConfig->hostsConnector()->stop();
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop hosts connector successfully");
     }
-    m_serviceConfig->sessionDataProcessor()->stop();
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop payload processor successfully");
+    m_serviceConfig->sessionModuleDataProcessor()->stop();
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop module data processor successfully");
+    m_serviceConfig->sessionServiceDataProcessor()->stop();
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop service data processor successfully");
     m_serviceConfig->listenner()->stop();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop listenner successfully");
     m_serviceConfig->acceptor()->stop();
@@ -243,8 +258,7 @@ int P2PService::stop()
     return 0;
 }
 
-void P2PService::registerModulePacketHandler(protocol::ModuleID moduleId,
-                                             std::function<int(std::shared_ptr<std::vector<char>>)> packetHander)
+void P2PService::registerModulePacketHandler(protocol::ModuleID moduleId, ModulePacketHandler packetHander)
 {
     m_serviceConfig->registerModulePacketHandler(moduleId, std::move(packetHander));
 }
@@ -280,8 +294,7 @@ int P2PService::boardcastModuleMessage(protocol::ModuleID moduleId, const std::v
     return 0;
 }
 
-int P2PService::sendModuleMessageByNodeId(const std::string &nodeId, protocol::ModuleID moduleId,
-                                          const std::vector<char>& data)
+int P2PService::sendModuleMessageByNodeId(const NodeId &nodeId, protocol::ModuleID moduleId, const std::vector<char>& data)
 {
     PacketHeader packetHeader;
     packetHeader.setType(PacketType::PT_ModuleMessage);
@@ -361,7 +374,8 @@ int P2PService::initServer()
     }
     if (-1 == utilities::Socket::bind(m_fd, listenIp, listenPort))
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "bind socket failed, errno: ", errno, ", ", strerror(errno), ", listenIp: ", listenIp, ", listenPort:", listenPort);
+        LOG->write(utilities::LogType::Log_Error,
+            FILE_INFO, "bind socket failed, errno: ", errno, ", ", strerror(errno), ", listenIp: ", listenIp, ", listenPort:", listenPort);
         utilities::Socket::close(m_fd);
         return -1;
     }
@@ -400,7 +414,7 @@ int P2PService::initServer()
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "will dispatch P2PSession to SlaveReactor index: ", slaveReactorIndex, ", fd: ", fd);
 
             // 将fd添加到心跳检查器中
-            if(-1 == m_serviceConfig->clientAliveChecker()->addClient(fd))
+            if(-1 == m_serviceConfig->sessionAliveChecker()->addClient(fd))
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add new online client to ClientAliveChecker failed, fd: ", fd);
                 return;
@@ -427,6 +441,36 @@ int P2PService::initServer()
 
     // 注册新客户端上线回调
     m_serviceConfig->listenner()->registerConnectHandler([this]() { m_serviceConfig->acceptor()->onConnect(); });
+
+    // 注册HeartbeatBeat处理回调
+    m_serviceConfig->sessionServiceDataProcessor()->registerPacketHandler(PacketType::PT_HeartBeat, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr packet) -> int {
+        PayloadHeartBeat::Ptr payloadHeartBeat = std::dynamic_pointer_cast<PayloadHeartBeat>(packet);
+
+        // 更新心跳
+        m_serviceConfig->sessionAliveChecker()->refreshClientLastRecvTime(fd);
+
+        PayloadHeartBeatReply payloadHeartBeatReply;
+        payloadHeartBeatReply.setNodeId(payloadHeartBeat->nodeId());
+        payloadHeartBeatReply.setSeq(payloadHeartBeat->seq());
+        payloadHeartBeatReply.setTransferTime(utilities::TimeTools::getCurrentTimestamp() - payloadHeartBeat->timestamp());
+
+        std::size_t payloadLength = payloadHeartBeatReply.packetLength();
+
+        PacketHeader packetHeader;
+        packetHeader.setType(PacketType::PT_HeartBeatReply);
+        packetHeader.setPayloadLength(payloadHeartBeatReply.packetLength());
+        std::size_t headerLength = packetHeader.headerLength();
+
+        std::vector<char> buffer;
+        buffer.resize(headerLength + payloadLength);
+        packetHeader.encode(buffer.data(), headerLength);
+        payloadHeartBeatReply.encode(buffer.data() + headerLength, payloadLength);
+
+        int ret = sendData(fd, buffer);
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send ClientInfo ret: ", ret, ", fd: ", fd);
+
+        return ret;
+    });
 
     return 0;
 }
@@ -470,7 +514,7 @@ int P2PService::initClient()
 
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "will dispatch P2PSession to SlaveReactor index: ", slaveReactorIndex, ", fd: ", fd);
 
-        if(-1 == m_serviceConfig->clientAliveChecker()->addClient(fd))
+        if(-1 == m_serviceConfig->sessionAliveChecker()->addClient(fd))
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add P2PSession to ClientAliveChecker failed", ", fd: ", fd);
             return;
@@ -500,12 +544,12 @@ int P2PService::initClient()
         clientInfoPacket.setPeerHost(p2pSession->peerHostEndPointInfo().host());
         clientInfoPacket.setHandshakeUuid(uuid);
         clientInfoPacket.setNodeId(m_serviceConfig->nodeConfig()->id());
-        int payloadLength = clientInfoPacket.packetLength();
+        std::size_t payloadLength = clientInfoPacket.packetLength();
 
         PacketHeader packetHeader;
         packetHeader.setType(PacketType::PT_ClientInfo);
         packetHeader.setPayloadLength(clientInfoPacket.packetLength());
-        int headerLength = packetHeader.headerLength();
+        std::size_t headerLength = packetHeader.headerLength();
 
         std::vector<char> buffer;
         buffer.resize(headerLength + payloadLength);
@@ -517,7 +561,7 @@ int P2PService::initClient()
     });
 
     // 客户端发送ClientInfo包表明自己的身份后，将id与fd绑定，一方面供判定重复连接使用，一方面发送数据的时候通过id查找fd
-    m_serviceConfig->sessionDataProcessor()->registerPacketHandler(PacketType::PT_ClientInfo, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) {
+    m_serviceConfig->sessionServiceDataProcessor()->registerPacketHandler(PacketType::PT_ClientInfo, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) {
         // 收到ClientInfo包，是别人连自己的情况
         PayloadClientInfo::Ptr payloadClientInfo = std::dynamic_pointer_cast<PayloadClientInfo>(payload);
 
@@ -598,7 +642,7 @@ int P2PService::initClient()
     });
 
     // 收到ClientInfoReply包
-    m_serviceConfig->sessionDataProcessor()->registerPacketHandler(PacketType::PT_ClientInfoReply, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
+    m_serviceConfig->sessionServiceDataProcessor()->registerPacketHandler(PacketType::PT_ClientInfoReply, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
         PayloadClientInfoReply::Ptr payloadClientInfoReply = std::dynamic_pointer_cast<PayloadClientInfoReply>(payload);
 
         P2PSession::Ptr p2pSession = m_serviceConfig->p2pSessionManager()->session(fd);
@@ -742,10 +786,22 @@ int P2PService::initClient()
         return 0;
     });
 
+    // 注册HeartBeatReply包处理
+    m_serviceConfig->sessionServiceDataProcessor()->registerPacketHandler(PacketType::PT_HeartBeatReply, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
+        PayloadHeartBeatReply::Ptr payloadHeartBeatReply = std::dynamic_pointer_cast<PayloadHeartBeatReply>(payload);
+
+        m_serviceConfig->sessionAliveChecker()->refreshClientLastRecvTime(fd);
+    });
+
     // 注册心跳发送回调
     m_serviceConfig->hostsHeartbeatService()->registerHeartbeatSender([this](const int fd, const std::vector<char> &data) {
-        // 心跳发送失败就不管，如果是业务发送数据量过大，把缓冲区占满了，那服务端解业务包的时候也会刷新时间戳
-        return sendData(fd, data);
+        if (0 != sendData(fd, data))
+        {
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send heartbeat failed, fd: ", fd);
+            return -1;
+        }
+
+        return 0;
     });
 
     return 0;

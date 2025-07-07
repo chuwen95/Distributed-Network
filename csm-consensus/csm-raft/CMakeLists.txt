@@ -33,11 +33,6 @@ find_package(Protobuf CONFIG REQUIRED)
 FILE(GLOB_RECURSE SOURCES *.cpp)
 FILE(GLOB_RECURSE HEADERS *.h)
 
-add_library(raft ${PROTOBUF_SRCS} ${SOURCES} ${HEADERS}
-        protocol/packet/RaftMessagePack.cpp
-        protocol/packet/RaftMessagePack.h
-        protocol/packet/MessageBase.h
-        protocol/packet/RequestVoteMessageReply.cpp
-        protocol/packet/RequestVoteMessageReply.h)
-target_link_libraries(raft PUBLIC protobuf::libprotobuf stmclog readerwriterqueue)
+add_library(raft ${PROTOBUF_SRCS} ${SOURCES} ${HEADERS})
+target_link_libraries(raft PUBLIC protobuf::libprotobuf stmclog readerwriterqueue tools)
 target_include_directories(raft SYSTEM BEFORE PUBLIC ${proto_output_path})

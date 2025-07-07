@@ -8,6 +8,7 @@
 #include "csm-tool/ClusterConfigurationSerializer.h"
 #include "csm-utilities/RandomNumber.h"
 #include "csm-utilities/TimeTools.h"
+#include "csm-consensus/csm-raft/protocol/utilities/MessageEncodeHelper.h"
 #include "csm-framework/protocol/Protocol.h"
 #include "csm-consensus/csm-raft/protocol/packet/RaftMessagePack.h"
 #include "csm-consensus/csm-raft/protocol/packet/RequestVoteMessage.h"
@@ -46,7 +47,7 @@ int Raft::stop()
     return 0;
 }
 
-int Raft::handleMessage(const std::vector<char>& messageData)
+int Raft::handleMessage(const NodeId& fromNodeId, const std::vector<char>& messageData)
 {
     RaftMessagePack raftMessage;
     raftMessage.decode(const_cast<char*>(messageData.data()), messageData.size());
@@ -58,7 +59,7 @@ int Raft::handleMessage(const std::vector<char>& messageData)
             RequestVoteMessage::Ptr requestVoteMsg = std::make_shared<RequestVoteMessage>();
             requestVoteMsg->decode(raftMessage.payloadRawPointer(), raftMessage.payloadSize());
 
-            if (0 != handleRequestVoteMessage(raftMessage.nodeIndex(), requestVoteMsg))
+            if (0 != handleRequestVoteMessage(fromNodeId, requestVoteMsg))
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "handle request vote message failed");
                 return -1;
@@ -71,6 +72,8 @@ int Raft::handleMessage(const std::vector<char>& messageData)
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "Raft message type not supported");
         break;
     }
+
+    return 0;
 }
 
 int Raft::initClusterConfiguration()
@@ -106,19 +109,8 @@ int Raft::initClusterConfiguration()
 
     //
 
-    return 0;
-}
 
-void Raft::updateNodeIndex(const NodeId& nodeId, const std::shared_ptr<NodeIds>& nodeIds)
-{
-    for (auto iter = nodeIds->cbegin(); iter != nodeIds->cend(); ++iter)
-    {
-        if (nodeId == *iter)
-        {
-            m_raftConfig->setNodeIndex(iter - nodeIds->cbegin());
-            return;
-        }
-    }
+    return 0;
 }
 
 int Raft::initState()
@@ -166,7 +158,10 @@ int Raft::initElectionThread()
             break;
         }
     };
-    m_electionThread = std::make_shared<utilities::Thread>(electionThread, 10, "raft_vote");
+    m_electionThread = std::make_shared<utilities::Thread>();
+    m_electionThread->setFunc(electionThread);
+    m_electionThread->setInterval(10);
+    m_electionThread->setName("raft_vote");
 
     return 0;
 }
@@ -217,7 +212,7 @@ RequestVoteMessage::Ptr Raft::generateRequestVoteMessage()
     }
 
     requestVoteMsg->setTerm(currentTerm);
-    requestVoteMsg->setCandidateId(m_raftConfig->nodeIndex());
+    requestVoteMsg->setCandidateId(m_raftConfig->nodeId());
 
     std::uint64_t endIndex = m_raftConfig->stateMachineLog()->endIndex();
     stmclog::Entry::Ptr entry = m_raftConfig->stateMachineLog()->getLogEntry(endIndex);
@@ -230,29 +225,60 @@ RequestVoteMessage::Ptr Raft::generateRequestVoteMessage()
 
 int Raft::boardcastMessage(MessageBase::Ptr message)
 {
-    // 计算RequestVoteMsg序列化大小
-    std::size_t requestVoteEncodeSize = message->encodeSize();
-
-    // 最终发出的包
-    RaftMessagePack raftMessage;
-    raftMessage.setMessageType(RaftMessageType::RequestVote);
-    raftMessage.setPayloadSize(requestVoteEncodeSize);
-
-    // RequestVoteMsg序列化，缓冲区直接使用RaftMessage的payload
-    message->encode(raftMessage.payloadRawPointer(), requestVoteEncodeSize);
-
-    // RaftMessage序列化
-    std::vector<char> buffer(raftMessage.encodeSize());
-    raftMessage.encode(buffer.data(), raftMessage.encodeSize());
+    std::vector<char> buffer;
+    if (0 != MessageEncodeHelper::encode(message, buffer))
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "encode message failed");
+        return -1;
+    }
 
     return m_raftConfig->p2pService()->boardcastModuleMessage(protocol::ModuleID::raft, buffer);
 }
 
-int Raft::handleRequestVoteMessage(const std::uint32_t fromNodeIndex, RequestVoteMessage::Ptr msg)
+int Raft::sendMessageToNode(const NodeId& targetNodeId, MessageBase::Ptr message)
+{
+    std::vector<char> buffer;
+    if (0 != MessageEncodeHelper::encode(message, buffer))
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "encode message failed");
+        return -1;
+    }
+
+    return m_raftConfig->p2pService()->sendModuleMessageByNodeId(targetNodeId, protocol::ModuleID::raft, buffer);
+}
+
+int Raft::handleRequestVoteMessage(const NodeId& fromNodeId, RequestVoteMessage::Ptr msg)
 {
     /*
      * 1. 如果投票发起者的任期 < 本节点任期，则返回false
-     * 2. 如果votedFor的值是null或者，表示该接收者从来没有投过票或者已经将票投给过请求发起者，
-     *    并且候选人的日志至少与接受者的日志一样或更新，则同意投票
+     * 2. 如果votedFor的值是null或者是CandidateId，表示该接收者从来没有投过票或者已经将票投给过请求发起者，
+     *    并且候选人的日志至少与接收者的日志一样或更新，则同意投票
      */
+    std::uint64_t currentTerm{ 0 };
+    if (0 != m_raftConfig->persistentState()->currentTerm(currentTerm))
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "get current term failed");
+        return -1;
+    }
+
+    RequestVoteReplyMessage::Ptr requestVoteReplyMsg = std::make_shared<RequestVoteReplyMessage>();
+    requestVoteReplyMsg->setTerm(currentTerm);
+    requestVoteReplyMsg->setVoteGranted(false);
+
+    NodeId voteFor = m_raftConfig->persistentState()->voteFor();
+    if (msg->term() < currentTerm ||
+        (false == voteFor.empty() && voteFor != m_raftConfig->nodeId()) || msg->lastLogIndex() < m_raftConfig->stateMachineLog()->endIndex())
+    {
+        // 如果投票发起者的任期 < 本节点任期，拒绝投票
+        if (0 != sendMessageToNode(fromNodeId, requestVoteReplyMsg))
+        {
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send message failed");
+            return -1;
+        }
+
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "the term of node which send request vote is less than this node, reject vote");
+        return 0;
+    }
+
+    return 0;
 }

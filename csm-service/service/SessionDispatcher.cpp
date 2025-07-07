@@ -61,7 +61,10 @@ int SessionDispatcher::init()
             s_refreshTime = 0;
         }
     };
-    m_thread = std::make_shared<utilities::Thread>(expression, 1, "session_dispa");
+    m_thread = std::make_shared<utilities::Thread>();
+    m_thread->setFunc(expression);
+    m_thread->setInterval(1);
+    m_thread->setName("session_dispa");
 
     return 0;
 }

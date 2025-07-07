@@ -226,7 +226,10 @@ int HostsConnector::init()
 
         return 0;
     };
-    m_thread = std::make_shared<utilities::Thread>(expression, 500, "host_connector");
+    m_thread = std::make_shared<utilities::Thread>();
+    m_thread->setFunc(expression);
+    m_thread->setInterval(500);
+    m_thread->setName("host_connector");
 
     return 0;
 }

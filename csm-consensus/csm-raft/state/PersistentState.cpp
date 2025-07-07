@@ -60,12 +60,12 @@ int PersistentState::increaseTerm()
     return 0;
 }
 
-std::int64_t PersistentState::voteFor() const
+csm::NodeId PersistentState::voteFor() const
 {
     return m_voteFor;
 }
 
-void PersistentState::setVoteFor(std::int64_t voteFor)
+void PersistentState::setVoteFor(const NodeId& voteFor)
 {
     m_voteFor = voteFor;
 }

@@ -11,6 +11,5 @@ enum RaftMessageType
 message RawRaftMessage
 {
     RaftMessageType messageType = 1;
-    uint32 nodeIndex = 2;
-    bytes payload = 3;
+    bytes payload = 2;
 }

@@ -19,8 +19,8 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<PayloadModuleMessage>;
 
-            PayloadModuleMessage();
-            ~PayloadModuleMessage() = default;
+            PayloadModuleMessage() = default;
+            ~PayloadModuleMessage() override = default;
 
         public:
             std::size_t packetLength() const override;
@@ -28,10 +28,10 @@ namespace csm
             int encode(char *buffer, const std::size_t length) const override;
             int decode(const char *buffer, const std::size_t length) override;
 
-            std::shared_ptr<std::vector<char>> payload();
+            const std::vector<char>& payload() const;
 
         private:
-            std::shared_ptr<std::vector<char>> m_payload;
+            std::vector<char> m_payload;
         };
 
     }

@@ -5,6 +5,7 @@
 #ifndef PERSISTENTSTATE_H
 #define PERSISTENTSTATE_H
 
+#include "csm-framework/cluster/Common.h"
 #include "csm-consensus/csm-raft/storage/RaftMetadataStorage.h"
 #include "csm-stmclog/protocol/packet/Entry.h"
 
@@ -32,8 +33,8 @@ namespace csm
             int setCurrentTerm(std::uint64_t term);
             int increaseTerm();
 
-            [[nodiscard]] std::int64_t voteFor() const;
-            void setVoteFor(std::int64_t voteFor);
+            [[nodiscard]] NodeId voteFor() const;
+            void setVoteFor(const NodeId& voteFor);
 
             void addEntry(stmclog::Entry::Ptr entry);
 
@@ -41,7 +42,7 @@ namespace csm
             // 当前任期
             std::atomic_uint64_t m_currentTerm{ 0 };
             // 当前任期内本节点将票投给了谁
-            std::int64_t m_voteFor{ -1 };
+            NodeId m_voteFor;
             // 本节点的日志条目集合
             std::queue<stmclog::Entry::Ptr> m_logs;
 

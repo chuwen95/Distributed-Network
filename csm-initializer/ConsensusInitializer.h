@@ -32,6 +32,8 @@ namespace csm
 
             int stop();
 
+            consensus::Raft::Ptr raft();
+
         private:
             consensus::Raft::Ptr m_raft;
         };

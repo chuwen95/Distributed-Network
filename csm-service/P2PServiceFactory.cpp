@@ -6,10 +6,11 @@
 
 #include "config/ServiceConfig.h"
 #include "service/P2PSessionManager.h"
-#include "service/ClientAliveChecker.h"
+#include "service/SessionAliveChecker.h"
 #include "service/SessionDispatcher.h"
 #include "service/SessionDestroyer.h"
-#include "service/SessionDataProcessor.h"
+#include "service/SessionModuleDataProcessor.h"
+#include "protocol/PayloadFactory.h"
 
 using namespace csm::service;
 
@@ -25,7 +26,7 @@ P2PService::Ptr P2PServiceFactory::create()
     // 创建P2PSession管理器
     P2PSessionManager::Ptr p2pSessionManager = std::make_shared<P2PSessionManager>();
     // 创建心跳检查器
-    ClientAliveChecker::Ptr clientAliveChecker = std::make_shared<ClientAliveChecker>();
+    SessionAliveChecker::Ptr sessionAliveChecker = std::make_shared<SessionAliveChecker>();
     // 创建子Reactor
     std::vector<SlaveReactor::Ptr> slaveReactors;
     for (int index = 0; index < m_nodeConfig->slaveReactorNum(); ++index)
@@ -37,9 +38,14 @@ P2PService::Ptr P2PServiceFactory::create()
             std::make_shared<SessionDispatcher>(m_nodeConfig->redispatchInterval(), m_nodeConfig->id(), m_nodeConfig->slaveReactorNum());
     // P2PSession销毁器
     SessionDestroyer::Ptr sessionDestroyer = std::make_shared<SessionDestroyer>();
-    // 包处理器
-    SessionDataProcessor::Ptr sessionDataProcessor =
-        std::make_shared<SessionDataProcessor>(p2pSessionManager, clientAliveChecker ,m_nodeConfig->sessionDataWorkerNum());
+    // 包解码器
+    SessionDataDecoder::Ptr sessionDataDecoder =
+        createSessionDataDecoder(p2pSessionManager, m_nodeConfig->sessionDataDecoderWorkerNum());
+    // 网络模组包处理器
+    SessionServiceDataProcessor::Ptr sessionSericeDataProcessor = createServiceDataProcessor();
+    // 其他模组包处理器
+    SessionModuleDataProcessor::Ptr sessionModuleDataProcessor =
+        createModuleDataProcessor(p2pSessionManager, m_nodeConfig->sessionDataProcessWorkerNum());
 
     ServiceConfig::Ptr serviceConfig{ nullptr };
     if(ServiceStartType::Node == m_serviceStartType)
@@ -51,17 +57,16 @@ P2PService::Ptr P2PServiceFactory::create()
 
         // 创建TcpServiceConfig
          serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
-             p2pSessionManager, clientAliveChecker, slaveReactors,
-             sessionDispatcher, sessionDestroyer, sessionDataProcessor,
+             p2pSessionManager, sessionAliveChecker, slaveReactors,
+             sessionDispatcher, sessionDestroyer, sessionDataDecoder, sessionSericeDataProcessor, sessionModuleDataProcessor,
              m_serviceStartType, hostsInfoManager, hostsConnector, hostsHeartbeatService);
     }
     else if(ServiceStartType::Server == m_serviceStartType)
     {
         // 创建TcpServiceConfig
         serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
-            p2pSessionManager, clientAliveChecker, slaveReactors,
-            sessionDispatcher, sessionDestroyer, sessionDataProcessor,
-            m_serviceStartType);
+            p2pSessionManager, sessionAliveChecker, slaveReactors, sessionDispatcher,
+            sessionDestroyer, sessionDataDecoder, sessionSericeDataProcessor, sessionModuleDataProcessor, m_serviceStartType);
     }
     else
     {
@@ -69,4 +74,29 @@ P2PService::Ptr P2PServiceFactory::create()
     }
 
     return std::make_shared<P2PService>(serviceConfig);
+}
+
+SessionDataDecoder::Ptr P2PServiceFactory::createSessionDataDecoder(
+    P2PSessionManager::Ptr p2pSessionManager, const std::size_t workerNum)
+{
+    PayloadFactory::Ptr payloadFactory = std::make_shared<PayloadFactory>();
+    utilities::ThreadPool::Ptr sessionDataDecoder =
+        std::make_shared<utilities::ThreadPool>(m_nodeConfig->sessionDataDecoderWorkerNum(), "sess_dt_deco");
+
+    return std::make_shared<SessionDataDecoder>(p2pSessionManager, payloadFactory, sessionDataDecoder);
+}
+
+SessionServiceDataProcessor::Ptr P2PServiceFactory::createServiceDataProcessor()
+{
+    utilities::Thread::Ptr thread = std::make_shared<utilities::Thread>();
+
+    return std::make_shared<SessionServiceDataProcessor>(thread);
+}
+
+SessionModuleDataProcessor::Ptr P2PServiceFactory::createModuleDataProcessor(
+    P2PSessionManager::Ptr p2pSessionManager, std::size_t workerNum)
+{
+    utilities::ThreadPool::Ptr normalPacketProcessor = std::make_shared<utilities::ThreadPool>(workerNum, "sess_dt_proc");
+
+    return std::make_shared<SessionModuleDataProcessor>(p2pSessionManager, normalPacketProcessor);
 }

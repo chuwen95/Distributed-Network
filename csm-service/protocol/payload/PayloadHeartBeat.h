@@ -25,11 +25,14 @@ namespace csm
         public:
             std::size_t packetLength() const override;
 
-            int setId(const std::string &id);
-            std::string getId();
+            int setNodeId(const std::string &nodeId);
+            std::string nodeId() const;
+
+            int setSeq(const std::uint64_t seq);
+            std::uint64_t seq() const;
 
             int setTimestamp(const std::uint32_t timestamp);
-            std::uint32_t getTimestamp();
+            std::uint32_t timestamp() const;
 
             int encode(char *buffer, const std::size_t length) const override;
             int decode(const char *buffer, const std::size_t length) override;

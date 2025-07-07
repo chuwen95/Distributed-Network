@@ -92,3 +92,14 @@ int Initializer::stop()
 
     return 0;
 }
+
+int Initializer::initP2PServiceModuleMessageHandler()
+{
+    m_p2pServiceInitializer->p2pService()->registerModulePacketHandler(protocol::ModuleID::raft,
+        [this](const NodeId& nodeId, const std::vector<char>& data) -> int
+        {
+            return m_consensusInitializer->raft()->handleMessage(nodeId, data);
+        });
+
+    return 0;
+}

@@ -5,7 +5,7 @@
 #ifndef COPYSTATEMACHINE_RAFTCONFIG_H
 #define COPYSTATEMACHINE_RAFTCONFIG_H
 
-#include "csm-framework/consensus/raft/Common.h"
+#include "csm-framework/cluster/Common.h"
 #include "csm-service/P2PService.h"
 #include "state/PersistentState.h"
 #include "state/VolatileState.h"
@@ -31,10 +31,6 @@ namespace csm
 
             // 获取本节点ID
             const NodeId& nodeId();
-            // 设置节点在节点列表中的index
-            void setNodeIndex(std::uint32_t nodeIndex);
-            // 获取节点在节点列表中的index
-            std::uint32_t nodeIndex() const;
 
             // 最小选举超时
             std::int32_t minElectionTimeout();
@@ -62,8 +58,6 @@ namespace csm
         private:
             // 本节点ID
             NodeId m_nodeId;
-            // 本节点在节点列表中的index
-            std::uint32_t m_nodeIndex;
             // 最小选举超时时间
             std::int32_t m_minElectionTimeout;
             // 最大选举超时时间

@@ -5,33 +5,48 @@
 
 using namespace csm::utilities;
 
-Thread::Thread(const std::function<void()>& func, const std::uint32_t interval, const std::string_view threadName) :
-    m_threadFunc(func), m_interval(interval), m_threadName(threadName)
-{
-}
-
 Thread::~Thread()
 {
     stop();
 }
 
-void Thread::start()
+void Thread::setFunc(std::function<void()> func)
 {
+    m_func = std::move(func);
+}
+
+void Thread::setInterval(std::uint32_t interval)
+{
+    m_interval = interval;
+}
+
+void Thread::setName(std::string_view name)
+{
+    m_name = name;
+}
+
+int Thread::start()
+{
+    if (nullptr == m_func)
+    {
+        return -1;
+    }
+
     std::unique_lock<std::mutex> ulock(x_startStop);
 
     if (true == m_isRunning)
     {
-        return;
+        return -1;
     }
 
     const auto expression = [this]() {
 #ifdef __linux__
-        pthread_setname_np(pthread_self(), m_threadName.c_str());
+        pthread_setname_np(pthread_self(), m_name.c_str());
 #endif
 
         while (true == m_isRunning)
         {
-            m_threadFunc();
+            m_func();
 
             if (m_interval > 0)
             {
@@ -42,6 +57,8 @@ void Thread::start()
     };
     m_isRunning = true;
     m_thread = std::make_unique<std::thread>(expression);
+
+    return 0;
 }
 
 void Thread::stop()

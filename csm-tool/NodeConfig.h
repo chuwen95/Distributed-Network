@@ -5,7 +5,7 @@
 #ifndef TCPNETWORK_NODECONFIG_H
 #define TCPNETWORK_NODECONFIG_H
 
-#include "csm-common/Common.h"
+#include "csm-framework/cluster/Common.h"
 #include "csm-utilities/Logger.h"
 #include "inipp.h"
 
@@ -31,9 +31,9 @@ namespace csm
 
             // [cluster]
             // 本节点的id
-            std::string id() const;
+            NodeId id() const;
             // 集群中所有的服务器id
-            const std::vector<std::string>& clusterServerIds() const;
+            const NodeIds& clusterServerIds() const;
 
             // [raft]
             std::uint32_t minRandomVoteTimeout() const;
@@ -61,8 +61,10 @@ namespace csm
             // 每连接一定数量的客户端就重新检查一下哪个reactor所管理的客户端数量最少
             // 下一轮将新上线的客户端分配给该reactor管理
             std::size_t redispatchInterval() const;
+            // 包解码线程池线程数量
+            std::size_t sessionDataDecoderWorkerNum() const;
             // 包处理线程池线程数量
-            std::size_t sessionDataWorkerNum() const;
+            std::size_t sessionDataProcessWorkerNum() const;
 
             // [log]
             // 是否将日志写入到文件
@@ -93,8 +95,8 @@ namespace csm
             std::string m_configDir;
 
             // [info]
-            std::string m_id;
-            std::vector<std::string> m_clusterServerIds;
+            NodeId m_id;
+            NodeIds m_clusterServerIds;
 
             // [raft]
             std::uint32_t m_minRandomVoteTimeout;
@@ -110,7 +112,8 @@ namespace csm
             std::string m_p2pIp{ "127.0.0.1" };
             unsigned short m_p2pPort{ 30200 };
             std::string m_nodesFile{ "nodes.json" };
-            std::size_t m_sessionDataWorkerNum{ 8 };
+            std::size_t m_sessionDataDecodeWorkerNum{ 4 };
+            std::size_t m_sessionDataProcessWorkerNum{ 8 };
 
             // [reactor]
             std::size_t m_slaveReactorNum{ 8 };

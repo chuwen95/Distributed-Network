@@ -14,6 +14,21 @@ project(CopyStateMachine)
 
 set(CMAKE_CXX_STANDARD 20)
 
+# 检测GCC版本是否大于8.1 或 Clang版本是否大于9.0
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.1)
+        message(STATUS "Using GCC >= 8.1, enabling -fmacro-prefix-map")
+        add_compile_options(-fmacro-prefix-map=${CMAKE_SOURCE_DIR}=.)
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 9.0)
+        message(STATUS "Using Clang >= 9.0, enabling -fmacro-prefix-map")
+        add_compile_options(-fmacro-prefix-map=${CMAKE_SOURCE_DIR}=.)
+    endif()
+else()
+    message(STATUS "Compiler is not GCC or Clang, skipping -fmacro-prefix-map")
+endif()
+
 include(IncludeDirectories)
 include(ProjectReaderWriterQueue)
 

@@ -30,3 +30,8 @@ int ConsensusInitializer::stop()
 {
     return m_raft->stop();
 }
+
+csm::consensus::Raft::Ptr ConsensusInitializer::raft()
+{
+    return m_raft;
+}

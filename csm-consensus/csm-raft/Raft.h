@@ -14,6 +14,7 @@
 #include "state/LeaderState.h"
 
 #include "protocol/packet/RequestVoteMessage.h"
+#include "protocol/packet/RequestVoteReplyMessage.h"
 
 namespace csm
 {
@@ -36,13 +37,11 @@ namespace csm
 
             int stop();
 
-            int handleMessage(const std::vector<char>& messageData);
+            int handleMessage(const NodeId& fromNodeId, const std::vector<char>& messageData);
 
         private:
             // 初始化集群配置
             int initClusterConfiguration();
-            // 更新节点Index
-            void updateNodeIndex(const NodeId& nodeId, const std::shared_ptr<NodeIds>& nodeIds);
             // 初始化状态
             int initState();
             // 初始化投票线程
@@ -55,11 +54,14 @@ namespace csm
 
             // 构建RequestVote消息
             RequestVoteMessage::Ptr generateRequestVoteMessage();
+
             // 广播消息给所有其他节点
             int boardcastMessage(MessageBase::Ptr message);
+            // 发送消息给某个节点
+            int sendMessageToNode(const NodeId& targetNodeId, MessageBase::Ptr message);
 
             // 处理RequestVote消息
-            int handleRequestVoteMessage(const std::uint32_t fromNodeIndex, RequestVoteMessage::Ptr msg);
+            int handleRequestVoteMessage(const NodeId& fromNode, RequestVoteMessage::Ptr msg);
 
         private:
             RaftConfig::Ptr m_raftConfig;

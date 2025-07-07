@@ -45,12 +45,12 @@ std::string NodeConfig::configFile() const
     return m_configFile;
 }
 
-std::string NodeConfig::id() const
+csm::NodeId NodeConfig::id() const
 {
     return m_id;
 }
 
-const std::vector<std::string> &NodeConfig::clusterServerIds() const
+const csm::NodeIds& NodeConfig::clusterServerIds() const
 {
     return m_clusterServerIds;
 }
@@ -110,9 +110,14 @@ std::size_t NodeConfig::redispatchInterval() const
     return m_redispatchInterval;
 }
 
-std::size_t NodeConfig::sessionDataWorkerNum() const
+std::size_t NodeConfig::sessionDataDecoderWorkerNum() const
 {
-    return m_sessionDataWorkerNum;
+    return m_sessionDataDecodeWorkerNum;
+}
+
+std::size_t NodeConfig::sessionDataProcessWorkerNum() const
+{
+    return m_sessionDataProcessWorkerNum;
 }
 
 bool NodeConfig::enableFileLog() const
@@ -216,7 +221,8 @@ int NodeConfig::parseNetworkConfig(inipp::Ini<char>& ini)
     m_p2pIp = getValue(ini, "network", "ip", m_p2pIp);
     m_p2pPort = getValue(ini, "network", "port", m_p2pPort);
     m_nodesFile = getValue(ini, "network", "nodes_file", m_nodesFile);
-    m_sessionDataWorkerNum = getValue(ini, "network", "packet_process_worker_num", m_sessionDataWorkerNum);
+    m_sessionDataDecodeWorkerNum = getValue(ini, "network", "packet_decode_worker_num", m_sessionDataDecodeWorkerNum);
+    m_sessionDataProcessWorkerNum = getValue(ini, "network", "packet_process_worker_num", m_sessionDataProcessWorkerNum);
 
     m_slaveReactorNum = getValue(ini, "reactor", "slave_reactor", m_slaveReactorNum);
     m_redispatchInterval = getValue(ini, "reactor", "redispatch_interval", m_redispatchInterval);

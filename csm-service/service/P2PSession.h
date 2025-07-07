@@ -44,18 +44,16 @@ namespace csm
             utilities::RingBuffer::Ptr &writeBuffer();
 
             void setClientId(const std::string_view id);
-
-            std::string getClientId();
+            std::string clientId();
 
             void setClientOnlineTimestamp(const std::uint32_t timestamp);
-
             /**
             * @brief 获取客户端上线的时间戳，供业务线程池用，业务线程池放入任务的时候会记录放入任务那一刻的时间戳
             * 如果客户端不存在此函数返回-1，表示客户端已经离线，直接丢弃任务
             * 如果任务时间戳小于客户端上线时间戳，可能是客户端离线后又上线但是fd分配的是一样的
             * @return
             */
-            std::uint32_t getClientOnlineTimestamp();
+            std::uint32_t clientOnlineTimestamp();
 
             template<typename... Args>
             void setPeerHostEndPointInfo(Args... args)

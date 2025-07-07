@@ -13,7 +13,9 @@
 #include "csm-service/service/Acceptor.h"
 #include "csm-service/service/SessionDispatcher.h"
 #include "csm-service/service/SessionDestroyer.h"
-#include "csm-service/service/SessionDataProcessor.h"
+#include "csm-service/service/SessionDataDecoder.h"
+#include "csm-service/service/SessionServiceDataProcessor.h"
+#include "csm-service/service/SessionModuleDataProcessor.h"
 #include "csm-utilities/ThreadPool.h"
 
 #include "csm-service/host/HostsInfoManager.h"
@@ -21,7 +23,7 @@
 #include "csm-service/host/HostsHeartbeatService.h"
 
 #include "csm-service/service/P2PSessionManager.h"
-#include "csm-service/service/ClientAliveChecker.h"
+#include "csm-service/service/SessionAliveChecker.h"
 
 #include "csm-framework/protocol/Protocol.h"
 
@@ -31,7 +33,7 @@ namespace csm
     namespace service
     {
 
-        using ModulePacketHandler = std::function<int(std::shared_ptr<std::vector<char>>)>;
+        using ModulePacketHandler = std::function<int(const NodeId& nodeId, const std::vector<char>&)>;
 
         enum class ServiceStartType
         {
@@ -45,10 +47,12 @@ namespace csm
             using Ptr = std::shared_ptr<ServiceConfig>;
 
             ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
-                          P2PSessionManager::Ptr p2pSessionManager, ClientAliveChecker::Ptr clientAliveChecker, std::vector<SlaveReactor::Ptr> slaveReactors,
-                          SessionDispatcher::Ptr sessionDispatcher, SessionDestroyer::Ptr sessionDestroyer, SessionDataProcessor::Ptr sessionDataProcessor,
-                          const ServiceStartType serverStartType = ServiceStartType::Node, HostsInfoManager::Ptr hostsInfoManager = nullptr,
-                          HostsConnector::Ptr hostsConnector = nullptr, HostsHeartbeatService::Ptr hostsHeartbeatService = nullptr);
+                P2PSessionManager::Ptr p2pSessionManager, SessionAliveChecker::Ptr sessionAliveChecker, std::vector<SlaveReactor::Ptr> slaveReactors,
+                SessionDispatcher::Ptr sessionDispatcher, SessionDestroyer::Ptr sessionDestroyer, SessionDataDecoder::Ptr sessionDataDecoder,
+                SessionServiceDataProcessor::Ptr sessionServiceDataProcesser, SessionModuleDataProcessor::Ptr sessionModuleDataProcessor,
+                const ServiceStartType serverStartType = ServiceStartType::Node,
+                HostsInfoManager::Ptr hostsInfoManager = nullptr, HostsConnector::Ptr hostsConnector = nullptr,
+                HostsHeartbeatService::Ptr hostsHeartbeatService = nullptr);
             ~ServiceConfig() = default;
 
         public:
@@ -58,12 +62,15 @@ namespace csm
             Acceptor::Ptr acceptor();
 
             P2PSessionManager::Ptr p2pSessionManager();
-            ClientAliveChecker::Ptr clientAliveChecker();
+            SessionAliveChecker::Ptr sessionAliveChecker();
 
             std::vector<SlaveReactor::Ptr>& slaveReactors();
             SessionDispatcher::Ptr sessionDispatcher();
             SessionDestroyer::Ptr sessionDestroyer();
-            SessionDataProcessor::Ptr sessionDataProcessor();
+
+            SessionDataDecoder::Ptr sessionDataDecoder();
+            SessionServiceDataProcessor::Ptr sessionServiceDataProcessor();
+            SessionModuleDataProcessor::Ptr sessionModuleDataProcessor();
 
             ServiceStartType serviceStartType() const;
 
@@ -72,7 +79,7 @@ namespace csm
             HostsHeartbeatService::Ptr hostsHeartbeatService();
 
             void registerModulePacketHandler(protocol::ModuleID moduleId, ModulePacketHandler modulePacketHandler);
-            ModulePacketHandler getModulePacketHandler(protocol::ModuleID moduleId);
+            int modulePacketHandler(protocol::ModuleID moduleId, ModulePacketHandler& modulePacketHandler);
 
         private:
             tool::NodeConfig::Ptr m_nodeConfig;
@@ -81,13 +88,15 @@ namespace csm
             Acceptor::Ptr m_acceptor;
 
             P2PSessionManager::Ptr m_p2pSessionManager;
-            ClientAliveChecker::Ptr m_clientAliveChecker;
+            SessionAliveChecker::Ptr m_sessionAliveChecker;
             std::vector<SlaveReactor::Ptr> m_slaveReactors;
 
             SessionDispatcher::Ptr m_sessionDispatcher;
             SessionDestroyer::Ptr m_sessionDestroyer;
-            SessionDataProcessor::Ptr m_sessionDataProcessor;
-            utilities::ThreadPool::Ptr m_packetProcesser;
+
+            SessionDataDecoder::Ptr m_sessionDataDecoder;
+            SessionServiceDataProcessor::Ptr m_sessionServiceDataProcessor;
+            SessionModuleDataProcessor::Ptr m_sessionModuleDataProcessor;
 
             ServiceStartType m_serviceStartType;
 
@@ -96,7 +105,7 @@ namespace csm
             HostsHeartbeatService::Ptr m_hostsHeartbeatService;
 
             std::mutex x_modulePacketHandler;
-            std::map<protocol::ModuleID, std::function<int(std::shared_ptr<std::vector<char>>)>> m_modulePacketHandler;
+            std::map<protocol::ModuleID, ModulePacketHandler> m_modulePacketHandler;
         };
 
     } // server

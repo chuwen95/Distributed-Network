@@ -65,7 +65,10 @@ int Logger::init()
             m_file.write(buffer.data(), buffer.size());
             m_file.flush();
         };
-        m_thread = std::make_shared<Thread>(expression, 1, "logger");
+        m_thread = std::make_shared<Thread>();
+        m_thread->setFunc(expression);
+        m_thread->setInterval(1);
+        m_thread->setName("logger");
     }
 
     return 0;

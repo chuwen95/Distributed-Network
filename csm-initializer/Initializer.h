@@ -36,7 +36,10 @@ namespace csm
 
             int stop();
 
-        public:
+        private:
+            int initP2PServiceModuleMessageHandler();
+
+        private:
             tool::NodeConfig::Ptr m_nodeConfig;
 
             StorageInitializer::Ptr m_storageInitializer;

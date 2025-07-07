@@ -10,7 +10,7 @@
 
 using namespace csm::tool;
 
-std::string ClusterConfigurationSerializer::serialize(const consensus::NodeIds& clusterServerIds)
+std::string ClusterConfigurationSerializer::serialize(const NodeIds& clusterServerIds)
 {
     Json::Value root;
     for(const std::string& serverId : clusterServerIds)
@@ -24,9 +24,9 @@ std::string ClusterConfigurationSerializer::serialize(const consensus::NodeIds& 
     return jsonString;
 }
 
-std::shared_ptr<csm::consensus::NodeIds> ClusterConfigurationSerializer::deserialize(const std::string& json)
+std::shared_ptr<csm::NodeIds> ClusterConfigurationSerializer::deserialize(const std::string& json)
 {
-    std::shared_ptr<consensus::NodeIds> clusterServerIds = std::make_shared<consensus::NodeIds>();
+    std::shared_ptr<NodeIds> clusterServerIds = std::make_shared<NodeIds>();
 
     Json::Value root;
     Json::Reader reader;

@@ -33,7 +33,7 @@ int HostsHeartbeatService::init()
             if (curTimestamp - host.second.second >= c_heartbeatInterval)
             {
                 PayloadHeartBeat packetHeartbeat;
-                packetHeartbeat.setId(m_hostId);
+                packetHeartbeat.setNodeId(m_hostId);
                 packetHeartbeat.setTimestamp(curTimestamp);
                 int payloadSize = packetHeartbeat.packetLength();
 
@@ -55,7 +55,10 @@ int HostsHeartbeatService::init()
             }
         }
     };
-    m_thread = std::make_shared<utilities::Thread>(expression, c_heartbeatInterval, "host_heartbeat");
+    m_thread = std::make_shared<utilities::Thread>();
+    m_thread->setFunc(expression);
+    m_thread->setInterval(c_heartbeatInterval);
+    m_thread->setName("host_heartbeat");
 
     return 0;
 }

@@ -14,19 +14,9 @@ RaftConfig::RaftConfig(const NodeId &nodeId, std::int32_t minElectionTimeout, st
     m_clusterConfigurationManager(std::move(clusterConfigurationManager)), m_stateMachineLog(std::move(stateMachineLog))
 { }
 
-const NodeId& RaftConfig::nodeId()
+const csm::NodeId& RaftConfig::nodeId()
 {
     return m_nodeId;
-}
-
-void RaftConfig::setNodeIndex(std::uint32_t nodeIndex)
-{
-    m_nodeIndex = nodeIndex;
-}
-
-std::uint32_t RaftConfig::nodeIndex() const
-{
-    return m_nodeIndex;
 }
 
 std::int32_t RaftConfig::minElectionTimeout()

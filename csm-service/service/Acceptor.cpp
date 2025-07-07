@@ -66,7 +66,9 @@ int Acceptor::init(const int fd)
             }
         } while (-1 != clientfd);
     };
-    m_thread = std::make_shared<utilities::Thread>(expression, 0, "acceptor");
+    m_thread = std::make_shared<utilities::Thread>();
+    m_thread->setFunc(expression);
+    m_thread->setName("acceptor");
 
     return 0;
 }

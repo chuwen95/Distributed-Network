@@ -2,15 +2,16 @@
 // Created by ChuWen on 9/9/23.
 //
 
-#include "ClientAliveChecker.h"
+#include "SessionAliveChecker.h"
 #include "csm-utilities/Logger.h"
 
 using namespace csm::service;
 
 // 若c_aliveTimeout时间内没有收到任何数据，判定客户端掉线
 constexpr std::size_t c_aliveTimeout{ 15000 };
+constexpr std::size_t c_aliveCountCircle{ 10000000 };
 
-int ClientAliveChecker::init()
+int SessionAliveChecker::init()
 {
     const auto expression = [this]() {
         std::vector<int> offlinefds;
@@ -34,31 +35,34 @@ int ClientAliveChecker::init()
             m_timeoutHandler(offlinefds);
         }
     };
-    m_thread = std::make_shared<utilities::Thread>(expression, c_aliveTimeout, "cli_alive_chk");
+    m_thread = std::make_shared<utilities::Thread>();
+    m_thread->setFunc(expression);
+    m_thread->setInterval(c_aliveTimeout);
+    m_thread->setName("cli_alive_chk");
 
     return 0;
 }
 
-int ClientAliveChecker::start()
+int SessionAliveChecker::start()
 {
     m_thread->start();
 
     return 0;
 }
 
-int ClientAliveChecker::stop()
+int SessionAliveChecker::stop()
 {
     m_thread->stop();
 
     return 0;
 }
 
-void ClientAliveChecker::setTimeoutHandler(std::function<void(const std::vector<int> &)> handler)
+void SessionAliveChecker::setTimeoutHandler(std::function<void(const std::vector<int> &)> handler)
 {
     m_timeoutHandler = std::move(handler);
 }
 
-int ClientAliveChecker::addClient(const int fd)
+int SessionAliveChecker::addClient(const int fd)
 {
     std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
 
@@ -76,7 +80,7 @@ int ClientAliveChecker::addClient(const int fd)
     return 0;
 }
 
-int ClientAliveChecker::removeClient(const int fd)
+int SessionAliveChecker::removeClient(const int fd)
 {
     std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
 
@@ -93,7 +97,7 @@ int ClientAliveChecker::removeClient(const int fd)
     return 0;
 }
 
-int ClientAliveChecker::refreshClientLastRecvTime(const int fd)
+int SessionAliveChecker::refreshClientLastRecvTime(const int fd)
 {
     std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
 
@@ -103,7 +107,7 @@ int ClientAliveChecker::refreshClientLastRecvTime(const int fd)
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client not exist, fd: ", fd);
         return -1;
     }
-    ++iter->second.second;
+    iter->second.second = (iter->second.second + 1) % c_aliveCountCircle;
 
     return 0;
 }

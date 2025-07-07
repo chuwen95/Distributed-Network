@@ -16,16 +16,6 @@ RaftMessageType RaftMessagePack::messageType() const
     return m_rawRaftMessage.messagetype();
 }
 
-void RaftMessagePack::setNodeIndex(const std::uint32_t nodeIndex)
-{
-    m_rawRaftMessage.set_nodeindex(nodeIndex);
-}
-
-std::uint32_t RaftMessagePack::nodeIndex() const
-{
-    return m_rawRaftMessage.nodeindex();
-}
-
 void RaftMessagePack::setPayloadSize(std::size_t size)
 {
     m_rawRaftMessage.mutable_payload()->resize(size);

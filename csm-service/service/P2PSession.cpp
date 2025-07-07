@@ -65,7 +65,7 @@ void P2PSession::setClientId(const std::string_view id)
     m_clientInfo.id = id;
 }
 
-std::string P2PSession::getClientId()
+std::string P2PSession::clientId()
 {
     return m_clientInfo.id;
 }
@@ -75,7 +75,7 @@ void P2PSession::setClientOnlineTimestamp(const std::uint32_t timestamp)
     m_clientInfo.onlineTimestamp = timestamp;
 }
 
-std::uint32_t P2PSession::getClientOnlineTimestamp()
+std::uint32_t P2PSession::clientOnlineTimestamp()
 {
     return m_clientInfo.onlineTimestamp;
 }
