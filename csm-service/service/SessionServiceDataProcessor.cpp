@@ -15,7 +15,15 @@ int SessionServiceDataProcessor::init()
     const auto serviceDataProcess = [this]()
     {
         SessionServiceData sessionServiceData;
-        m_sessionServiceDatas.wait_dequeue(sessionServiceData);
+        if (false == m_sessionServiceDatas.wait_dequeue_timed(sessionServiceData, 100000))
+        {
+            return;
+        }
+
+        if (false == m_running)
+        {
+            return;
+        }
 
         auto iter = m_packetHandlers.find(sessionServiceData.header->type());
         if (m_packetHandlers.end() != iter)
@@ -40,22 +48,37 @@ int SessionServiceDataProcessor::init()
 
 int SessionServiceDataProcessor::start()
 {
-    return m_thread->start();
+    if (true == m_running)
+    {
+        return 0;
+    }
+
+    m_running = true;
+    m_thread->start();
+
+    return 0;
 }
 
 int SessionServiceDataProcessor::stop()
 {
+    if (false == m_running)
+    {
+        return 0;
+    }
+
+    m_running = false;
     m_thread->stop();
 
     return 0;
 }
 
-int SessionServiceDataProcessor::addServiceDataPacket(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)
+int SessionServiceDataProcessor::addPacket(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)
 {
-    return true == m_sessionServiceDatas.emplace(fd, header, payload) ? 0 : -1;
+    return true == m_sessionServiceDatas.enqueue(SessionServiceData(fd, header, payload)) ? 0 : -1;
 }
 
-void SessionServiceDataProcessor::registerPacketHandler(const PacketType packetType, std::function<int(int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler)
+void SessionServiceDataProcessor::registerPacketHandler(
+    const PacketType packetType, std::function<int(int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler)
 {
     m_packetHandlers[packetType] = std::move(handler);
 }

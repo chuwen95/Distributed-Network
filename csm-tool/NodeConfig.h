@@ -64,7 +64,7 @@ namespace csm
             // 包解码线程池线程数量
             std::size_t sessionDataDecoderWorkerNum() const;
             // 包处理线程池线程数量
-            std::size_t sessionDataProcessWorkerNum() const;
+            std::size_t moduleDataProcessWorkerNum() const;
 
             // [log]
             // 是否将日志写入到文件
@@ -113,7 +113,7 @@ namespace csm
             unsigned short m_p2pPort{ 30200 };
             std::string m_nodesFile{ "nodes.json" };
             std::size_t m_sessionDataDecodeWorkerNum{ 4 };
-            std::size_t m_sessionDataProcessWorkerNum{ 8 };
+            std::size_t m_moduleDataProcessWorkerNum{ 8 };
 
             // [reactor]
             std::size_t m_slaveReactorNum{ 8 };

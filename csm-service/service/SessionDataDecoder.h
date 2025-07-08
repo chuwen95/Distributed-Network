@@ -34,8 +34,10 @@ namespace csm
         public:
             int init();
 
+            // 不考虑该方法被多线程调用
             int start();
 
+            // 不考虑该方法被多线程调用
             int stop();
 
             /**
@@ -53,7 +55,7 @@ namespace csm
              * @param handler
              * @return
              */
-            int setPacketHandler(std::function<int(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler);
+            void setPacketHandler(std::function<int(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler);
 
         private:
             int writeDataToP2PSessionReadBuffer(
@@ -65,6 +67,8 @@ namespace csm
         private:
             P2PSessionManager::Ptr m_p2pSessionManager;
             PayloadFactory::Ptr m_payloadFactory;
+
+            std::atomic_bool m_running{ false };
             utilities::ThreadPool::Ptr m_decodeWorkers;
 
             std::function<int(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> m_packetHandler;

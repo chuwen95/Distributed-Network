@@ -34,8 +34,10 @@ int ThreadPool::start()
         while (false == isTerminate())
         {
             ThreadPoolTask task;
-            m_tasks.wait_dequeue(task);
-            task();
+            if (true == m_tasks.wait_dequeue_timed(task, 100000))
+            {
+                task();
+            }
         }
     };
 

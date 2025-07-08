@@ -60,7 +60,7 @@ namespace csm
 
         private:
             std::uint32_t m_magic{ c_magic };
-            std::uint16_t m_packetType;
+            std::uint16_t m_packetType{ 0 };
             protocol::ModuleID m_moduleId;
             std::uint32_t m_payloadLength;
         };

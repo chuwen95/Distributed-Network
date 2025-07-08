@@ -45,7 +45,7 @@ P2PService::Ptr P2PServiceFactory::create()
     SessionServiceDataProcessor::Ptr sessionSericeDataProcessor = createServiceDataProcessor();
     // 其他模组包处理器
     SessionModuleDataProcessor::Ptr sessionModuleDataProcessor =
-        createModuleDataProcessor(p2pSessionManager, m_nodeConfig->sessionDataProcessWorkerNum());
+        createModuleDataProcessor(p2pSessionManager, m_nodeConfig->moduleDataProcessWorkerNum());
 
     ServiceConfig::Ptr serviceConfig{ nullptr };
     if(ServiceStartType::Node == m_serviceStartType)

@@ -109,6 +109,21 @@ int P2PService::init()
     });
     m_serviceConfig->sessionAliveChecker()->init();
 
+    // 注册会话数据处理回调
+    m_serviceConfig->sessionDataDecoder()->setPacketHandler([this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int
+    {
+        if (PacketType::PT_ModuleMessage == header->type())
+        {
+            m_serviceConfig->sessionModuleDataProcessor()->addPacket(fd, header, payload);
+        }
+        else
+        {
+            m_serviceConfig->sessionServiceDataProcessor()->addPacket(fd, header, payload);
+        }
+
+        return 0;
+    });
+
     // 注册网络模块数据接收回调
     if (0 != m_serviceConfig->sessionServiceDataProcessor()->init())
     {
@@ -175,6 +190,8 @@ int P2PService::start()
 {
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "****************************************TcpServer::start****************************************");
 
+    // 包解析器
+    m_serviceConfig->sessionDataDecoder()->start();
     // 网络模块包处理器
     m_serviceConfig->sessionServiceDataProcessor()->start();
     // 其它模组包处理器
@@ -234,10 +251,12 @@ int P2PService::stop()
         m_serviceConfig->hostsConnector()->stop();
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop hosts connector successfully");
     }
-    m_serviceConfig->sessionModuleDataProcessor()->stop();
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop module data processor successfully");
+    m_serviceConfig->sessionDataDecoder()->stop();
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop session data decoder successfully");
     m_serviceConfig->sessionServiceDataProcessor()->stop();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop service data processor successfully");
+    m_serviceConfig->sessionModuleDataProcessor()->stop();
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop module data processor successfully");
     m_serviceConfig->listenner()->stop();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop listenner successfully");
     m_serviceConfig->acceptor()->stop();
@@ -467,7 +486,10 @@ int P2PService::initServer()
         payloadHeartBeatReply.encode(buffer.data() + headerLength, payloadLength);
 
         int ret = sendData(fd, buffer);
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send ClientInfo ret: ", ret, ", fd: ", fd);
+        if (0 != ret)
+        {
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send heart beat ret: ", ret, ", fd: ", fd);
+        }
 
         return ret;
     });
@@ -791,6 +813,8 @@ int P2PService::initClient()
         PayloadHeartBeatReply::Ptr payloadHeartBeatReply = std::dynamic_pointer_cast<PayloadHeartBeatReply>(payload);
 
         m_serviceConfig->sessionAliveChecker()->refreshClientLastRecvTime(fd);
+
+        return 0;
     });
 
     // 注册心跳发送回调

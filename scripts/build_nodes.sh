@@ -1,6 +1,6 @@
 listen_ip="0.0.0.0"
 listen_port_start=(30300 20200 8500)
-cluster_all_servers=["node0","node1","node2","node3"]
+cluster_all_servers='["node0","node1","node2","node3"]'
 output_dir="./nodes"
 ip_param=
 binary_name="CopyStateMachine"
@@ -82,7 +82,7 @@ parse_params()
             ip_param=$OPTARG
             ;;
         p)
-            listen_port_start=(${OPTARG//,/})
+            IFS=',' read -r -a listen_port_start <<< "$OPTARG"
             if [ ${#listen_port_start[@]} -ne 3 ]; then
                 log_error "p2p start port error, e.g: 30300"
                 exit 1

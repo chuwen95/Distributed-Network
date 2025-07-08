@@ -34,7 +34,7 @@ namespace csm
 
             int stop();
 
-            void addPackets(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload);
+            void addPacket(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload);
 
             /**
              * @brief 注册包处理回调

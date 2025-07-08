@@ -7,7 +7,8 @@
 
 #include "csm-common/Common.h"
 
-#include <readerwriterqueue.h>
+#include <concurrentqueue/blockingconcurrentqueue.h>
+
 #include "csm-service/protocol/PacketHeader.h"
 #include "csm-service/protocol/payload/PayloadBase.h"
 #include "csm-utilities/Thread.h"
@@ -28,11 +29,13 @@ namespace csm
         public:
             int init();
 
+            // 不考虑该方法被多线程调用
             int start();
 
+            // 不考虑该方法被多线程调用
             int stop();
 
-            int addServiceDataPacket(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload);
+            int addPacket(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload);
 
             void registerPacketHandler(const PacketType packetType, std::function<int(int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler);
 
@@ -47,7 +50,9 @@ namespace csm
                 PacketHeader::Ptr header;
                 PayloadBase::Ptr payload;
             };
-            moodycamel::BlockingReaderWriterQueue<SessionServiceData> m_sessionServiceDatas;
+            moodycamel::BlockingConcurrentQueue<SessionServiceData> m_sessionServiceDatas;
+
+            std::atomic_bool m_running{false};
 
             std::unordered_map<PacketType, std::function<int(int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)>> m_packetHandlers;
             utilities::Thread::Ptr m_thread;

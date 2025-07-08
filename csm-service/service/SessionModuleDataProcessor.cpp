@@ -26,7 +26,7 @@ int SessionModuleDataProcessor::stop()
     return m_normalPacketProcessor->stop();
 }
 
-void SessionModuleDataProcessor::addPackets(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)
+void SessionModuleDataProcessor::addPacket(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)
 {
     const auto packetProcess = [this, fd, capture_header = std::move(header), capture_payload = std::move(payload)]()
     {

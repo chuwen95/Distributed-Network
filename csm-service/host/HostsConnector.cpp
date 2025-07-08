@@ -188,7 +188,7 @@ int HostsConnector::init()
                         // 将P2PSession回调出去，此时仍保留状态为连接中，即不处理m_connectingHosts，等到ClientInfoReply回来后再将fd从m_connectingHosts中移除
                         m_connectHandler(fd, p2pSession);
 
-                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " callback 将P2PSession回调出去 finish, fd: ", fd);
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " callback P2PSession finish, fd: ", fd);
                     }
 
                     // 将时间戳设置为-1，表示已经连上，不需要再监测超时

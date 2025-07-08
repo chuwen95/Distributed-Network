@@ -22,11 +22,23 @@ int SessionDataDecoder::init()
 
 int SessionDataDecoder::start()
 {
+    if (true == m_running)
+    {
+        return 0;
+    }
+
+    m_running = true;
     return m_decodeWorkers->start();
 }
 
 int SessionDataDecoder::stop()
 {
+    if (false == m_running)
+    {
+        return 0;
+    }
+
+    m_running = false;
     return m_decodeWorkers->stop();
 }
 
@@ -49,28 +61,28 @@ int SessionDataDecoder::addSessionData(const int fd, const char* data, const std
             return;
         }
 
-        while (true)
+        std::unique_lock<std::mutex> ulock(p2pSession->readBufferMutex());
+
+        // 将数据写入到缓冲区尾部
+        utilities::RingBuffer::Ptr& readBuffer = p2pSession->readBuffer();
+        if (-1 == writeDataToP2PSessionReadBuffer(fd, readBuffer, captureBuffer))
         {
-            std::unique_lock<std::mutex> ulock(p2pSession->readBufferMutex());
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "write data to buffer failed, fd: ", fd, ", data size: ", captureBuffer->size());
+            return;
+        }
 
-            // 将数据写入到缓冲区尾部
-            utilities::RingBuffer::Ptr& readBuffer = p2pSession->readBuffer();
-            if (-1 == writeDataToP2PSessionReadBuffer(fd, readBuffer, captureBuffer))
-            {
-                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "write data to buffer failed, fd: ", fd, ", data size: ", captureBuffer->size());
-                return;
-            }
-
+        while (true == m_running)
+        {
             PacketHeader::Ptr header = decodePacketHeader(fd, readBuffer);
             if (nullptr == header)
             {
-                return;
+                break;
             }
 
             PayloadBase::Ptr payload = decodePacketPayload(fd, header, readBuffer);
             if (nullptr == payload)
             {
-                return;
+                break;
             }
 
             if (nullptr != m_packetHandler)
@@ -82,6 +94,11 @@ int SessionDataDecoder::addSessionData(const int fd, const char* data, const std
     m_decodeWorkers->push(decode);
 
     return 0;
+}
+
+void SessionDataDecoder::setPacketHandler(std::function<int(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler)
+{
+    m_packetHandler = std::move(handler);
 }
 
 int SessionDataDecoder::writeDataToP2PSessionReadBuffer(
