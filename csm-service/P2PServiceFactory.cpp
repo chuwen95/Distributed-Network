@@ -11,6 +11,7 @@
 #include "service/SessionDestroyer.h"
 #include "service/SessionModuleDataProcessor.h"
 #include "protocol/PayloadFactory.h"
+#include "routing_algorithm/distance_vector/DistanceVector.h"
 
 using namespace csm::service;
 
@@ -55,13 +56,16 @@ P2PService::Ptr P2PServiceFactory::create()
         HostsConnector::Ptr hostsConnector = std::make_shared<HostsConnector>(hostsInfoManager);
         HostsHeartbeatService::Ptr hostsHeartbeatService = std::make_shared<HostsHeartbeatService>(m_nodeConfig->id(), hostsInfoManager);
 
+        // 路由选择算法
+        DistanceVector::Ptr distanceVector = createDistanceVector();
+
         // 创建TcpServiceConfig
          serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
              p2pSessionManager, sessionAliveChecker, slaveReactors,
              sessionDispatcher, sessionDestroyer, sessionDataDecoder, sessionSericeDataProcessor, sessionModuleDataProcessor,
-             m_serviceStartType, hostsInfoManager, hostsConnector, hostsHeartbeatService);
+             m_serviceStartType, hostsInfoManager, hostsConnector, hostsHeartbeatService, distanceVector);
     }
-    else if(ServiceStartType::Server == m_serviceStartType)
+    else if(ServiceStartType::RpcServer == m_serviceStartType)
     {
         // 创建TcpServiceConfig
         serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
@@ -83,13 +87,12 @@ SessionDataDecoder::Ptr P2PServiceFactory::createSessionDataDecoder(
     utilities::ThreadPool::Ptr sessionDataDecoder =
         std::make_shared<utilities::ThreadPool>(m_nodeConfig->sessionDataDecoderWorkerNum(), "sess_dt_deco");
 
-    return std::make_shared<SessionDataDecoder>(p2pSessionManager, payloadFactory, sessionDataDecoder);
+    return std::make_shared<SessionDataDecoder>(std::move(p2pSessionManager), payloadFactory, sessionDataDecoder);
 }
 
 SessionServiceDataProcessor::Ptr P2PServiceFactory::createServiceDataProcessor()
 {
     utilities::Thread::Ptr thread = std::make_shared<utilities::Thread>();
-
     return std::make_shared<SessionServiceDataProcessor>(thread);
 }
 
@@ -97,6 +100,11 @@ SessionModuleDataProcessor::Ptr P2PServiceFactory::createModuleDataProcessor(
     P2PSessionManager::Ptr p2pSessionManager, std::size_t workerNum)
 {
     utilities::ThreadPool::Ptr normalPacketProcessor = std::make_shared<utilities::ThreadPool>(workerNum, "sess_dt_proc");
+    return std::make_shared<SessionModuleDataProcessor>(std::move(p2pSessionManager), normalPacketProcessor);
+}
 
-    return std::make_shared<SessionModuleDataProcessor>(p2pSessionManager, normalPacketProcessor);
+DistanceVector::Ptr P2PServiceFactory::createDistanceVector()
+{
+    utilities::Thread::Ptr thread = std::make_shared<utilities::Thread>();
+    return std::make_shared<DistanceVector>(thread);
 }

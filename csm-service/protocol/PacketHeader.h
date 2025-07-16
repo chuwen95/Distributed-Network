@@ -29,6 +29,10 @@ namespace csm
             PT_HeartBeat,
             PT_HeartBeatReply,
 
+            // distance_vector -> distance detect
+            PT_DistanceDetect,
+            PT_DistanceDetectReply,
+
             // message
             PT_ModuleMessage
         };

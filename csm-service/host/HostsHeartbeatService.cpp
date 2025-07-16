@@ -5,7 +5,7 @@
 #include "HostsHeartbeatService.h"
 
 #include "csm-utilities/TimeTools.h"
-#include "csm-utilities/ElapsedTime.h"
+#include "csm-utilities/Logger.h"
 #include "csm-service/protocol/PacketHeader.h"
 #include "csm-service/protocol/payload/PayloadHeartBeat.h"
 
@@ -49,7 +49,17 @@ int HostsHeartbeatService::init()
 
                 if (nullptr != m_heartBeatSender)
                 {
-                    m_heartBeatSender(m_hostInfoManager->getHostFdById(host.second.first), buffer);
+                    int fd{-1};
+                    if (0 != m_hostInfoManager->getHostFdById(host.second.first, fd))
+                    {
+                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "get host fd failed, host: ", host.second.first);
+                        return;
+                    }
+                    if (0 != m_heartBeatSender(fd, buffer))
+                    {
+                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send heart beat failed, to host: ", host.second.first, ", fd: ", fd);
+                        return;
+                    }
                     host.second.second = curTimestamp;
                 }
             }

@@ -6,52 +6,32 @@
 
 using namespace csm::service;
 
-std::size_t PayloadHeartBeat::packetLength() const
+void PayloadHeartBeat::setNodeId(const std::string &nodeId)
 {
-    return m_protoHeartBeat.ByteSizeLong();
-}
-
-int PayloadHeartBeat::setNodeId(const std::string &nodeId)
-{
-    m_protoHeartBeat.set_nodeid(nodeId);
-    return 0;
+    m_protoPacket.set_nodeid(nodeId);
 }
 
 std::string PayloadHeartBeat::nodeId() const
 {
-    return m_protoHeartBeat.nodeid();
+    return m_protoPacket.nodeid();
 }
 
-int PayloadHeartBeat::setSeq(const std::uint64_t seq)
+void PayloadHeartBeat::setSeq(const std::uint64_t seq)
 {
-    m_protoHeartBeat.set_seq(seq);
-    return 0;
+    m_protoPacket.set_seq(seq);
 }
 
 std::uint64_t PayloadHeartBeat::seq() const
 {
-    return m_protoHeartBeat.seq();
+    return m_protoPacket.seq();
 }
 
-int PayloadHeartBeat::setTimestamp(const std::uint32_t timestamp)
+void PayloadHeartBeat::setTimestamp(const std::uint32_t timestamp)
 {
-    m_protoHeartBeat.set_timestamp(timestamp);
-    return 0;
+    m_protoPacket.set_timestamp(timestamp);
 }
 
 std::uint32_t PayloadHeartBeat::timestamp() const
 {
-    return m_protoHeartBeat.timestamp();
-}
-
-int PayloadHeartBeat::encode(char *buffer, const std::size_t length) const
-{
-    m_protoHeartBeat.SerializeToArray(buffer, length);
-    return 0;
-}
-
-int PayloadHeartBeat::decode(const char *buffer, const std::size_t length)
-{
-    m_protoHeartBeat.ParseFromArray(buffer, length);
-    return 0;
+    return m_protoPacket.timestamp();
 }

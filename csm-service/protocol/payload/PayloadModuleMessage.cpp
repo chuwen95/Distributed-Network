@@ -4,6 +4,8 @@
 
 #include "PayloadModuleMessage.h"
 
+#include <algorithm>
+
 using namespace csm::service;
 
 std::size_t PayloadModuleMessage::packetLength() const
@@ -13,13 +15,13 @@ std::size_t PayloadModuleMessage::packetLength() const
 
 int PayloadModuleMessage::encode( char *data, const std::size_t len) const
 {
-    return -1;
+    return 0;
 }
 
 int PayloadModuleMessage::decode(const char *buffer, const std::size_t length)
 {
     m_payload.resize(length);
-    memcpy(m_payload.data(), buffer, length);
+    std::copy_n(buffer, length, m_payload.begin());
 
     return 0;
 }

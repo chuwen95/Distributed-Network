@@ -5,8 +5,8 @@
 #ifndef TCPNETWORK_PAYLOADHEARTBEAT_H
 #define TCPNETWORK_PAYLOADHEARTBEAT_H
 
-#include "PayloadBase.h"
 #include "protocol/pb/heartbeat.pb.h"
+#include "PayloadBase.h"
 
 namespace csm
 {
@@ -14,31 +14,20 @@ namespace csm
     namespace service
     {
 
-        class PayloadHeartBeat : public PayloadBase
+        class PayloadHeartBeat : public PayloadTypeBase<protocol::HeartBeat>
         {
         public:
             using Ptr = std::shared_ptr<PayloadHeartBeat>;
 
-            PayloadHeartBeat() = default;
-            ~PayloadHeartBeat() = default;
-
         public:
-            std::size_t packetLength() const override;
-
-            int setNodeId(const std::string &nodeId);
+            void setNodeId(const std::string &nodeId);
             std::string nodeId() const;
 
-            int setSeq(const std::uint64_t seq);
+            void setSeq(const std::uint64_t seq);
             std::uint64_t seq() const;
 
-            int setTimestamp(const std::uint32_t timestamp);
+            void setTimestamp(const std::uint32_t timestamp);
             std::uint32_t timestamp() const;
-
-            int encode(char *buffer, const std::size_t length) const override;
-            int decode(const char *buffer, const std::size_t length) override;
-
-        private:
-            service::HeartBeat m_protoHeartBeat;
         };
 
     } // packetprocess

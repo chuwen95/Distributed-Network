@@ -5,6 +5,8 @@
 #ifndef TCPNETWORK_HOSTSINFOMANAGER_H
 #define TCPNETWORK_HOSTSINFOMANAGER_H
 
+#include <csm-framework/cluster/Common.h>
+
 #include "csm-common/Common.h"
 #include "HostEndPointInfo.h"
 
@@ -19,7 +21,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<HostsInfoManager>;
 
-            HostsInfoManager(const std::string& nodesFile);
+            HostsInfoManager(std::string nodesFile);
             ~HostsInfoManager() = default;
 
             using Hosts = std::unordered_map<HostEndPointInfo, std::pair<std::string, std::uint64_t>, HostEndPointInfo::hashFunction>;
@@ -45,7 +47,7 @@ namespace csm
              * @param fd
              * @return
              */
-            int addHostIdInfo(const std::string &id, const int fd, const std::string &uuid);
+            int addHostIdInfo(const std::string &id, int fd, const std::string &uuid);
 
             /**
              * @brief 将id和fd对应起来
@@ -54,7 +56,7 @@ namespace csm
              * @param fd
              * @return
              */
-            int setHostIdInfo(const std::string &id, const int fd, const std::string &uuid);
+            int setHostIdInfo(const std::string &id, int fd, const std::string &uuid);
 
             /**
              * @brief 将id和fd对应起来
@@ -77,9 +79,10 @@ namespace csm
              * brief 根据id得到fd
              *
              * @param id
+             * @param fd
              * @return
              */
-            int getHostFdById(const std::string id);
+            int getHostFdById(const NodeId& id, int& fd);
 
             /**
              * brief 判断host是否在线
@@ -89,7 +92,7 @@ namespace csm
              * @param uuid
              * @return
              */
-            bool isHostIdExist(const std::string id, int &fd, std::string &uuid);
+            bool isHostIdExist(const NodeId& id, int &fd, std::string &uuid);
 
             /**
              * brief 判断host是否在线
@@ -97,7 +100,7 @@ namespace csm
              * @param id
              * @return
              */
-            bool isHostIdExist(const std::string id);
+            bool isHostIdExist(const NodeId& id);
 
             /**
              * brief 在线客户端数量
@@ -119,7 +122,7 @@ namespace csm
              *
              * @return
              */
-            bool waitAtLeastOneNodeConnected(const int timeout);
+            bool waitAtLeastOneNodeConnected(int timeout);
 
         private:
             std::string m_nodesFile;

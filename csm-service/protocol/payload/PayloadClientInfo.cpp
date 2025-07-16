@@ -8,80 +8,55 @@ using namespace csm::service;
 
 PayloadClientInfo::PayloadClientInfo(std::shared_ptr<std::vector<char>> data)
 {
-    decode(data->data(), data->size());
+    m_protoPacket.ParseFromArray(data->data(), data->size());
 }
 
-std::size_t PayloadClientInfo::packetLength() const
+void PayloadClientInfo::setSeq(const std::uint32_t seq)
 {
-    return m_protoClientInfo.ByteSizeLong();
+    m_protoPacket.set_seq(seq);
 }
 
-int PayloadClientInfo::setSeq(const std::uint32_t seq)
+std::uint32_t PayloadClientInfo::seq() const
 {
-    m_protoClientInfo.set_seq(seq);
-    return 0;
+    return m_protoPacket.seq();
 }
 
-std::uint32_t PayloadClientInfo::seq()
+void PayloadClientInfo::setLocalHost(const std::string &host)
 {
-    return m_protoClientInfo.seq();
+    m_protoPacket.set_localhost(host);
 }
 
-int PayloadClientInfo::setLocalHost(const std::string &host)
+std::string PayloadClientInfo::localHost() const
 {
-    m_protoClientInfo.set_localhost(host);
-    return 0;
+    return m_protoPacket.localhost();
 }
 
-std::string PayloadClientInfo::localHost()
+void PayloadClientInfo::setPeerHost(const std::string &host)
 {
-    return m_protoClientInfo.localhost();
+    m_protoPacket.set_peerhost(host);
 }
 
-int PayloadClientInfo::setPeerHost(const std::string &host)
+std::string PayloadClientInfo::peerHost() const
 {
-    m_protoClientInfo.set_peerhost(host);
-    return 0;
+    return m_protoPacket.peerhost();
 }
 
-std::string PayloadClientInfo::peerHost()
+void PayloadClientInfo::setHandshakeUuid(const std::string &uuid)
 {
-    return m_protoClientInfo.peerhost();
+    m_protoPacket.set_handshakeuuid(uuid);
 }
 
-int PayloadClientInfo::setHandshakeUuid(const std::string &uuid)
+std::string PayloadClientInfo::handshakeUuid() const
 {
-    m_protoClientInfo.set_handshakeuuid(uuid);
-    return 0;
+    return m_protoPacket.handshakeuuid();
 }
 
-std::string PayloadClientInfo::handshakeUuid()
+void PayloadClientInfo::setNodeId(const std::string &nodeId)
 {
-    return m_protoClientInfo.handshakeuuid();
+    m_protoPacket.set_nodeid(nodeId);
 }
 
-int PayloadClientInfo::setNodeId(const std::string &nodeId)
+std::string PayloadClientInfo::nodeId() const
 {
-    m_protoClientInfo.set_nodeid(nodeId);
-
-    return 0;
-}
-
-std::string PayloadClientInfo::nodeId()
-{
-    return m_protoClientInfo.nodeid();
-}
-
-int PayloadClientInfo::encode(char *buffer, const std::size_t length) const
-{
-    m_protoClientInfo.SerializeToArray(buffer, length);
-
-    return 0;
-}
-
-int PayloadClientInfo::decode(const char *buffer, const std::size_t length)
-{
-    m_protoClientInfo.ParseFromArray(buffer, length);
-
-    return 0;
+    return m_protoPacket.nodeid();
 }

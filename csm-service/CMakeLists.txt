@@ -3,7 +3,7 @@ set(module_path ${CMAKE_CURRENT_SOURCE_DIR})
 set(proto_output_path ${CMAKE_CURRENT_BINARY_DIR})
 
 # 填充.proto文件
-set(proto_files protocol/pb/heartbeat.proto protocol/pb/clientinfo.proto)
+set(proto_files protocol/pb/heartbeat.proto protocol/pb/clientinfo.proto protocol/pb/distance_vector.proto)
 # 获取libservice文件夹的绝对路径
 get_filename_component(module_absolute_path ${module_path} ABSOLUTE)
 # 遍历.proto文件

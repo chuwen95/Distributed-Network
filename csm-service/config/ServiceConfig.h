@@ -16,7 +16,7 @@
 #include "csm-service/service/SessionDataDecoder.h"
 #include "csm-service/service/SessionServiceDataProcessor.h"
 #include "csm-service/service/SessionModuleDataProcessor.h"
-#include "csm-utilities/ThreadPool.h"
+#include "csm-service/routing_algorithm/distance_vector/DistanceVector.h"
 
 #include "csm-service/host/HostsInfoManager.h"
 #include "csm-service/host/HostsConnector.h"
@@ -38,7 +38,7 @@ namespace csm
         enum class ServiceStartType
         {
             Node,   // 作为节点启动，需要service模块全内容和host模块，节点相互连接
-            Server,     // 作为服务器启动，为Rpc模块所用，仅需要service模块部分功能（不包含握手协议部分）
+            RpcServer,     // 作为服务器启动，为RPC模块所用，仅需要service模块部分功能，不包含握手协议部分
         };
 
         class ServiceConfig
@@ -50,9 +50,9 @@ namespace csm
                 P2PSessionManager::Ptr p2pSessionManager, SessionAliveChecker::Ptr sessionAliveChecker, std::vector<SlaveReactor::Ptr> slaveReactors,
                 SessionDispatcher::Ptr sessionDispatcher, SessionDestroyer::Ptr sessionDestroyer, SessionDataDecoder::Ptr sessionDataDecoder,
                 SessionServiceDataProcessor::Ptr sessionServiceDataProcesser, SessionModuleDataProcessor::Ptr sessionModuleDataProcessor,
-                const ServiceStartType serverStartType = ServiceStartType::Node,
+                ServiceStartType serverStartType = ServiceStartType::Node,
                 HostsInfoManager::Ptr hostsInfoManager = nullptr, HostsConnector::Ptr hostsConnector = nullptr,
-                HostsHeartbeatService::Ptr hostsHeartbeatService = nullptr);
+                HostsHeartbeatService::Ptr hostsHeartbeatService = nullptr, DistanceVector::Ptr distanceVector = nullptr);
             ~ServiceConfig() = default;
 
         public:
@@ -81,6 +81,8 @@ namespace csm
             void registerModulePacketHandler(protocol::ModuleID moduleId, ModulePacketHandler modulePacketHandler);
             int modulePacketHandler(protocol::ModuleID moduleId, ModulePacketHandler& modulePacketHandler);
 
+            DistanceVector::Ptr distanceVector();
+
         private:
             tool::NodeConfig::Ptr m_nodeConfig;
 
@@ -106,6 +108,9 @@ namespace csm
 
             std::mutex x_modulePacketHandler;
             std::map<protocol::ModuleID, ModulePacketHandler> m_modulePacketHandler;
+
+            // 路由选择算法-距离矢量
+            DistanceVector::Ptr m_distanceVector;
         };
 
     } // server

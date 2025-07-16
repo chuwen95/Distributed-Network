@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package csm.service;
+package csm.service.protocol;
 
 message HeartBeat
 {

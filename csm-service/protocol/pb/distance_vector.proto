@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package csm.service.protocol;
+
+message DistanceDetect
+{
+    uint64 seq = 1;
+    uint32 timestamp = 2;
+}
+
+message DistanceDetectReply
+{
+    uint64 seq = 1;
+    uint32 elapsedTime = 2;
+}
+
+message DistanceInfo
+{
+    string nodeId = 1;
+    uint32 distance = 2;
+}
+
+message DistanceVector
+{
+    repeated DistanceInfo distanceVector = 1;
+}

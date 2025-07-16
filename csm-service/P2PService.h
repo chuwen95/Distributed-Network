@@ -33,7 +33,7 @@ namespace csm
 
             int stop();
 
-            void registerModulePacketHandler(const protocol::ModuleID moduleId, ModulePacketHandler packetHander);
+            void registerModulePacketHandler(protocol::ModuleID moduleId, ModulePacketHandler packetHander);
 
         public:
             /**
@@ -45,7 +45,7 @@ namespace csm
              */
             bool waitAtLeastOneNodeConnected(int timeout);
 
-            int boardcastModuleMessage(const protocol::ModuleID moduleId, const std::vector<char>& data);
+            int boardcastModuleMessage(protocol::ModuleID moduleId, const std::vector<char>& data);
 
             int sendModuleMessageByNodeId(const NodeId &nodeId, protocol::ModuleID moduleId, const std::vector<char>& data);
 
@@ -54,7 +54,7 @@ namespace csm
 
             int initClient();
 
-            int initPacketHandler();
+            int initDistanceVector();
 
             SlaveReactor::Ptr getSlaveReactorByFd(const int fd);
 

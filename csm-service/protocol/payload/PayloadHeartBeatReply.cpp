@@ -6,52 +6,32 @@
 
 using namespace csm::service;
 
-std::size_t PayloadHeartBeatReply::packetLength() const
+void PayloadHeartBeatReply::setNodeId(const std::string &id)
 {
-    return m_protoHeartBeatReply.ByteSizeLong();
-}
-
-int PayloadHeartBeatReply::setNodeId(const std::string &id)
-{
-    m_protoHeartBeatReply.set_nodeid(id);
-    return 0;
+    m_protoPacket.set_nodeid(id);
 }
 
 std::string PayloadHeartBeatReply::nodeId() const
 {
-    return m_protoHeartBeatReply.nodeid();
+    return m_protoPacket.nodeid();
 }
 
-int PayloadHeartBeatReply::setSeq(const std::uint64_t seq)
+void PayloadHeartBeatReply::setSeq(const std::uint64_t seq)
 {
-    m_protoHeartBeatReply.set_seq(seq);
-    return 0;
+    m_protoPacket.set_seq(seq);
 }
 
 std::uint64_t PayloadHeartBeatReply::seq() const
 {
-    return m_protoHeartBeatReply.seq();
+    return m_protoPacket.seq();
 }
 
-int PayloadHeartBeatReply::setTransferTime(const std::uint32_t transferTime)
+void PayloadHeartBeatReply::setTransferTime(const std::uint32_t transferTime)
 {
-    m_protoHeartBeatReply.set_transfertime(transferTime);
-    return 0;
+    m_protoPacket.set_transfertime(transferTime);
 }
 
 std::uint32_t PayloadHeartBeatReply::transferTime() const
 {
-    return m_protoHeartBeatReply.transfertime();
-}
-
-int PayloadHeartBeatReply::encode(char *buffer, const std::size_t length) const
-{
-    m_protoHeartBeatReply.SerializeToArray(buffer, length);
-    return 0;
-}
-
-int PayloadHeartBeatReply::decode(const char *buffer, const std::size_t length)
-{
-    m_protoHeartBeatReply.ParseFromArray(buffer, length);
-    return 0;
+    return m_protoPacket.transfertime();
 }

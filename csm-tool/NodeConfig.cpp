@@ -120,6 +120,11 @@ std::size_t NodeConfig::moduleDataProcessWorkerNum() const
     return m_moduleDataProcessWorkerNum;
 }
 
+std::string NodeConfig::routingAlgorithm() const
+{
+    return m_routingAlgorithm;
+}
+
 bool NodeConfig::enableFileLog() const
 {
     return m_enableFileLog;
@@ -224,8 +229,10 @@ int NodeConfig::parseNetworkConfig(inipp::Ini<char>& ini)
     m_sessionDataDecodeWorkerNum = getValue(ini, "network", "packet_decode_worker_num", m_sessionDataDecodeWorkerNum);
     m_moduleDataProcessWorkerNum = getValue(ini, "network", "packet_process_worker_num", m_moduleDataProcessWorkerNum);
 
-    m_slaveReactorNum = getValue(ini, "reactor", "slave_reactor", m_slaveReactorNum);
-    m_redispatchInterval = getValue(ini, "reactor", "redispatch_interval", m_redispatchInterval);
+    m_slaveReactorNum = getValue(ini, "network", "slave_reactor", m_slaveReactorNum);
+    m_redispatchInterval = getValue(ini, "network", "redispatch_interval", m_redispatchInterval);
+
+    m_routingAlgorithm = getValue(ini, "network", "routing_algorithm", m_routingAlgorithm);
 
     if('/' != m_nodesFile[0])
     {

@@ -5,8 +5,8 @@
 #ifndef TCPNETWORK_PAYLOADCLIENTINFOREPLY_H
 #define TCPNETWORK_PAYLOADCLIENTINFOREPLY_H
 
-#include "PayloadBase.h"
 #include "protocol/pb/clientinfo.pb.h"
+#include "PayloadBase.h"
 
 namespace csm
 {
@@ -14,38 +14,29 @@ namespace csm
     namespace service
     {
 
-        class PayloadClientInfoReply : public PayloadBase
+        class PayloadClientInfoReply : public PayloadTypeBase<protocol::ClientInfoReply>
         {
         public:
             using Ptr = std::shared_ptr<PayloadClientInfoReply>;
 
             PayloadClientInfoReply() = default;
             PayloadClientInfoReply(std::shared_ptr<std::vector<char>> data);
-            ~PayloadClientInfoReply() = default;
 
         public:
-            std::size_t packetLength() const override;
+            void setSeq(const std::uint32_t seq);
+            std::uint32_t seq() const;
 
-            int setSeq(const std::uint32_t seq);
-            std::uint32_t seq();
+            void setPeerHost(const std::string &host);
+            std::string peerHost() const;
 
-            int setPeerHost(const std::string &host);
-            std::string peerHost();
+            void setHandshakeUuid(const std::string &uuid);
+            std::string handshakeUuid() const;
 
-            int setHandshakeUuid(const std::string &uuid);
-            std::string handshakeUuid();
+            void setNodeId(const std::string &id);
+            std::string nodeId() const;
 
-            int setNodeId(const std::string &id);
-            std::string nodeId();
-
-            int setResult(const std::int32_t result);
-            std::int32_t result();
-
-            int encode(char *buffer, const std::size_t length) const override;
-            int decode(const char *buffer, const std::size_t length) override;
-
-        private:
-            service::ClientInfoReply m_protoClientInfoReply;
+            void setResult(const std::int32_t result);
+            std::int32_t result() const;
         };
 
     } // service

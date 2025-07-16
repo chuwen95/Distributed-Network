@@ -8,80 +8,55 @@ using namespace csm::service;
 
 PayloadClientInfoReply::PayloadClientInfoReply(std::shared_ptr<std::vector<char>> data)
 {
-    decode(data->data(), data->size());
+    m_protoPacket.ParseFromArray(data->data(), data->size());
 }
 
-std::size_t PayloadClientInfoReply::packetLength() const
+void PayloadClientInfoReply::setSeq(const std::uint32_t seq)
 {
-    return m_protoClientInfoReply.ByteSizeLong();
+    m_protoPacket.set_seq(seq);
 }
 
-int PayloadClientInfoReply::setSeq(const std::uint32_t seq)
+std::uint32_t PayloadClientInfoReply::seq() const
 {
-    m_protoClientInfoReply.set_seq(seq);
-    return 0;
+    return m_protoPacket.seq();
 }
 
-std::uint32_t PayloadClientInfoReply::seq()
+void PayloadClientInfoReply::setPeerHost(const std::string &host)
 {
-    return m_protoClientInfoReply.seq();
+    m_protoPacket.set_peerhost(host);
 }
 
-int PayloadClientInfoReply::setPeerHost(const std::string &host)
+std::string PayloadClientInfoReply::peerHost() const
 {
-    m_protoClientInfoReply.set_peerhost(host);
-    return 0;
+    return m_protoPacket.peerhost();
 }
 
-std::string PayloadClientInfoReply::peerHost()
+void PayloadClientInfoReply::setHandshakeUuid(const std::string &uuid)
 {
-    return m_protoClientInfoReply.peerhost();
+    m_protoPacket.set_handshakeuuid(uuid);
 }
 
-int PayloadClientInfoReply::setHandshakeUuid(const std::string &uuid)
+std::string PayloadClientInfoReply::handshakeUuid() const
 {
-    m_protoClientInfoReply.set_handshakeuuid(uuid);
-    return 0;
+    return m_protoPacket.handshakeuuid();
 }
 
-std::string PayloadClientInfoReply::handshakeUuid()
+void PayloadClientInfoReply::setNodeId(const std::string &id)
 {
-    return m_protoClientInfoReply.handshakeuuid();
+    m_protoPacket.set_nodeid(std::string(id));
 }
 
-int PayloadClientInfoReply::setNodeId(const std::string &id)
+std::string PayloadClientInfoReply::nodeId() const
 {
-    m_protoClientInfoReply.set_nodeid(std::string(id));
-
-    return 0;
+    return m_protoPacket.nodeid();
 }
 
-std::string PayloadClientInfoReply::nodeId()
+void PayloadClientInfoReply::setResult(const std::int32_t result)
 {
-    return m_protoClientInfoReply.nodeid();
+    m_protoPacket.set_result(result);
 }
 
-int PayloadClientInfoReply::setResult(const std::int32_t result)
+std::int32_t PayloadClientInfoReply::result() const
 {
-    m_protoClientInfoReply.set_result(result);
-    return 0;
-}
-
-std::int32_t PayloadClientInfoReply::result()
-{
-    return m_protoClientInfoReply.result();
-}
-
-int PayloadClientInfoReply::encode(char *buffer, const std::size_t length) const
-{
-    m_protoClientInfoReply.SerializeToArray(buffer, length);
-
-    return 0;
-}
-
-int PayloadClientInfoReply::decode(const char *buffer, const std::size_t length)
-{
-    m_protoClientInfoReply.ParseFromArray(buffer, length);
-
-    return 0;
+    return m_protoPacket.result();
 }

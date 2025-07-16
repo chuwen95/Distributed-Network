@@ -11,10 +11,9 @@
 
 using namespace csm::service;
 
-HostsInfoManager::HostsInfoManager(const std::string &nodesFile) : m_nodesFile(nodesFile)
+HostsInfoManager::HostsInfoManager(std::string nodesFile) : m_nodesFile(std::move(nodesFile))
 {
 }
-
 
 int HostsInfoManager::init()
 {
@@ -42,9 +41,9 @@ int HostsInfoManager::init()
         return -1;
     }
 
-    for (auto iter = nodesValue.begin(); iter != nodesValue.end(); ++iter)
+    for (const Json::Value& value : nodesValue)
     {
-        std::string host = iter->asString();
+        std::string host = value.asString();
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "hosts info: ", host);
         std::vector<std::string> ipPort = csm::utilities::split(host, ':');
         if (2 != ipPort.size())
@@ -53,7 +52,7 @@ int HostsInfoManager::init()
             return -1;
         }
 
-        std::string ip = ipPort[0];
+        const std::string& ip = ipPort[0];
         unsigned short port = csm::utilities::convertFromString<unsigned short>(ipPort[1]);
         m_hosts.emplace(HostEndPointInfo(ip, port), std::make_pair("", -1));
     }
@@ -142,7 +141,7 @@ int HostsInfoManager::setHostNotConnected(const service::HostEndPointInfo &endPo
     return 0;
 }
 
-int HostsInfoManager::getHostFdById(const std::string id)
+int HostsInfoManager::getHostFdById(const NodeId& id, int& fd)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
     auto iter = m_nodeIdInfos.find(id);
@@ -151,10 +150,12 @@ int HostsInfoManager::getHostFdById(const std::string id)
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "host not exist");
         return -1;
     }
-    return iter->second.first;
+
+    fd = iter->second.first;
+    return 0;
 }
 
-bool HostsInfoManager::isHostIdExist(const std::string id, int &fd, std::string &uuid)
+bool HostsInfoManager::isHostIdExist(const NodeId& id, int &fd, std::string &uuid)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
     auto iter = m_nodeIdInfos.find(id);
@@ -167,7 +168,7 @@ bool HostsInfoManager::isHostIdExist(const std::string id, int &fd, std::string 
     return true;
 }
 
-bool HostsInfoManager::isHostIdExist(const std::string id)
+bool HostsInfoManager::isHostIdExist(const NodeId& id)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
     auto iter = m_nodeIdInfos.find(id);
@@ -184,14 +185,14 @@ std::uint32_t HostsInfoManager::onlineClientSize()
     return m_nodeIdInfos.size();
 }
 
-std::vector<std::pair<std::string, int>> HostsInfoManager::getAllOnlineClients()
+std::vector<std::pair<csm::NodeId, int>> HostsInfoManager::getAllOnlineClients()
 {
-    std::vector<std::pair<std::string, int>> onlineClients;
+    std::vector<std::pair<NodeId, int>> onlineClients;
 
     std::unique_lock<std::mutex> ulock(x_hosts);
-    for (auto iter = m_nodeIdInfos.begin(); iter != m_nodeIdInfos.end(); ++iter)
+    for (const auto& [nodeId, fdUuid] : m_nodeIdInfos)
     {
-        onlineClients.emplace_back(iter->first, iter->second.first);
+        onlineClients.emplace_back(nodeId, fdUuid.first);
     }
 
     return std::move(onlineClients);

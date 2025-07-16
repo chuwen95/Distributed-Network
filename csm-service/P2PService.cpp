@@ -179,6 +179,8 @@ int P2PService::init()
             return -1;
         }
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "init client successfully");
+
+
     }
 
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "****************************************TcpServer::init****************************************");
@@ -277,7 +279,7 @@ int P2PService::stop()
     return 0;
 }
 
-void P2PService::registerModulePacketHandler(protocol::ModuleID moduleId, ModulePacketHandler packetHander)
+void P2PService::registerModulePacketHandler(csm::protocol::ModuleID moduleId, ModulePacketHandler packetHander)
 {
     m_serviceConfig->registerModulePacketHandler(moduleId, std::move(packetHander));
 }
@@ -287,7 +289,7 @@ bool P2PService::waitAtLeastOneNodeConnected(const int timeout)
     return m_serviceConfig->hostsInfoManager()->waitAtLeastOneNodeConnected(timeout);
 }
 
-int P2PService::boardcastModuleMessage(protocol::ModuleID moduleId, const std::vector<char>& data)
+int P2PService::boardcastModuleMessage(csm::protocol::ModuleID moduleId, const std::vector<char>& data)
 {
     PacketHeader packetHeader;
     packetHeader.setType(PacketType::PT_ModuleMessage);
@@ -313,7 +315,7 @@ int P2PService::boardcastModuleMessage(protocol::ModuleID moduleId, const std::v
     return 0;
 }
 
-int P2PService::sendModuleMessageByNodeId(const NodeId &nodeId, protocol::ModuleID moduleId, const std::vector<char>& data)
+int P2PService::sendModuleMessageByNodeId(const NodeId &nodeId, csm::protocol::ModuleID moduleId, const std::vector<char>& data)
 {
     PacketHeader packetHeader;
     packetHeader.setType(PacketType::PT_ModuleMessage);
@@ -327,8 +329,8 @@ int P2PService::sendModuleMessageByNodeId(const NodeId &nodeId, protocol::Module
     memcpy(buffer.data() + packetHeader.headerLength(), data.data(), data.size());
 
     // 发送给所有在线的节点
-    int fd = m_serviceConfig->hostsInfoManager()->getHostFdById(nodeId);
-    if (-1 == fd)
+    int fd;
+    if (0 != m_serviceConfig->hostsInfoManager()->getHostFdById(nodeId, fd))
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send message to ", fd, ", failed, no such node");
         return -1;
@@ -357,12 +359,11 @@ int P2PService::initServer()
     }
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "create socket successfully, fd: ", m_fd);
 
-#if 0   // 对于没有边缘触发的select来说，设置监听套接字非阻塞好像用处不大
-    // 设置为非阻塞模式
-        if(-1 == utilities::Socket::setNonBlock(m_fd))
-        {
-            return -1;
-        }
+#if 0
+    if(-1 == utilities::Socket::setNonBlock(m_fd))
+    {
+        return -1;
+    }
 #endif
 
     if(-1 == utilities::Socket::setReuseAddr(m_fd))
@@ -381,7 +382,7 @@ int P2PService::initServer()
         listenIp = m_serviceConfig->nodeConfig()->p2pIp();
         listenPort = m_serviceConfig->nodeConfig()->p2pPort();
     }
-    else if(ServiceStartType::Server == m_serviceConfig->serviceStartType())
+    else if(ServiceStartType::RpcServer == m_serviceConfig->serviceStartType())
     {
         listenIp = m_serviceConfig->nodeConfig()->tcpRpcIp();
         listenPort = m_serviceConfig->nodeConfig()->tcpRpcPort();
@@ -705,7 +706,7 @@ int P2PService::initClient()
             LOG->write(utilities::LogType::Log_Warning, FILE_INFO, "ClientInfoReply result: ", result, ", fd: ", fd);
             if (-3 == result)
             {
-                anotherConnectionFd = m_serviceConfig->hostsInfoManager()->getHostFdById(id);
+                m_serviceConfig->hostsInfoManager()->getHostFdById(id, anotherConnectionFd);
                 LOG->write(utilities::LogType::Log_Warning, FILE_INFO,"get another connection fd: ", anotherConnectionFd, ", fd: ", fd);
                 assert(-1 != anotherConnectionFd);
 
@@ -772,8 +773,8 @@ int P2PService::initClient()
                 packetHeader.setType(PacketType::PT_ClientInfoReply);
                 packetHeader.setPayloadLength(reply.packetLength());
 
-                int headerLength = packetHeader.headerLength();
-                int payloadLength = reply.packetLength();
+                std::size_t headerLength = packetHeader.headerLength();
+                std::size_t payloadLength = reply.packetLength();
 
                 std::vector<char> buffer;
                 buffer.resize(headerLength + reply.packetLength());
@@ -821,11 +822,37 @@ int P2PService::initClient()
     m_serviceConfig->hostsHeartbeatService()->registerHeartbeatSender([this](const int fd, const std::vector<char> &data) {
         if (0 != sendData(fd, data))
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send heartbeat failed, fd: ", fd);
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send heartbeat failed, to fd: ", fd);
             return -1;
         }
 
+        LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "send heartbeat successfully, to fd: ", fd);
+
         return 0;
+    });
+
+    return 0;
+}
+
+int P2PService::initDistanceVector()
+{
+    if (0 != m_serviceConfig->distanceVector()->init())
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "init distance vector failed");
+        return -1;
+    }
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "init distance vector successfully");
+
+    m_serviceConfig->distanceVector()->setPacketSender([this](const std::string& nodeId, const std::vector<char> &data) -> int
+    {
+        int fd;
+        if (0 != m_serviceConfig->hostsInfoManager()->getHostFdById(nodeId, fd))
+        {
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "get host fd from id failed, id: ", nodeId);
+            return -1;
+        }
+
+        return sendData(fd, data);
     });
 
     return 0;

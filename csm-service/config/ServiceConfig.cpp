@@ -11,15 +11,17 @@ ServiceConfig::ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::Select
     Acceptor::Ptr acceptor, P2PSessionManager::Ptr p2pSessionManager, SessionAliveChecker::Ptr sessionAliveChecker,
     std::vector<SlaveReactor::Ptr> slaveReactors, SessionDispatcher::Ptr sessionDispatcher, SessionDestroyer::Ptr sessionDestroyer,
     SessionDataDecoder::Ptr sessionDataDecoder, SessionServiceDataProcessor::Ptr sessionServiceDataProcessor,
-    SessionModuleDataProcessor::Ptr sessionModuleDataProcessor, const ServiceStartType serverStartType,
-    HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector, HostsHeartbeatService::Ptr hostsHeartbeatService) :
+    SessionModuleDataProcessor::Ptr sessionModuleDataProcessor, ServiceStartType serverStartType,
+    HostsInfoManager::Ptr hostsInfoManager, HostsConnector::Ptr hostsConnector, HostsHeartbeatService::Ptr hostsHeartbeatService
+    , DistanceVector::Ptr distanceVector) :
 m_nodeConfig(std::move(nodeConfig)), m_listenner(std::move(listenner)), m_acceptor(std::move(acceptor)),
 m_p2pSessionManager(std::move(p2pSessionManager)), m_sessionAliveChecker(std::move(sessionAliveChecker)),
 m_slaveReactors(std::move(slaveReactors)), m_sessionDispatcher(std::move(sessionDispatcher)),
 m_sessionDestroyer(std::move(sessionDestroyer)), m_sessionDataDecoder(std::move(sessionDataDecoder)),
 m_sessionServiceDataProcessor(std::move(sessionServiceDataProcessor)), m_sessionModuleDataProcessor(std::move(sessionModuleDataProcessor)),
 m_serviceStartType(serverStartType),
-m_hostsInfoManager(std::move(hostsInfoManager)),m_hostsConnector(std::move(hostsConnector)), m_hostsHeartbeatService(std::move(hostsHeartbeatService))
+m_hostsInfoManager(std::move(hostsInfoManager)),m_hostsConnector(std::move(hostsConnector)), m_hostsHeartbeatService(std::move(hostsHeartbeatService)),
+m_distanceVector(std::move(distanceVector))
 {}
 
 csm::tool::NodeConfig::Ptr ServiceConfig::nodeConfig()
@@ -100,7 +102,6 @@ HostsHeartbeatService::Ptr ServiceConfig::hostsHeartbeatService()
 void ServiceConfig::registerModulePacketHandler(const protocol::ModuleID moduleId, ModulePacketHandler modulePacketHandler)
 {
     std::unique_lock<std::mutex> ulock(x_modulePacketHandler);
-
     m_modulePacketHandler[moduleId] = std::move(modulePacketHandler);
 }
 
@@ -117,4 +118,9 @@ int ServiceConfig::modulePacketHandler(const protocol::ModuleID moduleId, Module
 
     modulePacketHandler = iter->second;
     return 0;
+}
+
+DistanceVector::Ptr ServiceConfig::distanceVector()
+{
+    return m_distanceVector;
 }

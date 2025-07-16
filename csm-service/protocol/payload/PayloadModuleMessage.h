@@ -5,7 +5,8 @@
 #ifndef COPYSTATEMACHINE_PAYLOADMODULEMESSAGE_H
 #define COPYSTATEMACHINE_PAYLOADMODULEMESSAGE_H
 
-#include "csm-common/Common.h"
+#include <vector>
+
 #include "PayloadBase.h"
 
 namespace csm
@@ -18,9 +19,6 @@ namespace csm
         {
         public:
             using Ptr = std::shared_ptr<PayloadModuleMessage>;
-
-            PayloadModuleMessage() = default;
-            ~PayloadModuleMessage() override = default;
 
         public:
             std::size_t packetLength() const override;

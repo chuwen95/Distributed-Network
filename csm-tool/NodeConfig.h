@@ -65,6 +65,8 @@ namespace csm
             std::size_t sessionDataDecoderWorkerNum() const;
             // 包处理线程池线程数量
             std::size_t moduleDataProcessWorkerNum() const;
+            // 路由选择算法
+            std::string routingAlgorithm() const;
 
             // [log]
             // 是否将日志写入到文件
@@ -114,6 +116,7 @@ namespace csm
             std::string m_nodesFile{ "nodes.json" };
             std::size_t m_sessionDataDecodeWorkerNum{ 4 };
             std::size_t m_moduleDataProcessWorkerNum{ 8 };
+            std::string m_routingAlgorithm{ "distance_vector" };
 
             // [reactor]
             std::size_t m_slaveReactorNum{ 8 };
