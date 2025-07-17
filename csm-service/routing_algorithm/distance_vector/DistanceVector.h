@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 #include "csm-framework/cluster/Common.h"
-#include "csm-service/protocol/PacketHeader.h"
+#include "csm-service/protocol/header/PacketHeader.h"
 #include "csm-service/protocol/payload/PayloadBase.h"
 #include "csm-utilities/Thread.h"
 
@@ -40,14 +40,14 @@ namespace csm
              *
              * @param sender
              */
-            void setPacketSender(std::function<int(const std::string& nodeId, const std::vector<char>& data)> sender);
+            void setPacketSender(std::function<int(const NodeId& nodeId, const std::vector<char>& data)> sender);
 
             /**
              *@brief 添加邻居节点
              *
              * @param nodeId
              */
-            void addNeighbourNode(const std::string& nodeId, int fd);
+            void addNeighbourNode(const NodeId& nodeId, int fd);
 
             /**
              * @brief 处理网络数据包
@@ -56,11 +56,11 @@ namespace csm
              * @param payload
              * @return
              */
-            int handlePacket(PacketHeader::Ptr header, PayloadBase::Ptr payload);
+            int handlePacket(const NodeId& fromNodeId, PacketHeader::Ptr header, PayloadBase::Ptr payload);
 
         private:
-            int handleDistanceDetect(PacketHeader::Ptr header, PayloadBase::Ptr payload);
-            int handleDistanceDetectReply(PacketHeader::Ptr header, PayloadBase::Ptr payload);
+            int handleDistanceDetect(const NodeId& fromNodeId, const PacketHeader::Ptr& header, const PayloadBase::Ptr& payload);
+            int handleDistanceDetectReply(const NodeId& fromNodeId, const PacketHeader::Ptr& header, const PayloadBase::Ptr& payload);
 
         private:
             struct NodeInfo

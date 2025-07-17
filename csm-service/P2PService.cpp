@@ -4,16 +4,17 @@
 
 #include "P2PService.h"
 
+#include "csm-packetprocess/concept/PacketConcept.h"
 #include "csm-utilities/Socket.h"
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/UUIDTool.h"
 #include "csm-utilities/TimeTools.h"
-#include "protocol/PacketHeader.h"
 #include "protocol/payload/PayloadClientInfo.h"
 #include "protocol/payload/PayloadClientInfoReply.h"
 #include "protocol/payload/PayloadHeartBeat.h"
 #include "protocol/payload/PayloadHeartBeatReply.h"
 #include "protocol/payload/PayloadModuleMessage.h"
+#include "protocol/utilities/PacketEncodeHelper.h"
 
 using namespace csm::service;
 
@@ -291,16 +292,8 @@ bool P2PService::waitAtLeastOneNodeConnected(const int timeout)
 
 int P2PService::boardcastModuleMessage(csm::protocol::ModuleID moduleId, const std::vector<char>& data)
 {
-    PacketHeader packetHeader;
-    packetHeader.setType(PacketType::PT_ModuleMessage);
-    packetHeader.setModuleId(moduleId);
-    packetHeader.setPayloadLength(data.size());
-
-    // 编码包为待发送数据
-    std::vector<char> buffer;
-    buffer.resize(packetHeader.headerLength() + data.size());
-    packetHeader.encode(buffer.data(), packetHeader.headerLength());
-    memcpy(buffer.data() + packetHeader.headerLength(), data.data(), data.size());
+    std::vector<char> buffer =
+        PacketEncodeHelper<PacketType::PT_ModuleMessage, std::vector<char>>::encode(moduleId, data);
 
     // 发送给所有在线的节点
     std::vector<std::pair<std::string, int>> allOnlineClients = m_serviceConfig->hostsInfoManager()->getAllOnlineClients();
@@ -317,16 +310,8 @@ int P2PService::boardcastModuleMessage(csm::protocol::ModuleID moduleId, const s
 
 int P2PService::sendModuleMessageByNodeId(const NodeId &nodeId, csm::protocol::ModuleID moduleId, const std::vector<char>& data)
 {
-    PacketHeader packetHeader;
-    packetHeader.setType(PacketType::PT_ModuleMessage);
-    packetHeader.setModuleId(moduleId);
-    packetHeader.setPayloadLength(data.size());
-
-    // 编码包为待发送数据
-    std::vector<char> buffer;
-    buffer.resize(packetHeader.headerLength() + data.size());
-    packetHeader.encode(buffer.data(), packetHeader.headerLength());
-    memcpy(buffer.data() + packetHeader.headerLength(), data.data(), data.size());
+    std::vector<char> buffer =
+        PacketEncodeHelper<PacketType::PT_ModuleMessage, std::vector<char>>::encode(moduleId, data);
 
     // 发送给所有在线的节点
     int fd;
@@ -467,15 +452,7 @@ int P2PService::initServer()
         // 更新心跳
         m_serviceConfig->sessionAliveChecker()->refreshSessionLastRecvTime(fd);
 
-        PacketHeader packetHeader;
-        packetHeader.setType(PacketType::PT_HeartBeatReply);
-        packetHeader.setPayloadLength(0);
-        std::size_t headerLength = packetHeader.headerLength();
-
-        std::vector<char> buffer;
-        buffer.resize(headerLength);
-        packetHeader.encode(buffer.data(), headerLength);
-
+        std::vector<char> buffer = PacketEncodeHelper<PacketType::PT_HeartBeatReply, std::nullopt_t>::encode();
         int ret = sendData(fd, buffer);
         if (0 != ret)
         {
@@ -553,106 +530,88 @@ int P2PService::initClient()
         // 发送ClientInfo包
         PayloadClientInfo clientInfoPacket;
         clientInfoPacket.setLocalHost(m_serviceConfig->nodeConfig()->p2pIp() + ":" +
-                                      csm::utilities::convertToString(m_serviceConfig->nodeConfig()->p2pPort()));
+                                      utilities::convertToString(m_serviceConfig->nodeConfig()->p2pPort()));
         clientInfoPacket.setPeerHost(p2pSession->peerHostEndPointInfo().host());
         clientInfoPacket.setHandshakeUuid(uuid);
         clientInfoPacket.setNodeId(m_serviceConfig->nodeConfig()->id());
-        std::size_t payloadLength = clientInfoPacket.packetLength();
 
-        PacketHeader packetHeader;
-        packetHeader.setType(PacketType::PT_ClientInfo);
-        packetHeader.setPayloadLength(clientInfoPacket.packetLength());
-        std::size_t headerLength = packetHeader.headerLength();
-
-        std::vector<char> buffer;
-        buffer.resize(headerLength + payloadLength);
-        packetHeader.encode(buffer.data(), headerLength);
-        clientInfoPacket.encode(buffer.data() + headerLength, payloadLength);
-
+        std::vector<char> buffer =
+            PacketEncodeHelper<PacketType::PT_ClientInfo, PayloadClientInfo>::encode(clientInfoPacket);
         int ret = sendData(fd, buffer);
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send ClientInfo ret: ", ret, ", fd: ", fd);
     });
 
     // 客户端发送ClientInfo包表明自己的身份后，将id与fd绑定，一方面供判定重复连接使用，一方面发送数据的时候通过id查找fd
-    m_serviceConfig->sessionServiceDataProcessor()->registerPacketHandler(PacketType::PT_ClientInfo, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) {
-        // 收到ClientInfo包，是别人连自己的情况
-        PayloadClientInfo::Ptr payloadClientInfo = std::dynamic_pointer_cast<PayloadClientInfo>(payload);
-
-        P2PSession::Ptr p2pSession = m_serviceConfig->p2pSessionManager()->session(fd);
-        if(nullptr == p2pSession)
+    m_serviceConfig->sessionServiceDataProcessor()->registerPacketHandler(PacketType::PT_ClientInfo,
+        [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find P2PSession failed, fd: ", fd);
-            return -1;
-        }
+            // 收到ClientInfo包，是别人连自己的情况
+            PayloadClientInfo::Ptr payloadClientInfo = std::dynamic_pointer_cast<PayloadClientInfo>(payload);
 
-        std::string id = payloadClientInfo->nodeId();
-        p2pSession->setClientId(id);
-        p2pSession->setHandshakeUuid(payloadClientInfo->handshakeUuid());
-        p2pSession->setClientOnlineTimestamp(utilities::TimeTools::getCurrentTimestamp());
-
-        HostEndPointInfo localHostEndPointInfo(payloadClientInfo->localHost());
-        HostEndPointInfo peerHostEndPointInfo(payloadClientInfo->peerHost());
-
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-                   "recv ClientInfo, fd: ", fd, ", id: ", id, ", localhost: ", localHostEndPointInfo.host(), ", peerHost: ", peerHostEndPointInfo.host());
-
-        /*
-         * -1: CommonError
-         * -2: ConnectSelf
-         * -3: DuplicateConnection
-         */
-        int replyResult{0};
-        if (id == m_serviceConfig->nodeConfig()->id())
-        {
-            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect self, set reply result to -2, then connection initiator will disconnect");
-            replyResult = -2;
-        }
-        else
-        {
-            int ret = m_serviceConfig->hostsInfoManager()->addHostIdInfo(id, fd, payloadClientInfo->handshakeUuid());
-            if (-1 == ret)
+            P2PSession::Ptr p2pSession = m_serviceConfig->p2pSessionManager()->session(fd);
+            if(nullptr == p2pSession)
             {
-                LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                    "host already connected, return -3 then peer will disconnect it, this is who connect me: ", localHostEndPointInfo.host());
-                replyResult = -3;
+                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find P2PSession failed, fd: ", fd);
+                return -1;
+            }
+
+            std::string id = payloadClientInfo->nodeId();
+            p2pSession->setClientId(id);
+            p2pSession->setHandshakeUuid(payloadClientInfo->handshakeUuid());
+            p2pSession->setClientOnlineTimestamp(utilities::TimeTools::getCurrentTimestamp());
+
+            HostEndPointInfo localHostEndPointInfo(payloadClientInfo->localHost());
+            HostEndPointInfo peerHostEndPointInfo(payloadClientInfo->peerHost());
+
+            LOG->write(utilities::LogType::Log_Info, FILE_INFO,
+                       "recv ClientInfo, fd: ", fd, ", id: ", id, ", localhost: ", localHostEndPointInfo.host(), ", peerHost: ", peerHostEndPointInfo.host());
+
+            /*
+             * -1: CommonError
+             * -2: ConnectSelf
+             * -3: DuplicateConnection
+             */
+            int replyResult{0};
+            if (id == m_serviceConfig->nodeConfig()->id())
+            {
+                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect self, set reply result to -2, then connection initiator will disconnect");
+                replyResult = -2;
             }
             else
             {
-                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add host id info to HostsInfoManager successfully, fd: ", fd, ", id: ", id);
+                int ret = m_serviceConfig->hostsInfoManager()->addHostIdInfo(id, fd, payloadClientInfo->handshakeUuid());
+                if (-1 == ret)
+                {
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO,
+                        "host already connected, return -3 then peer will disconnect it, this is who connect me: ", localHostEndPointInfo.host());
+                    replyResult = -3;
+                }
+                else
+                {
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add host id info to HostsInfoManager successfully, fd: ", fd, ", id: ", id);
+                }
             }
-        }
 
-        // 构造回应包
-        PayloadClientInfoReply reply;
-        reply.setPeerHost(peerHostEndPointInfo.host());
-        reply.setHandshakeUuid(payloadClientInfo->handshakeUuid());
-        reply.setNodeId(m_serviceConfig->nodeConfig()->id());
-        reply.setResult(replyResult);
+            // 构造回应包
+            PayloadClientInfoReply clientInfoReply;
+            clientInfoReply.setPeerHost(peerHostEndPointInfo.host());
+            clientInfoReply.setHandshakeUuid(payloadClientInfo->handshakeUuid());
+            clientInfoReply.setNodeId(m_serviceConfig->nodeConfig()->id());
+            clientInfoReply.setResult(replyResult);
 
-        PacketHeader packetHeader;
-        packetHeader.setType(PacketType::PT_ClientInfoReply);
-        packetHeader.setPayloadLength(reply.packetLength());
+            std::vector<char> buffer =
+                PacketEncodeHelper<PacketType::PT_ClientInfoReply, PayloadClientInfoReply>::encode(clientInfoReply);
+            if (-1 == sendData(fd, buffer))
+            {
+                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send ClientInfoReply payload failed", ", fd: ", fd, ", id: ", id);
+                return -1;
+            }
 
-        int headerLength = packetHeader.headerLength();
-        int payloadLength = reply.packetLength();
+            LOG->write(utilities::LogType::Log_Info, FILE_INFO,
+                       "send ClientInfoReply payload successfully, result:", replyResult, ", fd: ", fd, ", id: ", id);
 
-        std::vector<char> buffer;
-        buffer.resize(headerLength + reply.packetLength());
-
-        packetHeader.encode(buffer.data(), headerLength);
-        reply.encode(buffer.data() + headerLength, payloadLength);
-
-        if (-1 == sendData(fd, buffer))
-        {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send ClientInfoReply payload failed", ", fd: ", fd, ", id: ", id);
-            return -1;
-        }
-
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO,
-                   "send ClientInfoReply payload successfully, result:", replyResult, ", fd: ", fd, ", id: ", id);
-
-        return 0;
-    });
+            return 0;
+        });
 
     // 收到ClientInfoReply包
     m_serviceConfig->sessionServiceDataProcessor()->registerPacketHandler(PacketType::PT_ClientInfoReply, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
@@ -720,24 +679,13 @@ int P2PService::initClient()
             if (anotherConnectionUuid < payloadClientInfoReply->handshakeUuid())    // 因为对方的uuid比较小，告诉对方断开与自己的连接，仅保留自己连对方的连接
             {
                 // 构造回应包
-                PayloadClientInfoReply reply;
-                reply.setHandshakeUuid(anotherConnectionUuid);
-                reply.setNodeId(m_serviceConfig->nodeConfig()->id());
-                reply.setResult(-3);
+                PayloadClientInfoReply clientInfoReply;
+                clientInfoReply.setHandshakeUuid(anotherConnectionUuid);
+                clientInfoReply.setNodeId(m_serviceConfig->nodeConfig()->id());
+                clientInfoReply.setResult(-3);
 
-                PacketHeader packetHeader;
-                packetHeader.setType(PacketType::PT_ClientInfoReply);
-                packetHeader.setPayloadLength(reply.packetLength());
-
-                int headerLength = packetHeader.headerLength();
-                int payloadLength = reply.packetLength();
-
-                std::vector<char> buffer;
-                buffer.resize(headerLength + reply.packetLength());
-
-                packetHeader.encode(buffer.data(), headerLength);
-                reply.encode(buffer.data() + headerLength, payloadLength);
-
+                std::vector<char> buffer =
+                    PacketEncodeHelper<PacketType::PT_ClientInfoReply, PayloadClientInfoReply>::encode(clientInfoReply);
                 if (-1 == sendData(anotherConnectionFd, buffer))
                 {
                     LOG->write(utilities::LogType::Log_Error, FILE_INFO,
@@ -755,24 +703,13 @@ int P2PService::initClient()
             else
             {
                 // 构造回应包
-                PayloadClientInfoReply reply;
-                reply.setHandshakeUuid(anotherConnectionUuid);
-                reply.setNodeId(m_serviceConfig->nodeConfig()->id());
-                reply.setResult(-1);
+                PayloadClientInfoReply clientInfoReply;
+                clientInfoReply.setHandshakeUuid(anotherConnectionUuid);
+                clientInfoReply.setNodeId(m_serviceConfig->nodeConfig()->id());
+                clientInfoReply.setResult(-1);
 
-                PacketHeader packetHeader;
-                packetHeader.setType(PacketType::PT_ClientInfoReply);
-                packetHeader.setPayloadLength(reply.packetLength());
-
-                std::size_t headerLength = packetHeader.headerLength();
-                std::size_t payloadLength = reply.packetLength();
-
-                std::vector<char> buffer;
-                buffer.resize(headerLength + reply.packetLength());
-
-                packetHeader.encode(buffer.data(), headerLength);
-                reply.encode(buffer.data() + headerLength, payloadLength);
-
+                std::vector<char> buffer =
+                    PacketEncodeHelper<PacketType::PT_ClientInfoReply, PayloadClientInfoReply>::encode(clientInfoReply);
                 if (-1 == sendData(anotherConnectionFd, buffer))
                 {
                     LOG->write(utilities::LogType::Log_Error, FILE_INFO,

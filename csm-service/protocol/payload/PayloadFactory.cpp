@@ -4,11 +4,11 @@
 
 #include "PayloadFactory.h"
 
-#include "payload/PayloadClientInfo.h"
-#include "payload/PayloadClientInfoReply.h"
-#include "payload/PayloadHeartBeat.h"
-#include "payload/PayloadHeartBeatReply.h"
-#include "payload/PayloadModuleMessage.h"
+#include "PayloadClientInfo.h"
+#include "PayloadClientInfoReply.h"
+#include "PayloadHeartBeat.h"
+#include "PayloadHeartBeatReply.h"
+#include "PayloadModuleMessage.h"
 
 using namespace csm::service;
 

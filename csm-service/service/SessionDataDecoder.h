@@ -5,16 +5,15 @@
 #ifndef SESSIONDATADECODER_H
 #define SESSIONDATADECODER_H
 
-#include <queue>
 #include <memory>
 #include <cstring>
 #include <condition_variable>
 
 #include "csm-utilities/ThreadPool.h"
 #include "csm-service/service/P2PSessionManager.h"
-#include "csm-service/protocol/PacketHeader.h"
+#include "csm-service/protocol/header/PacketHeader.h"
 #include "csm-service/protocol/payload/PayloadBase.h"
-#include "csm-service/protocol/PayloadFactory.h"
+#include "../protocol/payload/PayloadFactory.h"
 
 namespace csm
 {

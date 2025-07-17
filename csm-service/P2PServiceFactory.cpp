@@ -10,7 +10,7 @@
 #include "service/SessionDispatcher.h"
 #include "service/SessionDestroyer.h"
 #include "service/SessionModuleDataProcessor.h"
-#include "protocol/PayloadFactory.h"
+#include "protocol/payload/PayloadFactory.h"
 #include "routing_algorithm/distance_vector/DistanceVector.h"
 
 using namespace csm::service;

@@ -9,7 +9,7 @@
 
 #include <concurrentqueue/blockingconcurrentqueue.h>
 
-#include "csm-service/protocol/PacketHeader.h"
+#include "csm-service/protocol/header/PacketHeader.h"
 #include "csm-service/protocol/payload/PayloadBase.h"
 #include "csm-utilities/Thread.h"
 

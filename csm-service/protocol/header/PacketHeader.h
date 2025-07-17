@@ -8,6 +8,7 @@
 #include "csm-common/Common.h"
 
 #include "csm-framework/protocol/Protocol.h"
+#include "csm-service/protocol/common/PacketType.h"
 
 namespace csm
 {
@@ -16,26 +17,6 @@ namespace csm
     {
 
         constexpr std::uint32_t c_magic{ 0x2cc98f5d };
-
-        enum class PacketType
-        {
-            PT_None,
-
-            // handshake
-            PT_ClientInfo,
-            PT_ClientInfoReply,
-
-            // heartbeat
-            PT_HeartBeat,
-            PT_HeartBeatReply,
-
-            // distance_vector -> distance detect
-            PT_DistanceDetect,
-            PT_DistanceDetectReply,
-
-            // message
-            PT_ModuleMessage
-        };
 
         class PacketHeader
         {

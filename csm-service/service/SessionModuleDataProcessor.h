@@ -6,12 +6,10 @@
 #define COPYSTATEMACHINE_SESSIONDATAPROCESSOR_H
 
 #include "csm-common/Common.h"
-#include "csm-utilities/Thread.h"
 #include "csm-utilities/ThreadPool.h"
-#include "P2PSession.h"
 #include "P2PSessionManager.h"
-#include "SessionAliveChecker.h"
-#include "csm-service/protocol/PayloadFactory.h"
+#include "csm-service/protocol/header/PacketHeader.h"
+#include "csm-service/protocol/payload/PayloadFactory.h"
 
 namespace csm
 {
@@ -41,11 +39,11 @@ namespace csm
              * @param packetType
              * @param handler
              */
-            void registerPacketHandler(const PacketType packetType,
+            void registerPacketHandler(PacketType packetType,
                 std::function<int(const int fd, PacketHeader::Ptr, PayloadBase::Ptr packet)> handler);
 
         private:
-            int processPackets(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload);
+            int processPackets(int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload);
 
         private:
             P2PSessionManager::Ptr m_p2pSessionManager;

@@ -6,6 +6,7 @@
 
 #include "csm-service/protocol/payload/PayloadDistanceDetect.h"
 #include "csm-service/protocol/payload/PayloadDistanceDetectReply.h"
+#include "csm-service/protocol/utilities/PacketEncodeHelper.h"
 #include "csm-utilities/TimeTools.h"
 #include "csm-utilities/Logger.h"
 
@@ -22,24 +23,13 @@ int DistanceVector::init()
 {
     const auto expression = [this]()
     {
-        // 构造回应包
+        // 构造距离探测包
         PayloadDistanceDetect payloadDistanceDetect;
         payloadDistanceDetect.setSeq(m_distanceDetectSeq++);
         payloadDistanceDetect.setTimestamp(utilities::TimeTools::getCurrentTimestamp());
 
-        PacketHeader packetHeader;
-        packetHeader.setType(PacketType::PT_DistanceDetect);
-        packetHeader.setPayloadLength(payloadDistanceDetect.packetLength());
-
-        std::size_t headerLength = packetHeader.headerLength();
-        std::size_t payloadLength = payloadDistanceDetect.packetLength();
-
-        std::vector<char> buffer;
-        buffer.resize(headerLength + payloadDistanceDetect.packetLength());
-
-        packetHeader.encode(buffer.data(), headerLength);
-        payloadDistanceDetect.encode(buffer.data() + headerLength, payloadLength);
-
+        std::vector<char> buffer =
+            PacketEncodeHelper<PacketType::PT_DistanceDetect, PayloadDistanceDetect>::encode(payloadDistanceDetect);
         std::unordered_map<NodeId, NodeInfo::Ptr> dvInfo;
         {
             std::unique_lock<std::mutex> ulock(x_dvInfo);
@@ -89,15 +79,15 @@ void DistanceVector::setPacketSender(std::function<int(const NodeId& nodeId, con
     m_packetSender = std::move(sender);
 }
 
-int DistanceVector::handlePacket(PacketHeader::Ptr header, PayloadBase::Ptr payload)
+int DistanceVector::handlePacket(const NodeId& fromNodeId, PacketHeader::Ptr header, PayloadBase::Ptr payload)
 {
     if (PacketType::PT_DistanceDetect == header->type())
     {
-        return handleDistanceDetect(std::move(header), std::move(payload));
+        return handleDistanceDetect(fromNodeId, header, payload);
     }
     else if (PacketType::PT_DistanceDetectReply == header->type())
     {
-        return handleDistanceDetectReply(std::move(header), std::move(payload));
+        return handleDistanceDetectReply(fromNodeId, header, payload);
     }
     else
     {
@@ -106,12 +96,30 @@ int DistanceVector::handlePacket(PacketHeader::Ptr header, PayloadBase::Ptr payl
     }
 }
 
-int DistanceVector::handleDistanceDetect(PacketHeader::Ptr header, PayloadBase::Ptr payload)
+int DistanceVector::handleDistanceDetect(const NodeId& fromNodeId, const PacketHeader::Ptr& header, const PayloadBase::Ptr& payload)
 {
+    PayloadDistanceDetect::Ptr payloadDistanceDetect = std::dynamic_pointer_cast<PayloadDistanceDetect>(payload);
+
+    // 构造距离探测包
+    PayloadDistanceDetectReply payloadDistanceDetectReply;
+    payloadDistanceDetectReply.setSeq(payloadDistanceDetect->seq());
+    payloadDistanceDetectReply.setElapsedTime(utilities::TimeTools::getCurrentTimestamp() - payloadDistanceDetect->timestamp());
+
+    std::vector<char> buffer =
+        PacketEncodeHelper<PacketType::PT_DistanceDetectReply, PayloadDistanceDetectReply>::encode(payloadDistanceDetectReply);
+    if (nullptr != m_packetSender)
+    {
+        if (0 != m_packetSender(fromNodeId, buffer))
+        {
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send distance detect reply failed, send to: ", fromNodeId);
+            return -1;
+        }
+    }
+
     return 0;
 }
 
-int DistanceVector::handleDistanceDetectReply(PacketHeader::Ptr header, PayloadBase::Ptr payload)
+int DistanceVector::handleDistanceDetectReply(const NodeId& fromNodeId, const PacketHeader::Ptr& header, const PayloadBase::Ptr& payload)
 {
     return 0;
 }

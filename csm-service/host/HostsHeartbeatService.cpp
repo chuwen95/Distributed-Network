@@ -6,8 +6,9 @@
 
 #include "csm-utilities/TimeTools.h"
 #include "csm-utilities/Logger.h"
-#include "csm-service/protocol/PacketHeader.h"
+#include "csm-service/protocol/header/PacketHeader.h"
 #include "csm-service/protocol/payload/PayloadHeartBeat.h"
+#include "csm-service/protocol/utilities/PacketEncodeHelper.h"
 
 using namespace csm::service;
 
@@ -29,18 +30,10 @@ int HostsHeartbeatService::init()
                 continue;
             }
 
-            std::int64_t curTimestamp = utilities::TimeTools::getCurrentTimestamp();
+            std::uint64_t curTimestamp = utilities::TimeTools::getCurrentTimestamp();
             if (curTimestamp - host.second.second >= c_heartbeatInterval)
             {
-                PacketHeader packetHeader;
-                packetHeader.setType(PacketType::PT_HeartBeat);
-                packetHeader.setPayloadLength(0);
-                int headerSize = packetHeader.headerLength();
-
-                std::vector<char> buffer;
-                buffer.resize(headerSize);
-                packetHeader.encode(buffer.data(), headerSize);
-
+                std::vector<char> buffer = PacketEncodeHelper<PacketType::PT_HeartBeat, std::nullopt_t>::encode();
                 if (nullptr != m_heartBeatSender)
                 {
                     int fd{-1};

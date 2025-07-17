@@ -35,7 +35,8 @@ void SessionModuleDataProcessor::addPacket(const int fd, PacketHeader::Ptr heade
     m_normalPacketProcessor->push(packetProcess);
 }
 
-void SessionModuleDataProcessor::registerPacketHandler(const PacketType packetType, std::function<int(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr packet)> handler)
+void SessionModuleDataProcessor::registerPacketHandler(
+    const PacketType packetType, std::function<int(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr packet)> handler)
 {
     m_packetHandler.emplace(packetType, std::move(handler));
 }

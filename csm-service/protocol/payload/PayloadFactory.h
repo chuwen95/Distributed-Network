@@ -5,9 +5,8 @@
 #ifndef COPYSTATEMACHINE_PAYLOADFACTORY_H
 #define COPYSTATEMACHINE_PAYLOADFACTORY_H
 
-#include "csm-common/Common.h"
-#include "PacketHeader.h"
-#include "payload/PayloadBase.h"
+#include "csm-service/protocol/common/PacketType.h"
+#include "PayloadBase.h"
 
 namespace csm
 {
@@ -24,8 +23,8 @@ namespace csm
             ~PayloadFactory() = default;
 
         public:
-            PayloadBase::Ptr createPayload(const PacketType packetType);
-            PayloadBase::Ptr createPayload(const PacketType packetType, const char* data, const std::size_t len);
+            PayloadBase::Ptr createPayload(PacketType packetType);
+            PayloadBase::Ptr createPayload( PacketType packetType, const char* data, std::size_t len);
         };
 
     }

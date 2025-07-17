@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include "csm-service/protocol/common/PacketType.h"
+
 namespace csm
 {
 
