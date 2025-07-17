@@ -32,20 +32,14 @@ int HostsHeartbeatService::init()
             std::int64_t curTimestamp = utilities::TimeTools::getCurrentTimestamp();
             if (curTimestamp - host.second.second >= c_heartbeatInterval)
             {
-                PayloadHeartBeat packetHeartbeat;
-                packetHeartbeat.setNodeId(m_hostId);
-                packetHeartbeat.setTimestamp(curTimestamp);
-                int payloadSize = packetHeartbeat.packetLength();
-
                 PacketHeader packetHeader;
                 packetHeader.setType(PacketType::PT_HeartBeat);
-                packetHeader.setPayloadLength(payloadSize);
+                packetHeader.setPayloadLength(0);
                 int headerSize = packetHeader.headerLength();
 
                 std::vector<char> buffer;
-                buffer.resize(headerSize + payloadSize);
+                buffer.resize(headerSize);
                 packetHeader.encode(buffer.data(), headerSize);
-                packetHeartbeat.encode(buffer.data() + headerSize, payloadSize);
 
                 if (nullptr != m_heartBeatSender)
                 {
@@ -58,7 +52,6 @@ int HostsHeartbeatService::init()
                     if (0 != m_heartBeatSender(fd, buffer))
                     {
                         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send heart beat failed, to host: ", host.second.first, ", fd: ", fd);
-                        return;
                     }
                     host.second.second = curTimestamp;
                 }

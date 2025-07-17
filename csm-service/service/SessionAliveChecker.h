@@ -29,7 +29,7 @@ namespace csm
 
             int stop();
 
-            void setTimeoutHandler(const std::function<void(const std::vector<int>&)> handler);
+            void setTimeoutHandler(std::function<void(const std::vector<int>&)> handler);
 
             /**
              * @brief 添加要监测是否在线的客户端
@@ -37,7 +37,7 @@ namespace csm
              * @param fd
              * @return
              */
-            int addClient(const int fd);
+            int addSession(int fd);
 
             /**
              * @brief 移除要监测是否在线的客户端
@@ -45,7 +45,7 @@ namespace csm
              * @param fd
              * @return
              */
-            int removeClient(const int fd);
+            int removeSession(int fd);
 
             /**
              * @brief 客户端收到了数据，更新最后收到数据的时间戳
@@ -53,11 +53,11 @@ namespace csm
              * @param fd
              * @return
              */
-            int refreshClientLastRecvTime(const int fd);
+            int refreshSessionLastRecvTime(int fd);
 
         private:
-            std::mutex x_clientLastRecvTime;
-            std::unordered_map<int, std::pair<std::uint32_t, std::uint32_t>> m_clientLastRecvTime;
+            std::mutex x_sessionLastRecvTime;
+            std::unordered_map<int, std::pair<std::uint32_t, std::uint32_t>> m_sessionLastRecvTime;
 
             utilities::Thread::Ptr m_thread;
             std::function<void(const std::vector<int> &)> m_timeoutHandler;

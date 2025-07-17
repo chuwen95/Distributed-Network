@@ -79,11 +79,17 @@ int SessionDataDecoder::addSessionData(const int fd, const char* data, const std
                 break;
             }
 
-            PayloadBase::Ptr payload = decodePacketPayload(fd, header, readBuffer);
-            if (nullptr == payload)
+            PayloadBase::Ptr payload{nullptr};
+            if (0 != header->payloadLength())
             {
-                break;
+                payload = decodePacketPayload(fd, header, readBuffer);
+                if (nullptr == payload)
+                {
+                    break;
+                }
             }
+
+            readBuffer->decreaseUsedSpace(header->headerLength() + header->payloadLength());
 
             if (nullptr != m_packetHandler)
             {
@@ -187,8 +193,6 @@ PayloadBase::Ptr SessionDataDecoder::decodePacketPayload(const int fd, const Pac
     {
         payload = m_payloadFactory->createPayload(header->type(), buffer + headerLength, payloadLength);
     }
-
-    readBuffer->decreaseUsedSpace(headerLength + payloadLength);
 
     return payload;
 }

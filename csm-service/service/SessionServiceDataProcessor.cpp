@@ -30,7 +30,8 @@ int SessionServiceDataProcessor::init()
         {
             if (0 != iter->second(sessionServiceData.fd, sessionServiceData.header, sessionServiceData.payload))
             {
-                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "process packet failed");
+                LOG->write(utilities::LogType::Log_Error,
+                    FILE_INFO, "process packet failed, type: ", static_cast<int>(sessionServiceData.header->type()));
             }
         }
         else

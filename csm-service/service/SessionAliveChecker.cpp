@@ -17,13 +17,14 @@ int SessionAliveChecker::init()
         std::vector<int> offlinefds;
 
         {
-            std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
+            std::unique_lock<std::mutex> ulock(x_sessionLastRecvTime);
 
-            for (auto iter = m_clientLastRecvTime.begin(); iter != m_clientLastRecvTime.end(); ++iter)
+            for (auto iter = m_sessionLastRecvTime.begin(); iter != m_sessionLastRecvTime.end(); ++iter)
             {
                 if (iter->second.first == iter->second.second)
                 {
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "client offline, fd: ", iter->first);
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session offline, fd: ",
+                        iter->first, ", last count: ", iter->second.first, ", current count: ", iter->second.second);
                     offlinefds.emplace_back(iter->first);
                 }
                 iter->second.first = iter->second.second;
@@ -38,7 +39,7 @@ int SessionAliveChecker::init()
     m_thread = std::make_shared<utilities::Thread>();
     m_thread->setFunc(expression);
     m_thread->setInterval(c_aliveTimeout);
-    m_thread->setName("cli_alive_chk");
+    m_thread->setName("ses_alive_chk");
 
     return 0;
 }
@@ -62,52 +63,54 @@ void SessionAliveChecker::setTimeoutHandler(std::function<void(const std::vector
     m_timeoutHandler = std::move(handler);
 }
 
-int SessionAliveChecker::addClient(const int fd)
+int SessionAliveChecker::addSession(const int fd)
 {
-    std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
+    std::unique_lock<std::mutex> ulock(x_sessionLastRecvTime);
 
-    auto iter = m_clientLastRecvTime.find(fd);
-    if (m_clientLastRecvTime.end() != iter)
+    auto iter = m_sessionLastRecvTime.find(fd);
+    if (m_sessionLastRecvTime.end() != iter)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client already exist, fd: ", fd);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session already exist, fd: ", fd);
         return -1;
     }
 
-    m_clientLastRecvTime.emplace(fd, std::make_pair(0, 0));
+    m_sessionLastRecvTime.emplace(fd, std::make_pair(0, 1));
 
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add client successfully, fd: ", fd);
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add session successfully, fd: ", fd);
 
     return 0;
 }
 
-int SessionAliveChecker::removeClient(const int fd)
+int SessionAliveChecker::removeSession(const int fd)
 {
-    std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
+    std::unique_lock<std::mutex> ulock(x_sessionLastRecvTime);
 
-    auto iter = m_clientLastRecvTime.find(fd);
-    if (m_clientLastRecvTime.end() == iter)
+    auto iter = m_sessionLastRecvTime.find(fd);
+    if (m_sessionLastRecvTime.end() == iter)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client not exist, fd: ", fd);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session not exist, fd: ", fd);
         return -1;
     }
-    m_clientLastRecvTime.erase(iter);
+    m_sessionLastRecvTime.erase(iter);
 
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "client remove successfully, fd: ", fd);
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session remove successfully, fd: ", fd);
 
     return 0;
 }
 
-int SessionAliveChecker::refreshClientLastRecvTime(const int fd)
+int SessionAliveChecker::refreshSessionLastRecvTime(const int fd)
 {
-    std::unique_lock<std::mutex> ulock(x_clientLastRecvTime);
+    std::unique_lock<std::mutex> ulock(x_sessionLastRecvTime);
 
-    auto iter = m_clientLastRecvTime.find(fd);
-    if (m_clientLastRecvTime.end() == iter)
+    auto iter = m_sessionLastRecvTime.find(fd);
+    if (m_sessionLastRecvTime.end() == iter)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client not exist, fd: ", fd);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session not exist, fd: ", fd);
         return -1;
     }
+
     iter->second.second = (iter->second.second + 1) % c_aliveCountCircle;
+    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "refresh session last recv time, fd: ", fd, ", value: ", iter->second.second);
 
     return 0;
 }

@@ -62,7 +62,7 @@ int P2PService::init()
 
         // 不再检查心跳
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remove tcp session from client alive checker, fd: ", fd);
-        m_serviceConfig->sessionAliveChecker()->removeClient(fd);
+        m_serviceConfig->sessionAliveChecker()->removeSession(fd);
 
         // 将fd从子Reactor中移除
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remove fd from slave reactor, fd: ", fd);
@@ -434,7 +434,7 @@ int P2PService::initServer()
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "will dispatch P2PSession to SlaveReactor index: ", slaveReactorIndex, ", fd: ", fd);
 
             // 将fd添加到心跳检查器中
-            if(-1 == m_serviceConfig->sessionAliveChecker()->addClient(fd))
+            if(-1 == m_serviceConfig->sessionAliveChecker()->addSession(fd))
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add new online client to ClientAliveChecker failed, fd: ", fd);
                 return;
@@ -464,27 +464,17 @@ int P2PService::initServer()
 
     // 注册HeartbeatBeat处理回调
     m_serviceConfig->sessionServiceDataProcessor()->registerPacketHandler(PacketType::PT_HeartBeat, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr packet) -> int {
-        PayloadHeartBeat::Ptr payloadHeartBeat = std::dynamic_pointer_cast<PayloadHeartBeat>(packet);
-
         // 更新心跳
-        m_serviceConfig->sessionAliveChecker()->refreshClientLastRecvTime(fd);
-
-        PayloadHeartBeatReply payloadHeartBeatReply;
-        payloadHeartBeatReply.setNodeId(payloadHeartBeat->nodeId());
-        payloadHeartBeatReply.setSeq(payloadHeartBeat->seq());
-        payloadHeartBeatReply.setTransferTime(utilities::TimeTools::getCurrentTimestamp() - payloadHeartBeat->timestamp());
-
-        std::size_t payloadLength = payloadHeartBeatReply.packetLength();
+        m_serviceConfig->sessionAliveChecker()->refreshSessionLastRecvTime(fd);
 
         PacketHeader packetHeader;
         packetHeader.setType(PacketType::PT_HeartBeatReply);
-        packetHeader.setPayloadLength(payloadHeartBeatReply.packetLength());
+        packetHeader.setPayloadLength(0);
         std::size_t headerLength = packetHeader.headerLength();
 
         std::vector<char> buffer;
-        buffer.resize(headerLength + payloadLength);
+        buffer.resize(headerLength);
         packetHeader.encode(buffer.data(), headerLength);
-        payloadHeartBeatReply.encode(buffer.data() + headerLength, payloadLength);
 
         int ret = sendData(fd, buffer);
         if (0 != ret)
@@ -537,7 +527,7 @@ int P2PService::initClient()
 
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "will dispatch P2PSession to SlaveReactor index: ", slaveReactorIndex, ", fd: ", fd);
 
-        if(-1 == m_serviceConfig->sessionAliveChecker()->addClient(fd))
+        if(-1 == m_serviceConfig->sessionAliveChecker()->addSession(fd))
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add P2PSession to ClientAliveChecker failed", ", fd: ", fd);
             return;
@@ -719,14 +709,15 @@ int P2PService::initClient()
             }
             LOG->write(utilities::LogType::Log_Warning, FILE_INFO, "add tcp session to destoryer, fd: ", fd);
             m_serviceConfig->sessionDestroyer()->addSession(fd, payloadClientInfoReply->result());
-            return -1;
+
+            return 0;
         }
 
-        // 可能是双方互相进行连接，但是对方已经发来了ClientInfo包，断开对方连自己的连接，仅保留自己连对方的连接
+        // 可能是双方互相进行连接，但是对方已经发来了ClientInfo包
         std::string anotherConnectionUuid;
         if (true == m_serviceConfig->hostsInfoManager()->isHostIdExist(id, anotherConnectionFd, anotherConnectionUuid))
         {
-            if (anotherConnectionUuid < payloadClientInfoReply->handshakeUuid())
+            if (anotherConnectionUuid < payloadClientInfoReply->handshakeUuid())    // 因为对方的uuid比较小，告诉对方断开与自己的连接，仅保留自己连对方的连接
             {
                 // 构造回应包
                 PayloadClientInfoReply reply;
@@ -759,7 +750,7 @@ int P2PService::initClient()
             }
             else if (anotherConnectionUuid > payloadClientInfoReply->handshakeUuid())
             {
-                return -1;
+                return 0;
             }
             else
             {
@@ -811,9 +802,7 @@ int P2PService::initClient()
 
     // 注册HeartBeatReply包处理
     m_serviceConfig->sessionServiceDataProcessor()->registerPacketHandler(PacketType::PT_HeartBeatReply, [this](const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload) -> int {
-        PayloadHeartBeatReply::Ptr payloadHeartBeatReply = std::dynamic_pointer_cast<PayloadHeartBeatReply>(payload);
-
-        m_serviceConfig->sessionAliveChecker()->refreshClientLastRecvTime(fd);
+        m_serviceConfig->sessionAliveChecker()->refreshSessionLastRecvTime(fd);
 
         return 0;
     });
@@ -895,6 +884,11 @@ int P2PService::disconnectClient(const HostEndPointInfo &hostEndPointInfo, const
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "id: ", id, ", flag: ", flag, ", hostEndPointInfo: ", hostEndPointInfo.host());
     if (0 == flag || -1 == flag)
     {
+        if (id == m_serviceConfig->nodeConfig()->id())
+        {
+            return 0;
+        }
+
         if (-1 == m_serviceConfig->hostsInfoManager()->removeHostIdInfo(id, uuid))
         {
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remove host id info failed, id: ", id);
@@ -902,11 +896,6 @@ int P2PService::disconnectClient(const HostEndPointInfo &hostEndPointInfo, const
         else
         {
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "remove host id info successfully, id: ", id);
-        }
-
-        if (id == m_serviceConfig->nodeConfig()->id())
-        {
-            return 0;
         }
 
         if (-1 == m_serviceConfig->hostsInfoManager()->setHostNotConnected(hostEndPointInfo))
