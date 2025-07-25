@@ -6,7 +6,7 @@
 
 using namespace csm::service;
 
-void PayloadHeartBeatReply::setNodeId(const std::string &id)
+void PayloadHeartBeatReply::setNodeId(const std::string& id)
 {
     m_protoPacket.set_nodeid(id);
 }

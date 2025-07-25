@@ -9,9 +9,10 @@
 
 using namespace csm::service;
 
-SessionDataDecoder::SessionDataDecoder(
-    P2PSessionManager::Ptr p2pSessionManager, PayloadFactory::Ptr payloadFactory, utilities::ThreadPool::Ptr decodeWorkers) :
-    m_p2pSessionManager(std::move(p2pSessionManager)), m_payloadFactory(std::move(payloadFactory)), m_decodeWorkers(std::move(decodeWorkers))
+SessionDataDecoder::SessionDataDecoder(P2PSessionManager::Ptr p2pSessionManager, PayloadFactory::Ptr payloadFactory,
+                                       utilities::ThreadPool::Ptr decodeWorkers)
+    : m_p2pSessionManager(std::move(p2pSessionManager)), m_payloadFactory(std::move(payloadFactory)),
+      m_decodeWorkers(std::move(decodeWorkers))
 {
 }
 
@@ -50,13 +51,13 @@ int SessionDataDecoder::addSessionData(const int fd, const char* data, const std
     const auto decode = [this, fd, captureBuffer = std::move(buffer)]()
     {
         P2PSession::Ptr p2pSession = m_p2pSessionManager->session(fd);
-        if(nullptr == p2pSession)
+        if (nullptr == p2pSession)
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find P2PSession failed, fd: ", fd);
             return;
         }
 
-        if(true == p2pSession->isWaitingDisconnect())
+        if (true == p2pSession->isWaitingDisconnect())
         {
             return;
         }
@@ -67,13 +68,14 @@ int SessionDataDecoder::addSessionData(const int fd, const char* data, const std
         utilities::RingBuffer::Ptr& readBuffer = p2pSession->readBuffer();
         if (-1 == writeDataToP2PSessionReadBuffer(fd, readBuffer, captureBuffer))
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "write data to buffer failed, fd: ", fd, ", data size: ", captureBuffer->size());
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "write data to buffer failed, fd: ", fd,
+                       ", data size: ", captureBuffer->size());
             return;
         }
 
         while (true == m_running)
         {
-            PacketHeader::Ptr header = decodePacketHeader(fd, readBuffer);
+            PacketHeader::Ptr header = decodePacketHeader(readBuffer);
             if (nullptr == header)
             {
                 break;
@@ -82,7 +84,7 @@ int SessionDataDecoder::addSessionData(const int fd, const char* data, const std
             PayloadBase::Ptr payload{nullptr};
             if (0 != header->payloadLength())
             {
-                payload = decodePacketPayload(fd, header, readBuffer);
+                payload = decodePacketPayload(header, readBuffer);
                 if (nullptr == payload)
                 {
                     break;
@@ -93,6 +95,8 @@ int SessionDataDecoder::addSessionData(const int fd, const char* data, const std
 
             if (nullptr != m_packetHandler)
             {
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "received packet from fd: ", fd,
+                           ", packet type: ", header->type());
                 m_packetHandler(fd, header, payload);
             }
         }
@@ -102,13 +106,14 @@ int SessionDataDecoder::addSessionData(const int fd, const char* data, const std
     return 0;
 }
 
-void SessionDataDecoder::setPacketHandler(std::function<int(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler)
+void SessionDataDecoder::setPacketHandler(
+    std::function<int(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler)
 {
     m_packetHandler = std::move(handler);
 }
 
-int SessionDataDecoder::writeDataToP2PSessionReadBuffer(
-    const int fd, const utilities::RingBuffer::Ptr& readBuffer, const std::shared_ptr<std::vector<char>>& buffer)
+int SessionDataDecoder::writeDataToP2PSessionReadBuffer(const int fd, const utilities::RingBuffer::Ptr& readBuffer,
+                                                        const std::shared_ptr<std::vector<char>>& buffer)
 {
     int ret = readBuffer->writeData(buffer->data(), buffer->size());
     if (-1 == ret)
@@ -120,23 +125,24 @@ int SessionDataDecoder::writeDataToP2PSessionReadBuffer(
     ret = readBuffer->increaseUsedSpace(buffer->size());
     if (-1 == ret)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "increaseUsedSpace failed, space: ", readBuffer->space(), ", data len: ", buffer->size(), ", fd: ", fd);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "increaseUsedSpace failed, space: ", readBuffer->space(),
+                   ", data len: ", buffer->size(), ", fd: ", fd);
         assert(-1 != ret);
     }
 
     return 0;
 }
 
-PacketHeader::Ptr SessionDataDecoder::decodePacketHeader(const int fd, const utilities::RingBuffer::Ptr& readBuffer)
+PacketHeader::Ptr SessionDataDecoder::decodePacketHeader(const utilities::RingBuffer::Ptr& readBuffer)
 {
     PacketHeader::Ptr header = std::make_shared<PacketHeader>();
     const std::size_t headerLength = header->headerLength();
 
     LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "readBuffer->length(): ", readBuffer->dataLength());
 
-    char *buffer{nullptr};
+    char* buffer{nullptr};
     int ret = readBuffer->getBufferForRead(headerLength, buffer);
-    if (-1 == ret)  // 缓冲区数据量不足
+    if (-1 == ret) // 缓冲区数据量不足
     {
         LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "buffer data length less than header length");
         return nullptr;
@@ -154,19 +160,22 @@ PacketHeader::Ptr SessionDataDecoder::decodePacketHeader(const int fd, const uti
     assert(true == header->isMagicMatch());
 
     LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
-               "decode payload header successfully, payload type: ", static_cast<int>(header->type()), ", payload length: ", header->payloadLength());
+               "decode payload header successfully, payload type: ", static_cast<int>(header->type()),
+               ", payload length: ", header->payloadLength());
 
     return header;
 }
 
-PayloadBase::Ptr SessionDataDecoder::decodePacketPayload(const int fd, const PacketHeader::Ptr& header, const utilities::RingBuffer::Ptr& readBuffer)
+PayloadBase::Ptr SessionDataDecoder::decodePacketPayload(const PacketHeader::Ptr& header,
+                                                         const utilities::RingBuffer::Ptr& readBuffer)
 {
     // 尝试复制包数据
     std::size_t headerLength = header->headerLength();
     std::size_t payloadLength = header->payloadLength();
     if (readBuffer->dataLength() - headerLength < payloadLength)
     {
-        LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "payload length not enough, payload type: ", static_cast<int>(header->type()));
+        LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
+                   "payload length not enough, payload type: ", static_cast<int>(header->type()));
         return nullptr;
     }
 
@@ -183,7 +192,8 @@ PayloadBase::Ptr SessionDataDecoder::decodePacketPayload(const int fd, const Pac
         payloadData.resize(payloadLength);
         if (-1 == (ret = readBuffer->readData(payloadLength, headerLength, payloadData)))
         {
-            LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "payload length not enough, payload type: ", static_cast<int>(header->type()));
+            LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
+                       "payload length not enough, payload type: ", static_cast<int>(header->type()));
             assert(-1 != ret);
         }
 

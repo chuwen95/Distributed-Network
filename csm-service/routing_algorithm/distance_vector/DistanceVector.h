@@ -5,8 +5,8 @@
 #ifndef DISTANCEVECTOR_H
 #define DISTANCEVECTOR_H
 
-#include <mutex>
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 
 #include "csm-framework/cluster/Common.h"
@@ -19,6 +19,8 @@ namespace csm
 
     namespace service
     {
+
+        const std::uint32_t c_unreachableDistance{750};
 
         class DistanceVector
         {
@@ -47,7 +49,15 @@ namespace csm
              *
              * @param nodeId
              */
-            void addNeighbourNode(const NodeId& nodeId, int fd);
+            void addNeighbourNode(const NodeId& nodeId);
+
+            /**
+             * @brief 设置邻居节点不可达
+             *
+             * @param nodeId
+             * @return
+             */
+            int setNightbourUnreachable(const NodeId& nodeId);
 
             /**
              * @brief 处理网络数据包
@@ -59,8 +69,14 @@ namespace csm
             int handlePacket(const NodeId& fromNodeId, PacketHeader::Ptr header, PayloadBase::Ptr payload);
 
         private:
-            int handleDistanceDetect(const NodeId& fromNodeId, const PacketHeader::Ptr& header, const PayloadBase::Ptr& payload);
-            int handleDistanceDetectReply(const NodeId& fromNodeId, const PacketHeader::Ptr& header, const PayloadBase::Ptr& payload);
+            void sendDistanceDetect();
+            void sendDistanceVector();
+
+            int handleDistanceDetect(const NodeId& fromNodeId, const PayloadBase::Ptr& payload);
+            int handleDistanceDetectReply(const NodeId& fromNodeId, const PayloadBase::Ptr& payload);
+            int handleDistanceVector(const NodeId& fromNodeId, const PayloadBase::Ptr& payload);
+
+            bool queryNodeDistanceWithoutLock(const NodeId& nodeId, std::uint32_t& distance);
 
         private:
             struct NodeInfo
@@ -68,22 +84,21 @@ namespace csm
                 using Ptr = std::shared_ptr<NodeInfo>;
 
                 NodeInfo() = default;
-                NodeInfo(NodeId ni, NodeId nh) :
-                    nodeId(std::move(ni)), nextHop(std::move(nh)) {}
+                explicit NodeInfo(NodeId n) : nextHop(std::move(n)) {}
 
-                [[nodiscard]] bool isNeighbourhood() const { return nodeId == nextHop; }
-
-                NodeId nodeId;     // 目标节点
-                NodeId nextHop;    // 到达目标节点的下一跳节点
-                int distance{ -1 };     // 到达目标节点的距离
+                NodeId nextHop; // 到达目标节点的下一跳节点
+                std::uint32_t distance{c_unreachableDistance}; // 到达目标节点的距离
             };
+
             std::mutex x_dvInfo;
-            std::unordered_map<NodeId, NodeInfo::Ptr> m_dvInfo;
+            std::set<NodeId> m_neighbours;
+            std::unordered_map<NodeId, NodeInfo::Ptr> m_dvInfos;
 
             std::function<int(const NodeId& nodeId, const std::vector<char>& data)> m_packetSender;
-            utilities::Thread::Ptr m_thread{ nullptr };
+            utilities::Thread::Ptr m_thread{nullptr};
 
             std::uint64_t m_distanceDetectSeq{0};
+            std::atomic_bool m_needToSyncDistaceVector{false};
         };
 
     }

@@ -6,22 +6,22 @@
 
 using namespace csm::service;
 
-SessionDispatcher::SessionDispatcher(std::size_t redispatchInterval, const std::string& hostId, std::size_t slaveReactorSize) :
-        m_redispatchInterval(redispatchInterval), m_id(hostId), m_slaveReactorSize(slaveReactorSize)
+SessionDispatcher::SessionDispatcher(std::size_t redispatchInterval, const std::string& hostId, std::size_t slaveReactorSize)
+    : m_redispatchInterval(redispatchInterval), m_id(hostId), m_slaveReactorSize(slaveReactorSize)
 {
-    for(std::size_t i = 0; i < m_slaveReactorSize; ++i)
+    for (std::size_t i = 0; i < m_slaveReactorSize; ++i)
     {
         m_slaveReactorFdSize.emplace_back(std::make_unique<std::atomic_uint32_t>());
     }
 }
 
-SessionDispatcher::~SessionDispatcher()
-{}
+SessionDispatcher::~SessionDispatcher() {}
 
 int SessionDispatcher::init()
 {
-    const auto expression = [this]() {
-        if(true == m_isTerminate)
+    const auto expression = [this]()
+    {
+        if (true == m_isTerminate)
         {
             return;
         }
@@ -29,7 +29,7 @@ int SessionDispatcher::init()
         SessionInfo::Ptr sessionInfo{nullptr};
         m_p2pSessionsQueue.wait_dequeue(sessionInfo);
 
-        if(nullptr == sessionInfo)
+        if (nullptr == sessionInfo)
         {
             return;
         }

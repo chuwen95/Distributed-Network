@@ -5,9 +5,9 @@
 #ifndef TCPSERVER_ACCEPTOR_H
 #define TCPSERVER_ACCEPTOR_H
 
+#include "P2PSession.h"
 #include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
-#include "P2PSession.h"
 
 namespace csm
 {
@@ -45,8 +45,8 @@ namespace csm
             utilities::Thread::Ptr m_thread;
         };
 
-    }
+    } // namespace service
 
-}
+} // namespace csm
 
-#endif //TCPSERVER_ACCEPTOR_H
+#endif // TCPSERVER_ACCEPTOR_H

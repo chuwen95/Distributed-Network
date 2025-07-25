@@ -7,8 +7,6 @@
 
 #include <memory>
 
-#include "csm-service/protocol/common/PacketType.h"
-
 namespace csm
 {
 
@@ -25,25 +23,21 @@ namespace csm
 
         public:
             virtual std::size_t packetLength() const = 0;
-            virtual int encode(char *buffer, const std::size_t length) const = 0;
-            virtual int decode(const char *buffer, const std::size_t length) = 0;
+            virtual int encode(char* buffer, const std::size_t length) const = 0;
+            virtual int decode(const char* buffer, const std::size_t length) = 0;
         };
 
-        template<typename T>
-        class PayloadTypeBase : public PayloadBase
+        template <typename T> class PayloadTypeBase : public PayloadBase
         {
         public:
-            std::size_t packetLength() const override
-            {
-                return m_protoPacket.ByteSizeLong();
-            }
+            std::size_t packetLength() const override { return m_protoPacket.ByteSizeLong(); }
 
-            int encode(char *buffer, const std::size_t length) const override
+            int encode(char* buffer, const std::size_t length) const override
             {
                 return true == m_protoPacket.SerializeToArray(buffer, length) ? 0 : -1;
             }
 
-            int decode(const char *buffer, const std::size_t length) override
+            int decode(const char* buffer, const std::size_t length) override
             {
                 return true == m_protoPacket.ParseFromArray(buffer, length) ? 0 : -1;
             }
@@ -51,8 +45,9 @@ namespace csm
         protected:
             T m_protoPacket;
         };
-    }
 
-}
+    } // namespace service
 
-#endif //COPYSTATEMACHINE_PAYLOADBASE_H
+} // namespace csm
+
+#endif // COPYSTATEMACHINE_PAYLOADBASE_H

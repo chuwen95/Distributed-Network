@@ -20,9 +20,10 @@ enum class PacketType
     // distance_vector -> distance detect
     PT_DistanceDetect,
     PT_DistanceDetectReply,
+    PT_DistanceVector,
 
     // message
     PT_ModuleMessage
 };
 
-#endif //PACKETTYPE_H
+#endif // PACKETTYPE_H

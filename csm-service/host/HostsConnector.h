@@ -5,11 +5,11 @@
 #ifndef TCPNETWORK_HOST_H
 #define TCPNETWORK_HOST_H
 
-#include "csm-common/Common.h"
-#include "csm-utilities/Thread.h"
-#include "csm-service//service/P2PSession.h"
 #include "HostEndPointInfo.h"
 #include "HostsInfoManager.h"
+#include "csm-common/Common.h"
+#include "csm-service//service/P2PSession.h"
+#include "csm-utilities/Thread.h"
 
 namespace csm
 {
@@ -34,9 +34,9 @@ namespace csm
 
             int registerConnectHandler(std::function<void(const int, P2PSession::Ptr)> connectHandler);
 
-            int setHostConnected(const HostEndPointInfo &hostEndPointInfo);
+            int setHostConnected(const HostEndPointInfo& hostEndPointInfo);
 
-            int setHostConnectedByFd(const int fd);
+            int setHostConnectedByFd(int fd);
 
         private:
             std::mutex x_connectingHosts;
@@ -50,8 +50,8 @@ namespace csm
             std::function<void(const int, P2PSession::Ptr)> m_connectHandler;
         };
 
-    } // service
+    } // namespace service
 
-}
+} // namespace csm
 
-#endif //TCPNETWORK_HOST_H
+#endif // TCPNETWORK_HOST_H

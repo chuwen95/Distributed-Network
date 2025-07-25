@@ -20,7 +20,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<HostsHeartbeatService>;
 
-            HostsHeartbeatService(const std::string &hostId, HostsInfoManager::Ptr hostsInfoManager);
+            HostsHeartbeatService(const std::string& hostId, HostsInfoManager::Ptr hostsInfoManager);
             ~HostsHeartbeatService() = default;
 
         public:
@@ -30,18 +30,18 @@ namespace csm
 
             int stop();
 
-            void registerHeartbeatSender(std::function<int(const int fd, const std::vector<char> &data)>);
+            void registerHeartbeatSender(std::function<int(const int fd, const std::vector<char>& data)>);
 
         private:
             std::string m_hostId;
             HostsInfoManager::Ptr m_hostInfoManager;
-            std::function<int(const int fd, const std::vector<char> &data)> m_heartBeatSender;
+            std::function<int(const int fd, const std::vector<char>& data)> m_heartBeatSender;
 
             utilities::Thread::Ptr m_thread;
         };
 
-    } // service
+    } // namespace service
 
-}
+} // namespace csm
 
-#endif //TCPNETWORK_HOSTSHEARTBEATSERVICE_H
+#endif // TCPNETWORK_HOSTSHEARTBEATSERVICE_H

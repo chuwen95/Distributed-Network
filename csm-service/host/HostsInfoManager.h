@@ -7,8 +7,8 @@
 
 #include <csm-framework/cluster/Common.h>
 
-#include "csm-common/Common.h"
 #include "HostEndPointInfo.h"
+#include "csm-common/Common.h"
 
 namespace csm
 {
@@ -24,12 +24,13 @@ namespace csm
             HostsInfoManager(std::string nodesFile);
             ~HostsInfoManager() = default;
 
-            using Hosts = std::unordered_map<HostEndPointInfo, std::pair<std::string, std::uint64_t>, HostEndPointInfo::hashFunction>;
+            using Hosts =
+                std::unordered_map<HostEndPointInfo, std::pair<std::string, std::uint64_t>, HostEndPointInfo::hashFunction>;
 
         public:
             int init();
 
-            auto getHosts() -> const Hosts &;
+            auto getHosts() -> const Hosts&;
 
             /**
              * brief 设置host的id
@@ -38,7 +39,7 @@ namespace csm
              * @param id
              * @return
              */
-            int setHostId(const HostEndPointInfo &endPointInfo, const std::string &id);
+            int setHostId(const HostEndPointInfo& endPointInfo, const std::string& id);
 
             /**
              * @brief 将id和fd对应起来
@@ -47,7 +48,7 @@ namespace csm
              * @param fd
              * @return
              */
-            int addHostIdInfo(const std::string &id, int fd, const std::string &uuid);
+            int addHostIdInfo(const std::string& id, int fd, const std::string& uuid);
 
             /**
              * @brief 将id和fd对应起来
@@ -56,7 +57,7 @@ namespace csm
              * @param fd
              * @return
              */
-            int setHostIdInfo(const std::string &id, int fd, const std::string &uuid);
+            int setHostIdInfo(const std::string& id, int fd, const std::string& uuid);
 
             /**
              * @brief 将id和fd对应起来
@@ -65,7 +66,7 @@ namespace csm
              * @param fd
              * @return
              */
-            int removeHostIdInfo(const std::string &id, const std::string &uuid);
+            int removeHostIdInfo(const std::string& id, const std::string& uuid);
 
             /**
              * @brief 清空Host的id，Host掉线的时候会调用该函数
@@ -73,7 +74,7 @@ namespace csm
              * @param endPointInfo
              * @return
              */
-            int setHostNotConnected(const HostEndPointInfo &endPointInfo);
+            int setHostNotConnected(const HostEndPointInfo& endPointInfo);
 
             /**
              * brief 根据id得到fd
@@ -92,7 +93,7 @@ namespace csm
              * @param uuid
              * @return
              */
-            bool isHostIdExist(const NodeId& id, int &fd, std::string &uuid);
+            bool isHostIdExist(const NodeId& id, int& fd, std::string& uuid);
 
             /**
              * brief 判断host是否在线

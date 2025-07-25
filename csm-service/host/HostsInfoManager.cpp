@@ -3,17 +3,15 @@
 //
 
 #include "HostsInfoManager.h"
+#include "csm-utilities/ElapsedTime.h"
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/StringTool.h"
-#include "csm-utilities/ElapsedTime.h"
 
 #include <json/json.h>
 
 using namespace csm::service;
 
-HostsInfoManager::HostsInfoManager(std::string nodesFile) : m_nodesFile(std::move(nodesFile))
-{
-}
+HostsInfoManager::HostsInfoManager(std::string nodesFile) : m_nodesFile(std::move(nodesFile)) {}
 
 int HostsInfoManager::init()
 {
@@ -34,7 +32,7 @@ int HostsInfoManager::init()
     }
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "parse nodes config file successfully: ", m_nodesFile);
 
-    Json::Value &nodesValue = root["nodes"];
+    Json::Value& nodesValue = root["nodes"];
     if (false == nodesValue.isArray())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "parse hosts config file failed: ", m_nodesFile);
@@ -60,13 +58,13 @@ int HostsInfoManager::init()
     return 0;
 }
 
-auto HostsInfoManager::getHosts() -> const Hosts &
+auto HostsInfoManager::getHosts() -> const Hosts&
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
     return m_hosts;
 }
 
-int HostsInfoManager::setHostId(const service::HostEndPointInfo &endPointInfo, const std::string &id)
+int HostsInfoManager::setHostId(const service::HostEndPointInfo& endPointInfo, const std::string& id)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
     auto iter = m_hosts.find(endPointInfo);
@@ -78,7 +76,7 @@ int HostsInfoManager::setHostId(const service::HostEndPointInfo &endPointInfo, c
     return 0;
 }
 
-int HostsInfoManager::addHostIdInfo(const std::string &id, const int fd, const std::string &uuid)
+int HostsInfoManager::addHostIdInfo(const std::string& id, const int fd, const std::string& uuid)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
     auto iter = m_nodeIdInfos.find(id);
@@ -92,7 +90,7 @@ int HostsInfoManager::addHostIdInfo(const std::string &id, const int fd, const s
     return 0;
 }
 
-int HostsInfoManager::setHostIdInfo(const std::string &id, const int fd, const std::string &uuid)
+int HostsInfoManager::setHostIdInfo(const std::string& id, const int fd, const std::string& uuid)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
     auto iter = m_nodeIdInfos.find(id);
@@ -107,7 +105,7 @@ int HostsInfoManager::setHostIdInfo(const std::string &id, const int fd, const s
     return 0;
 }
 
-int HostsInfoManager::removeHostIdInfo(const std::string &id, const std::string &uuid)
+int HostsInfoManager::removeHostIdInfo(const std::string& id, const std::string& uuid)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
     auto iter = m_nodeIdInfos.find(id);
@@ -126,7 +124,7 @@ int HostsInfoManager::removeHostIdInfo(const std::string &id, const std::string 
     return 0;
 }
 
-int HostsInfoManager::setHostNotConnected(const service::HostEndPointInfo &endPointInfo)
+int HostsInfoManager::setHostNotConnected(const service::HostEndPointInfo& endPointInfo)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
     auto iter = m_hosts.find(endPointInfo);
@@ -155,7 +153,7 @@ int HostsInfoManager::getHostFdById(const NodeId& id, int& fd)
     return 0;
 }
 
-bool HostsInfoManager::isHostIdExist(const NodeId& id, int &fd, std::string &uuid)
+bool HostsInfoManager::isHostIdExist(const NodeId& id, int& fd, std::string& uuid)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
     auto iter = m_nodeIdInfos.find(id);

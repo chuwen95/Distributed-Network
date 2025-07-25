@@ -5,8 +5,8 @@
 #ifndef PAYLOADDISTANCEDETECT_H
 #define PAYLOADDISTANCEDETECT_H
 
-#include "protocol/pb/distance_vector.pb.h"
 #include "PayloadBase.h"
+#include "protocol/pb/distance_vector.pb.h"
 
 namespace csm
 {
@@ -27,8 +27,8 @@ namespace csm
             std::uint32_t timestamp() const;
         };
 
-    }
+    } // namespace service
 
-}
+} // namespace csm
 
-#endif //PAYLOADDISTANCEDETECT_H
+#endif // PAYLOADDISTANCEDETECT_H

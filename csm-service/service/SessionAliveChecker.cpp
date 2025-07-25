@@ -8,12 +8,13 @@
 using namespace csm::service;
 
 // 若c_aliveTimeout时间内没有收到任何数据，判定客户端掉线
-constexpr std::size_t c_aliveTimeout{ 15000 };
-constexpr std::size_t c_aliveCountCircle{ 10000000 };
+constexpr std::size_t c_aliveTimeout{15000};
+constexpr std::size_t c_aliveCountCircle{10000000};
 
 int SessionAliveChecker::init()
 {
-    const auto expression = [this]() {
+    const auto expression = [this]()
+    {
         std::vector<int> offlinefds;
 
         {
@@ -23,8 +24,8 @@ int SessionAliveChecker::init()
             {
                 if (iter->second.first == iter->second.second)
                 {
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session offline, fd: ",
-                        iter->first, ", last count: ", iter->second.first, ", current count: ", iter->second.second);
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session offline, fd: ", iter->first,
+                               ", last count: ", iter->second.first, ", current count: ", iter->second.second);
                     offlinefds.emplace_back(iter->first);
                 }
                 iter->second.first = iter->second.second;
@@ -58,7 +59,7 @@ int SessionAliveChecker::stop()
     return 0;
 }
 
-void SessionAliveChecker::setTimeoutHandler(std::function<void(const std::vector<int> &)> handler)
+void SessionAliveChecker::setTimeoutHandler(std::function<void(const std::vector<int>&)> handler)
 {
     m_timeoutHandler = std::move(handler);
 }
@@ -110,7 +111,8 @@ int SessionAliveChecker::refreshSessionLastRecvTime(const int fd)
     }
 
     iter->second.second = (iter->second.second + 1) % c_aliveCountCircle;
-    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "refresh session last recv time, fd: ", fd, ", value: ", iter->second.second);
+    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "refresh session last recv time, fd: ", fd,
+               ", first: ", iter->second.first, ", second: ", iter->second.second);
 
     return 0;
 }

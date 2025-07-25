@@ -23,8 +23,8 @@ namespace csm
         public:
             std::size_t packetLength() const override;
 
-            int encode(char *buffer, const std::size_t length) const override;
-            int decode(const char *buffer, const std::size_t length) override;
+            int encode(char* buffer, const std::size_t length) const override;
+            int decode(const char* buffer, const std::size_t length) override;
 
             const std::vector<char>& payload() const;
 
@@ -32,9 +32,8 @@ namespace csm
             std::vector<char> m_payload;
         };
 
-    }
+    } // namespace service
 
-}
+} // namespace csm
 
-
-#endif //COPYSTATEMACHINE_PAYLOADMODULEMESSAGE_H
+#endif // COPYSTATEMACHINE_PAYLOADMODULEMESSAGE_H

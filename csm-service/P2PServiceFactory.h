@@ -5,8 +5,8 @@
 #ifndef P2PSERVICEFACTORY_H
 #define P2PSERVICEFACTORY_H
 
-#include "config/ServiceConfig.h"
 #include "P2PService.h"
+#include "config/ServiceConfig.h"
 
 namespace csm
 {
@@ -27,13 +27,12 @@ namespace csm
 
         private:
             // 创建数据解码器
-            SessionDataDecoder::Ptr createSessionDataDecoder(
-                P2PSessionManager::Ptr p2pSessionManager, std::size_t workerNum);
+            SessionDataDecoder::Ptr createSessionDataDecoder(P2PSessionManager::Ptr p2pSessionManager, std::size_t workerNum);
             // 创建网络模块包处理器
             SessionServiceDataProcessor::Ptr createServiceDataProcessor();
             // 创建其他模组包处理器
-            SessionModuleDataProcessor::Ptr createModuleDataProcessor(
-                P2PSessionManager::Ptr p2pSessionManager, std::size_t workerNum);
+            SessionModuleDataProcessor::Ptr createModuleDataProcessor(P2PSessionManager::Ptr p2pSessionManager,
+                                                                      std::size_t workerNum);
             // 创建路由选择算法 - 距离矢量
             DistanceVector::Ptr createDistanceVector();
 

@@ -5,12 +5,12 @@
 #ifndef P2PSERVER_H
 #define P2PSERVER_H
 
-#include "csm-common/Common.h"
 #include "config/ServiceConfig.h"
+#include "csm-common/Common.h"
 #include "csm-framework/cluster/Common.h"
-#include "service/SessionDispatcher.h"
-#include "host/HostsInfoManager.h"
 #include "csm-framework/protocol/Protocol.h"
+#include "host/HostsInfoManager.h"
+#include "service/SessionDispatcher.h"
 
 namespace csm
 {
@@ -47,7 +47,7 @@ namespace csm
 
             int boardcastModuleMessage(protocol::ModuleID moduleId, const std::vector<char>& data);
 
-            int sendModuleMessageByNodeId(const NodeId &nodeId, protocol::ModuleID moduleId, const std::vector<char>& data);
+            int sendModuleMessageByNodeId(const NodeId& nodeId, protocol::ModuleID moduleId, const std::vector<char>& data);
 
         private:
             int initServer();
@@ -56,9 +56,9 @@ namespace csm
 
             int initDistanceVector();
 
-            SlaveReactor::Ptr getSlaveReactorByFd(const int fd);
+            SlaveReactor::Ptr getSlaveReactorByFd(int fd);
 
-            int sendData(const int fd, const std::vector<char>& data);
+            int sendData(int fd, const std::vector<char>& data);
 
             /**
              * 断开客户端
@@ -68,10 +68,11 @@ namespace csm
              * @param flag  0：因为socket发生错误而断开，-1/-2/-3为协议错误码
              * @return
              */
-            int disconnectClient(const HostEndPointInfo &hostEndPointInfo, const std::string &id, const std::string &uuid, const int flag);
+            int disconnectClient(const HostEndPointInfo& hostEndPointInfo, const std::string& id, const std::string& uuid,
+                                 int flag, int fd);
 
         private:
-            int m_fd{ -1 };
+            int m_fd{-1};
 
             std::map<std::int32_t, std::function<int(std::shared_ptr<std::vector<char>>)>> m_modulePacketHandler;
 

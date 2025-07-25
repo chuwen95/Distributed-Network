@@ -8,36 +8,21 @@
 
 using namespace csm::service;
 
-P2PSession::P2PSession(const int fd, utilities::RingBuffer::Ptr readBuffer, utilities::RingBuffer::Ptr writeBuffer) :
-        m_clientfd(fd), m_readBuffer(std::move(readBuffer)), m_writeBuffer(std::move(writeBuffer))
+P2PSession::P2PSession(const int fd, utilities::RingBuffer::Ptr readBuffer, utilities::RingBuffer::Ptr writeBuffer)
+    : m_fd(fd), m_readBuffer(std::move(readBuffer)), m_writeBuffer(std::move(writeBuffer))
 {
 }
 
 int P2PSession::init()
 {
-    utilities::Socket::setNonBlock(m_clientfd);
+    utilities::Socket::setNonBlock(m_fd);
 
     return 0;
 }
 
-int P2PSession::uninit()
+int P2PSession::fd() const
 {
-    return 0;
-}
-
-int P2PSession::start()
-{
-    return 0;
-}
-
-int P2PSession::stop()
-{
-    return 0;
-}
-
-int P2PSession::fd()
-{
-    return m_clientfd;
+    return m_fd;
 }
 
 std::mutex& P2PSession::readBufferMutex()
@@ -60,42 +45,42 @@ csm::utilities::RingBuffer::Ptr& P2PSession::writeBuffer()
     return m_writeBuffer;
 }
 
-void P2PSession::setClientId(const std::string_view id)
+void P2PSession::setNodeId(std::string id)
 {
-    m_clientInfo.id = id;
+    m_nodeInfo.id = std::move(id);
 }
 
-std::string P2PSession::clientId()
+std::string P2PSession::nodeId() const
 {
-    return m_clientInfo.id;
+    return m_nodeInfo.id;
 }
 
-void P2PSession::setClientOnlineTimestamp(const std::uint32_t timestamp)
+void P2PSession::setNodeOnlineTimestamp(const std::uint32_t timestamp)
 {
-    m_clientInfo.onlineTimestamp = timestamp;
+    m_nodeInfo.onlineTimestamp = timestamp;
 }
 
-std::uint32_t P2PSession::clientOnlineTimestamp()
+std::uint32_t P2PSession::clientOnlineTimestamp() const
 {
-    return m_clientInfo.onlineTimestamp;
+    return m_nodeInfo.onlineTimestamp;
 }
 
-void P2PSession::setPeerHostEndPointInfo(const service::HostEndPointInfo &hostEndPointInfo)
+void P2PSession::setPeerHostEndPointInfo(const service::HostEndPointInfo& hostEndPointInfo)
 {
     m_peerHostEndPointInfo = hostEndPointInfo;
 }
 
-const HostEndPointInfo &P2PSession::peerHostEndPointInfo() const
+const HostEndPointInfo& P2PSession::peerHostEndPointInfo() const
 {
     return m_peerHostEndPointInfo;
 }
 
-void P2PSession::setHandshakeUuid(const std::string &uuid)
+void P2PSession::setHandshakeUuid(std::string uuid)
 {
-    m_handshakeUuid = uuid;
+    m_handshakeUuid = std::move(uuid);
 }
 
-std::string P2PSession::handshakeUuid()
+std::string P2PSession::handshakeUuid() const
 {
     return m_handshakeUuid;
 }

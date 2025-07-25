@@ -6,21 +6,21 @@
 #define TCPNETWORK_SERVICECONFIG_H
 
 #include "csm-common/Common.h"
-#include "inipp.h"
 #include "csm-tool/NodeConfig.h"
+#include "inipp.h"
 
-#include "csm-utilities/SelectListenner.h"
-#include "csm-service/service/Acceptor.h"
-#include "csm-service/service/SessionDispatcher.h"
-#include "csm-service/service/SessionDestroyer.h"
-#include "csm-service/service/SessionDataDecoder.h"
-#include "csm-service/service/SessionServiceDataProcessor.h"
-#include "csm-service/service/SessionModuleDataProcessor.h"
 #include "csm-service/routing_algorithm/distance_vector/DistanceVector.h"
+#include "csm-service/service/Acceptor.h"
+#include "csm-service/service/SessionDataDecoder.h"
+#include "csm-service/service/SessionDestroyer.h"
+#include "csm-service/service/SessionDispatcher.h"
+#include "csm-service/service/SessionModuleDataProcessor.h"
+#include "csm-service/service/SessionServiceDataProcessor.h"
+#include "csm-utilities/SelectListenner.h"
 
-#include "csm-service/host/HostsInfoManager.h"
 #include "csm-service/host/HostsConnector.h"
 #include "csm-service/host/HostsHeartbeatService.h"
+#include "csm-service/host/HostsInfoManager.h"
 
 #include "csm-service/service/P2PSessionManager.h"
 #include "csm-service/service/SessionAliveChecker.h"
@@ -37,25 +37,28 @@ namespace csm
 
         enum class ServiceStartType
         {
-            Node,   // 作为节点启动，需要service模块全内容和host模块，节点相互连接
-            RpcServer,     // 作为服务器启动，为RPC模块所用，仅需要service模块部分功能，不包含握手协议部分
+            Node,      // 作为节点启动，需要service模块全内容和host模块，节点相互连接
+            RpcServer, // 作为服务器启动，为RPC模块所用，仅需要service模块部分功能，不包含握手协议部分
         };
 
         class ServiceConfig
         {
-        public:
+          public:
             using Ptr = std::shared_ptr<ServiceConfig>;
 
             ServiceConfig(tool::NodeConfig::Ptr nodeConfig, utilities::SelectListenner::Ptr listenner, Acceptor::Ptr acceptor,
-                P2PSessionManager::Ptr p2pSessionManager, SessionAliveChecker::Ptr sessionAliveChecker, std::vector<SlaveReactor::Ptr> slaveReactors,
-                SessionDispatcher::Ptr sessionDispatcher, SessionDestroyer::Ptr sessionDestroyer, SessionDataDecoder::Ptr sessionDataDecoder,
-                SessionServiceDataProcessor::Ptr sessionServiceDataProcesser, SessionModuleDataProcessor::Ptr sessionModuleDataProcessor,
-                ServiceStartType serverStartType = ServiceStartType::Node,
-                HostsInfoManager::Ptr hostsInfoManager = nullptr, HostsConnector::Ptr hostsConnector = nullptr,
-                HostsHeartbeatService::Ptr hostsHeartbeatService = nullptr, DistanceVector::Ptr distanceVector = nullptr);
+                          P2PSessionManager::Ptr p2pSessionManager, SessionAliveChecker::Ptr sessionAliveChecker,
+                          std::vector<SlaveReactor::Ptr> slaveReactors, SessionDispatcher::Ptr sessionDispatcher,
+                          SessionDestroyer::Ptr sessionDestroyer, SessionDataDecoder::Ptr sessionDataDecoder,
+                          SessionServiceDataProcessor::Ptr sessionServiceDataProcesser,
+                          SessionModuleDataProcessor::Ptr sessionModuleDataProcessor,
+                          ServiceStartType serverStartType = ServiceStartType::Node,
+                          HostsInfoManager::Ptr hostsInfoManager = nullptr, HostsConnector::Ptr hostsConnector = nullptr,
+                          HostsHeartbeatService::Ptr hostsHeartbeatService = nullptr,
+                          DistanceVector::Ptr distanceVector = nullptr);
             ~ServiceConfig() = default;
 
-        public:
+          public:
             tool::NodeConfig::Ptr nodeConfig();
 
             utilities::SelectListenner::Ptr listenner();
@@ -83,7 +86,7 @@ namespace csm
 
             DistanceVector::Ptr distanceVector();
 
-        private:
+          private:
             tool::NodeConfig::Ptr m_nodeConfig;
 
             utilities::SelectListenner::Ptr m_listenner;

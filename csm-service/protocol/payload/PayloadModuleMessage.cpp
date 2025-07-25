@@ -13,12 +13,12 @@ std::size_t PayloadModuleMessage::packetLength() const
     return 0;
 }
 
-int PayloadModuleMessage::encode( char *data, const std::size_t len) const
+int PayloadModuleMessage::encode(char* data, const std::size_t len) const
 {
     return 0;
 }
 
-int PayloadModuleMessage::decode(const char *buffer, const std::size_t length)
+int PayloadModuleMessage::decode(const char* buffer, const std::size_t length)
 {
     m_payload.resize(length);
     std::copy_n(buffer, length, m_payload.begin());

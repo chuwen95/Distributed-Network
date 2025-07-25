@@ -5,8 +5,8 @@
 #ifndef COPYSTATEMACHINE_P2PSESSIONMANAGER_H
 #define COPYSTATEMACHINE_P2PSESSIONMANAGER_H
 
-#include "csm-common/Common.h"
 #include "P2PSession.h"
+#include "csm-common/Common.h"
 
 namespace csm
 {
@@ -62,8 +62,8 @@ namespace csm
             std::unordered_map<int, P2PSession::Ptr> m_sessions;
         };
 
-    }
+    } // namespace service
 
-}
+} // namespace csm
 
-#endif //COPYSTATEMACHINE_P2PSESSIONMANAGER_H
+#endif // COPYSTATEMACHINE_P2PSESSIONMANAGER_H

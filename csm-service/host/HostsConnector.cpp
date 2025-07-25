@@ -3,11 +3,11 @@
 //
 
 #include "HostsConnector.h"
+#include "csm-service/service/P2PSessionFactory.h"
+#include "csm-utilities/ElapsedTime.h"
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/Socket.h"
 #include "csm-utilities/TimeTools.h"
-#include "csm-utilities/ElapsedTime.h"
-#include "csm-service/service/P2PSessionFactory.h"
 
 #include <json/json.h>
 
@@ -15,17 +15,14 @@ using namespace csm::service;
 
 constexpr std::uint32_t c_connectTimeout{20 * 1000};
 
-HostsConnector::HostsConnector(HostsInfoManager::Ptr hostsInfoManager)
-    : m_hostsInfoManager(std::move(hostsInfoManager))
-{
-}
-
+HostsConnector::HostsConnector(HostsInfoManager::Ptr hostsInfoManager) : m_hostsInfoManager(std::move(hostsInfoManager)) {}
 
 int HostsConnector::init()
 {
-    const auto expression = [this]() {
+    const auto expression = [this]()
+    {
         HostsInfoManager::Hosts hosts = m_hostsInfoManager->getHosts();
-        for (auto &host: hosts)
+        for (auto& host : hosts)
         {
             LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "connecting host: ", host.first.host());
             // 如果id不为空，证明客户端已经连上并发送了ClientInfo包
@@ -43,7 +40,8 @@ int HostsConnector::init()
             }
             if (true == isConnecting)
             {
-                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "host is connecting or waiting ClientInfo payload: ", host.first.ip());
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
+                           "host is connecting or waiting ClientInfo payload: ", host.first.ip());
                 continue;
             }
             LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "start to connect: ", host.first.host());
@@ -58,12 +56,14 @@ int HostsConnector::init()
             LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "create socket successfully, fd: ", fd);
 
             // 设置socket接收缓冲区大小
-            if(-1 == utilities::Socket::setSocketKernelRecvBufferSize(fd, utilities::Socket::c_defaultSocketRecvBufferSize))
+            if (-1 == utilities::Socket::setSocketKernelRecvBufferSize(fd, utilities::Socket::c_defaultSocketRecvBufferSize))
             {
-                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "set socket recv buffer size failed, errno: ", errno, ", ", strerror(errno));
+                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "set socket recv buffer size failed, errno: ", errno, ", ",
+                           strerror(errno));
                 return -1;
             }
-            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "set socket recv buffer size to ", utilities::Socket::c_defaultSocketRecvBufferSize, " successfully, fd: ", fd);
+            LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "set socket recv buffer size to ",
+                       utilities::Socket::c_defaultSocketRecvBufferSize, " successfully, fd: ", fd);
 
             // 添加host到正在连接
             {
@@ -81,11 +81,13 @@ int HostsConnector::init()
             {
                 // 一般情况下这个if不会走到，因为非阻塞io第一次connect不会立即返回0，后续又因为m_connectingHosts的原因不会再connect
 
-                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "connect successfully, host: ", host.first.host(), ", fd: ", fd);
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "connect successfully, host: ", host.first.host(),
+                           ", fd: ", fd);
 
                 if (nullptr != m_connectHandler)
                 {
-                    P2PSession::Ptr p2pSession = P2PSessionFactory().create(fd, service::c_p2pSessionReadBufferSize, service::c_p2pSessionWriteBufferSize);
+                    P2PSession::Ptr p2pSession =
+                        P2PSessionFactory().create(fd, service::c_p2pSessionReadBufferSize, service::c_p2pSessionWriteBufferSize);
                     p2pSession->init();
                     p2pSession->setPeerHostEndPointInfo(host.first);
 
@@ -126,14 +128,15 @@ int HostsConnector::init()
         fd_set wset;
         FD_ZERO(&wset);
         int maxfd{0};
-        for (auto &host: m_connectingHosts)
+        for (auto& host : m_connectingHosts)
         {
             LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "checking ", host.first.host(), " connect status");
             // 将时间戳设置为-1，表示已经连上，不需要再监测超时，
             // P2PSession已经回调出去，由Reactor管理recv/send，此时正在等待ClientInfoReply包
             if (-1 == host.second.second)
             {
-                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "socket connect successfully, waiting ClientInfoReply payload, fd: ", host.second.first);
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
+                           "socket connect successfully, waiting ClientInfoReply payload, fd: ", host.second.first);
                 continue;
             }
 
@@ -152,7 +155,8 @@ int HostsConnector::init()
             return -1;
         }
         else if (0 == ret)
-        {}
+        {
+        }
         else
         {
             for (auto iter = m_connectingHosts.begin(); iter != m_connectingHosts.end();)
@@ -170,25 +174,30 @@ int HostsConnector::init()
                     }
                     if (0 != error)
                     {
-                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " failed, error: ", error);
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(),
+                                   " failed, error: ", error);
                         utilities::Socket::close(fd);
                         iter = m_connectingHosts.erase(iter);
                         continue;
                     }
 
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, fd is set, fd: ", fd);
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(),
+                               " successfully, fd is set, fd: ", fd);
                     if (nullptr != m_connectHandler)
                     {
-                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " successfully, callback P2PSession, fd: ", fd);
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(),
+                                   " successfully, callback P2PSession, fd: ", fd);
 
-                        P2PSession::Ptr p2pSession = P2PSessionFactory().create(fd, service::c_p2pSessionReadBufferSize, service::c_p2pSessionWriteBufferSize);
+                        P2PSession::Ptr p2pSession = P2PSessionFactory().create(fd, service::c_p2pSessionReadBufferSize,
+                                                                                service::c_p2pSessionWriteBufferSize);
                         p2pSession->init();
                         p2pSession->setPeerHostEndPointInfo(iter->first);
 
                         // 将P2PSession回调出去，此时仍保留状态为连接中，即不处理m_connectingHosts，等到ClientInfoReply回来后再将fd从m_connectingHosts中移除
                         m_connectHandler(fd, p2pSession);
 
-                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(), " callback P2PSession finish, fd: ", fd);
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "connect to ", iter->first.host(),
+                                   " callback P2PSession finish, fd: ", fd);
                     }
 
                     // 将时间戳设置为-1，表示已经连上，不需要再监测超时
@@ -202,7 +211,7 @@ int HostsConnector::init()
         }
 
         std::unique_lock<std::mutex> ulock(x_connectingHosts);
-        for (auto &host: m_connectingHosts)
+        for (auto& host : m_connectingHosts)
         {
             if (-1 == host.second.second)
             {
@@ -217,8 +226,8 @@ int HostsConnector::init()
             }
         }
 
-        static int printCircle{ 0 };
-        if(0 == printCircle % 6)
+        static int printCircle{0};
+        if (0 == printCircle % 6)
         {
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "online node size: ", m_hostsInfoManager->onlineClientSize());
         }
@@ -253,7 +262,7 @@ int HostsConnector::registerConnectHandler(std::function<void(const int, P2PSess
     return 0;
 }
 
-int HostsConnector::setHostConnected(const service::HostEndPointInfo &hostEndPointInfo)
+int HostsConnector::setHostConnected(const service::HostEndPointInfo& hostEndPointInfo)
 {
     std::unique_lock<std::mutex> ulock(x_connectingHosts);
     auto iter = m_connectingHosts.find(hostEndPointInfo);
@@ -270,11 +279,11 @@ int HostsConnector::setHostConnected(const service::HostEndPointInfo &hostEndPoi
 int HostsConnector::setHostConnectedByFd(const int fd)
 {
     std::unique_lock<std::mutex> ulock(x_connectingHosts);
-    for (auto& host : m_connectingHosts)
+    for (auto iter = m_connectingHosts.begin(); iter != m_connectingHosts.end(); ++iter)
     {
-        if (host.second.first == fd)
+        if (iter->second.first == fd)
         {
-            m_connectingHosts.erase(host.first);
+            m_connectingHosts.erase(iter);
             return 0;
         }
     }

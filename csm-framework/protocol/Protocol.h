@@ -15,6 +15,8 @@ namespace csm
         {
             raft,
             rpc,
+
+            unknown,
         };
 
     }

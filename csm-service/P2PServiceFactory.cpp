@@ -5,18 +5,18 @@
 #include "P2PServiceFactory.h"
 
 #include "config/ServiceConfig.h"
-#include "service/P2PSessionManager.h"
-#include "service/SessionAliveChecker.h"
-#include "service/SessionDispatcher.h"
-#include "service/SessionDestroyer.h"
-#include "service/SessionModuleDataProcessor.h"
 #include "protocol/payload/PayloadFactory.h"
 #include "routing_algorithm/distance_vector/DistanceVector.h"
+#include "service/P2PSessionManager.h"
+#include "service/SessionAliveChecker.h"
+#include "service/SessionDestroyer.h"
+#include "service/SessionDispatcher.h"
+#include "service/SessionModuleDataProcessor.h"
 
 using namespace csm::service;
 
-P2PServiceFactory::P2PServiceFactory(tool::NodeConfig::Ptr nodeConfig, ServiceStartType serviceStartType) :
-    m_nodeConfig(std::move(nodeConfig)), m_serviceStartType(serviceStartType)
+P2PServiceFactory::P2PServiceFactory(tool::NodeConfig::Ptr nodeConfig, ServiceStartType serviceStartType)
+    : m_nodeConfig(std::move(nodeConfig)), m_serviceStartType(serviceStartType)
 {
 }
 
@@ -35,8 +35,8 @@ P2PService::Ptr P2PServiceFactory::create()
         slaveReactors.emplace_back(std::make_shared<SlaveReactor>(index, m_nodeConfig->id(), p2pSessionManager));
     }
     // P2PSession派发器
-    SessionDispatcher::Ptr sessionDispatcher =
-            std::make_shared<SessionDispatcher>(m_nodeConfig->redispatchInterval(), m_nodeConfig->id(), m_nodeConfig->slaveReactorNum());
+    SessionDispatcher::Ptr sessionDispatcher = std::make_shared<SessionDispatcher>(
+        m_nodeConfig->redispatchInterval(), m_nodeConfig->id(), m_nodeConfig->slaveReactorNum());
     // P2PSession销毁器
     SessionDestroyer::Ptr sessionDestroyer = std::make_shared<SessionDestroyer>();
     // 包解码器
@@ -48,28 +48,29 @@ P2PService::Ptr P2PServiceFactory::create()
     SessionModuleDataProcessor::Ptr sessionModuleDataProcessor =
         createModuleDataProcessor(p2pSessionManager, m_nodeConfig->moduleDataProcessWorkerNum());
 
-    ServiceConfig::Ptr serviceConfig{ nullptr };
-    if(ServiceStartType::Node == m_serviceStartType)
+    ServiceConfig::Ptr serviceConfig{nullptr};
+    if (ServiceStartType::Node == m_serviceStartType)
     {
         // 作为节点需要
         HostsInfoManager::Ptr hostsInfoManager = std::make_shared<HostsInfoManager>(m_nodeConfig->nodesFile());
         HostsConnector::Ptr hostsConnector = std::make_shared<HostsConnector>(hostsInfoManager);
-        HostsHeartbeatService::Ptr hostsHeartbeatService = std::make_shared<HostsHeartbeatService>(m_nodeConfig->id(), hostsInfoManager);
+        HostsHeartbeatService::Ptr hostsHeartbeatService =
+            std::make_shared<HostsHeartbeatService>(m_nodeConfig->id(), hostsInfoManager);
 
         // 路由选择算法
         DistanceVector::Ptr distanceVector = createDistanceVector();
 
         // 创建TcpServiceConfig
-         serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
-             p2pSessionManager, sessionAliveChecker, slaveReactors,
-             sessionDispatcher, sessionDestroyer, sessionDataDecoder, sessionSericeDataProcessor, sessionModuleDataProcessor,
-             m_serviceStartType, hostsInfoManager, hostsConnector, hostsHeartbeatService, distanceVector);
+        serviceConfig = std::make_shared<ServiceConfig>(
+            m_nodeConfig, listenner, acceptor, p2pSessionManager, sessionAliveChecker, slaveReactors, sessionDispatcher,
+            sessionDestroyer, sessionDataDecoder, sessionSericeDataProcessor, sessionModuleDataProcessor, m_serviceStartType,
+            hostsInfoManager, hostsConnector, hostsHeartbeatService, distanceVector);
     }
-    else if(ServiceStartType::RpcServer == m_serviceStartType)
+    else if (ServiceStartType::RpcServer == m_serviceStartType)
     {
         // 创建TcpServiceConfig
-        serviceConfig = std::make_shared<ServiceConfig>(m_nodeConfig, listenner, acceptor,
-            p2pSessionManager, sessionAliveChecker, slaveReactors, sessionDispatcher,
+        serviceConfig = std::make_shared<ServiceConfig>(
+            m_nodeConfig, listenner, acceptor, p2pSessionManager, sessionAliveChecker, slaveReactors, sessionDispatcher,
             sessionDestroyer, sessionDataDecoder, sessionSericeDataProcessor, sessionModuleDataProcessor, m_serviceStartType);
     }
     else
@@ -80,8 +81,8 @@ P2PService::Ptr P2PServiceFactory::create()
     return std::make_shared<P2PService>(serviceConfig);
 }
 
-SessionDataDecoder::Ptr P2PServiceFactory::createSessionDataDecoder(
-    P2PSessionManager::Ptr p2pSessionManager, const std::size_t workerNum)
+SessionDataDecoder::Ptr P2PServiceFactory::createSessionDataDecoder(P2PSessionManager::Ptr p2pSessionManager,
+                                                                    const std::size_t workerNum)
 {
     PayloadFactory::Ptr payloadFactory = std::make_shared<PayloadFactory>();
     utilities::ThreadPool::Ptr sessionDataDecoder =
@@ -96,8 +97,8 @@ SessionServiceDataProcessor::Ptr P2PServiceFactory::createServiceDataProcessor()
     return std::make_shared<SessionServiceDataProcessor>(thread);
 }
 
-SessionModuleDataProcessor::Ptr P2PServiceFactory::createModuleDataProcessor(
-    P2PSessionManager::Ptr p2pSessionManager, std::size_t workerNum)
+SessionModuleDataProcessor::Ptr P2PServiceFactory::createModuleDataProcessor(P2PSessionManager::Ptr p2pSessionManager,
+                                                                             std::size_t workerNum)
 {
     utilities::ThreadPool::Ptr normalPacketProcessor = std::make_shared<utilities::ThreadPool>(workerNum, "sess_dt_proc");
     return std::make_shared<SessionModuleDataProcessor>(std::move(p2pSessionManager), normalPacketProcessor);

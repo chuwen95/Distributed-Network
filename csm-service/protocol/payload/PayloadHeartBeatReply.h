@@ -5,8 +5,8 @@
 #ifndef TCPNETWORK_PAYLOADHEARTBEATREPLY_H
 #define TCPNETWORK_PAYLOADHEARTBEATREPLY_H
 
-#include "protocol/pb/heartbeat.pb.h"
 #include "PayloadBase.h"
+#include "protocol/pb/heartbeat.pb.h"
 
 namespace csm
 {
@@ -20,18 +20,18 @@ namespace csm
             using Ptr = std::shared_ptr<PayloadHeartBeatReply>;
 
         public:
-            void setNodeId(const std::string &id);
+            void setNodeId(const std::string& id);
             std::string nodeId() const;
 
-            void setSeq(const std::uint64_t seq);
+            void setSeq(std::uint64_t seq);
             std::uint64_t seq() const;
 
-            void setTransferTime(const std::uint32_t timestamp);
+            void setTransferTime(std::uint32_t timestamp);
             std::uint32_t transferTime() const;
         };
 
-    } // service
+    } // namespace service
 
-}
+} // namespace csm
 
-#endif //TCPNETWORK_PAYLOADHEARTBEATREPLY_H
+#endif // TCPNETWORK_PAYLOADHEARTBEATREPLY_H

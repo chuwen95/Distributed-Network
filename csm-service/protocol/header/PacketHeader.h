@@ -16,15 +16,12 @@ namespace csm
     namespace service
     {
 
-        constexpr std::uint32_t c_magic{ 0x2cc98f5d };
+        constexpr std::uint32_t c_magic{0x2cc98f5d};
 
         class PacketHeader
         {
         public:
             using Ptr = std::shared_ptr<PacketHeader>;
-
-            PacketHeader() = default;
-            ~PacketHeader() = default;
 
         public:
             bool isMagicMatch();
@@ -40,18 +37,18 @@ namespace csm
 
             std::size_t headerLength();
 
-            int encode(char *buffer, const std::size_t length);
-            int decode(const char *buffer, const std::size_t length);
+            int encode(char* buffer, const std::size_t length);
+            int decode(const char* buffer, const std::size_t length);
 
         private:
-            std::uint32_t m_magic{ c_magic };
-            std::uint16_t m_packetType{ 0 };
-            protocol::ModuleID m_moduleId;
-            std::uint32_t m_payloadLength;
+            std::uint32_t m_magic{c_magic};
+            std::uint16_t m_packetType{0};
+            protocol::ModuleID m_moduleId{protocol::ModuleID::unknown};
+            std::uint32_t m_payloadLength{0};
         };
 
-    } // packetprocess
+    } // namespace service
 
-}
+} // namespace csm
 
-#endif //TCPNETWORK_PACKETHEADER_H
+#endif // TCPNETWORK_PACKETHEADER_H

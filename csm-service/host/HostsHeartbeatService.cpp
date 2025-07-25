@@ -4,26 +4,27 @@
 
 #include "HostsHeartbeatService.h"
 
-#include "csm-utilities/TimeTools.h"
-#include "csm-utilities/Logger.h"
 #include "csm-service/protocol/header/PacketHeader.h"
 #include "csm-service/protocol/payload/PayloadHeartBeat.h"
 #include "csm-service/protocol/utilities/PacketEncodeHelper.h"
+#include "csm-utilities/Logger.h"
+#include "csm-utilities/TimeTools.h"
 
 using namespace csm::service;
 
 constexpr std::int32_t c_heartbeatInterval{5000};
 
-HostsHeartbeatService::HostsHeartbeatService(const std::string &hostId, HostsInfoManager::Ptr hostsInfoManager) :
-    m_hostId(hostId), m_hostInfoManager(std::move(hostsInfoManager))
+HostsHeartbeatService::HostsHeartbeatService(const std::string& hostId, HostsInfoManager::Ptr hostsInfoManager)
+    : m_hostId(hostId), m_hostInfoManager(std::move(hostsInfoManager))
 {
 }
 
 int HostsHeartbeatService::init()
 {
-    const auto expression = [this]() {
+    const auto expression = [this]()
+    {
         HostsInfoManager::Hosts hosts = m_hostInfoManager->getHosts();
-        for (auto &host: hosts)
+        for (auto& host : hosts)
         {
             if (true == host.second.first.empty() || m_hostId == host.second.first)
             {
@@ -44,8 +45,12 @@ int HostsHeartbeatService::init()
                     }
                     if (0 != m_heartBeatSender(fd, buffer))
                     {
-                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send heart beat failed, to host: ", host.second.first, ", fd: ", fd);
+                        LOG->write(utilities::LogType::Log_Error, FILE_INFO,
+                                   "send heart beat failed, to host: ", host.second.first, ", fd: ", fd);
                     }
+                    LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
+                               "send heart beat successfully, to host: ", host.second.first, ", fd: ", fd);
+
                     host.second.second = curTimestamp;
                 }
             }
@@ -73,7 +78,7 @@ int HostsHeartbeatService::stop()
     return 0;
 }
 
-void HostsHeartbeatService::registerHeartbeatSender(std::function<int(const int, const std::vector<char> &)> heartbeatSender)
+void HostsHeartbeatService::registerHeartbeatSender(std::function<int(const int, const std::vector<char>&)> heartbeatSender)
 {
     m_heartBeatSender = std::move(heartbeatSender);
 }

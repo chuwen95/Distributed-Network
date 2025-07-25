@@ -11,7 +11,7 @@ int P2PSessionManager::addSession(const int fd, P2PSession::Ptr p2pSession)
 {
     std::unique_lock<std::mutex> ulock(x_sessions);
 
-    if(m_sessions.end() != m_sessions.find(fd))
+    if (m_sessions.end() != m_sessions.find(fd))
     {
         return -1;
     }
@@ -26,7 +26,7 @@ int P2PSessionManager::removeSession(const int fd)
     std::unique_lock<std::mutex> ulock(x_sessions);
 
     auto iter = m_sessions.find(fd);
-    if(m_sessions.end() == iter)
+    if (m_sessions.end() == iter)
     {
         return -1;
     }
@@ -41,7 +41,7 @@ P2PSession::Ptr P2PSessionManager::session(const int fd)
     std::unique_lock<std::mutex> ulock(x_sessions);
 
     auto iter = m_sessions.find(fd);
-    if(m_sessions.end() == iter)
+    if (m_sessions.end() == iter)
     {
         return nullptr;
     }
@@ -62,4 +62,3 @@ std::size_t P2PSessionManager::sessionSize()
 
     return m_sessions.size();
 }
-

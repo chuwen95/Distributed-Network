@@ -19,8 +19,8 @@ namespace csm
             P2PSession::Ptr create(const int fd, const std::size_t readBufferSize, const std::size_t writeBufferSize);
         };
 
-    } // service
+    } // namespace service
 
-}
+} // namespace csm
 
-#endif //P2PSESSIONFACTORY_H
+#endif // P2PSESSIONFACTORY_H

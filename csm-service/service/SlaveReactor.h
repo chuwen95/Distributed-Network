@@ -5,10 +5,9 @@
 #ifndef TCPSERVER_SLAVEREACTOR_H
 #define TCPSERVER_SLAVEREACTOR_H
 
+#include "P2PSessionManager.h"
 #include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
-#include "P2PSession.h"
-#include "P2PSessionManager.h"
 
 namespace csm
 {
@@ -53,7 +52,8 @@ namespace csm
              * @brief 设置P2PSession有数据需要解码处理的回调函数
              * @param handler
              */
-            void setSessionDataHandler(const std::function<int(const int fd, const char* data, const std::size_t dataLen)> handler);
+            void
+            setSessionDataHandler(const std::function<int(const int fd, const char* data, const std::size_t dataLen)> handler);
 
             /**
              * @brief 写入待发送的数据到writeBuffer，如果writeBuffer的可用空间小于要写入的数据大小，则返回-1，客户端需重新尝试写入
@@ -64,7 +64,7 @@ namespace csm
              * @param size 数据大小
              * @return
              */
-            int sendData(const int fd, const char *data, const std::size_t size);
+            int sendData(const int fd, const char* data, const std::size_t size);
 
             int sendData(const int fd, const std::vector<char> data);
 

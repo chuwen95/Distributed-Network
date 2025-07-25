@@ -22,7 +22,8 @@ namespace csm
 
             /**
              *
-             * @param redispatchInterval    多少个客户端后重新查找管理客户端数量最少的SlaveReactor，下一个客户端将会放到最少的这个SlaveReactor中
+             * @param redispatchInterval
+             * 多少个客户端后重新查找管理客户端数量最少的SlaveReactor，下一个客户端将会放到最少的这个SlaveReactor中
              * @param id    本节点ID
              * @param slaveReactors     要管理的子Reactor
              * @return
@@ -53,8 +54,10 @@ namespace csm
             {
                 using Ptr = std::shared_ptr<SessionInfo>;
 
-                SessionInfo(const int f, std::function<void(const std::size_t slaveReactorIndex)> c) : fd(f), callback(std::move(c))
-                {}
+                SessionInfo(const int f, std::function<void(const std::size_t slaveReactorIndex)> c)
+                    : fd(f), callback(std::move(c))
+                {
+                }
 
                 int fd;
                 std::function<void(const std::size_t slaveReactorIndex)> callback;
@@ -62,7 +65,7 @@ namespace csm
             moodycamel::BlockingReaderWriterQueue<SessionInfo::Ptr> m_p2pSessionsQueue;
 
             // 当前管理最少fd的SlaveReactor index（非实时刷新）
-            std::size_t m_slaveReactorIndexWhichHasLeastFd{ 0 };
+            std::size_t m_slaveReactorIndexWhichHasLeastFd{0};
             // 每个SlaveReactor管理的fd数量
             std::vector<std::unique_ptr<std::atomic_uint32_t>> m_slaveReactorFdSize;
 

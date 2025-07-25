@@ -8,21 +8,23 @@ using namespace csm::service;
 
 int SessionDestroyer::init()
 {
-    const auto expression = [this](){
+    const auto expression = [this]()
+    {
         {
             std::unique_lock<std::mutex> ulock(x_waitingDestroySessionInfos);
-            m_waitingDestroySessionInfosCv.wait(ulock, [&](){ return 0 == m_destroyInterval || false == m_waitingDestroySessionInfos.empty(); });
+            m_waitingDestroySessionInfosCv.wait(
+                ulock, [&]() { return 0 == m_destroyInterval || false == m_waitingDestroySessionInfos.empty(); });
         }
 
-        while(true)
+        while (true)
         {
-            if(nullptr != m_destoryHandler)
+            if (nullptr != m_destoryHandler)
             {
                 std::pair<int, int> sessionInfo;
                 {
                     std::unique_lock<std::mutex> ulock(x_waitingDestroySessionInfos);
 
-                    if(true == m_waitingDestroySessionInfos.empty())
+                    if (true == m_waitingDestroySessionInfos.empty())
                     {
                         break;
                     }
@@ -72,7 +74,7 @@ int SessionDestroyer::addSession(const int fd, const int flag)
 int SessionDestroyer::addSessions(const std::vector<std::pair<int, int>>& sessionInfos)
 {
     std::unique_lock<std::mutex> ulock(x_waitingDestroySessionInfos);
-    for(const std::pair<int, int> &sessionInfo : sessionInfos)
+    for (const std::pair<int, int>& sessionInfo : sessionInfos)
     {
         m_waitingDestroySessionInfos.emplace(sessionInfo.first, sessionInfo.second);
     }

@@ -33,6 +33,10 @@ FILE(GLOB_RECURSE HEADERS *.h)
 
 add_library(service ${SOURCES} ${PROTOBUF_SRCS} ${HEADERS}
         protocol/utilities/PacketEncodeHelper.h
-        protocol/common/PacketType.h)
+        protocol/common/PacketType.h
+        protocol/payload/PayloadDistanceVector.cpp
+        protocol/payload/PayloadDistanceVector.h
+        routing_algorithm/distance_vector/DistanceVector.h
+        routing_algorithm/distance_vector/DistanceVector.cpp)
 target_link_libraries(service PUBLIC utilities tools readerwriterqueue JsonCpp::JsonCpp protobuf::libprotobuf)
 target_include_directories(service SYSTEM BEFORE PUBLIC ${readerwriterqueue_SOURCE_DIR} ${proto_output_path})

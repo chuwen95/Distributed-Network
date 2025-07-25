@@ -38,7 +38,7 @@ namespace csm
         private:
             std::function<int(const int fd, const int flag)> m_destoryHandler;
 
-            std::atomic_int m_destroyInterval{ 5 };
+            std::atomic_int m_destroyInterval{5};
             utilities::Thread::Ptr m_thread;
 
             std::mutex x_waitingDestroySessionInfos;
@@ -46,8 +46,8 @@ namespace csm
             std::queue<std::pair<int, int>> m_waitingDestroySessionInfos;
         };
 
-    }
+    } // namespace service
 
-}
+} // namespace csm
 
-#endif //COPYSTATEMACHINE_SESSIONDESTROYER_H
+#endif // COPYSTATEMACHINE_SESSIONDESTROYER_H
