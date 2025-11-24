@@ -6,7 +6,7 @@
 #define COPYSTATEMACHINE_RAFTCONFIG_H
 
 #include "csm-framework/cluster/Common.h"
-#include "csm-service/P2PService.h"
+#include "../../csm-service/service/P2PService.h"
 #include "state/PersistentState.h"
 #include "state/VolatileState.h"
 #include "state/LeaderState.h"
@@ -24,7 +24,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<RaftConfig>;
 
-            RaftConfig(const NodeId &nodeId, std::int32_t minElectionTimeout, std::int32_t maxElectionTimeout, service::P2PService::Ptr p2pService,
+            RaftConfig(const NodeId &nodeId, std::int32_t minElectionTimeout, std::int32_t maxElectionTimeout, service::P2PService* p2pService,
                 PersistentState::Ptr persistentState, VolatileState::Ptr volatileState, LeaderState::Ptr leaderState,
                 ClusterConfigurationManager::Ptr clusterConfigurationManager, stmclog::StateMachineLog::Ptr stateMachineLog);
             ~RaftConfig() = default;
@@ -38,7 +38,7 @@ namespace csm
             std::int32_t maxElectionTimeout();
 
             // P2P模块
-            service::P2PService::Ptr p2pService();
+            service::P2PService* p2pService();
 
             // 持久化数据
             PersistentState::Ptr persistentState();
@@ -64,7 +64,7 @@ namespace csm
             std::int32_t m_maxElectionTimeout;
 
             // P2P模块
-            service::P2PService::Ptr m_p2pService;
+            service::P2PService* m_p2pService{nullptr};
 
             /*
              * Raft元数据

@@ -21,13 +21,15 @@ constexpr int c_nodeDistanceDetectInterval{10};
 // 时间转距离量化单位，毫秒
 constexpr int c_timeResolutionMs{200};
 
-DistanceVector::DistanceVector(utilities::Thread::Ptr thread) : m_thread(std::move(thread)) {}
+DistanceVector::DistanceVector(utilities::Thread::Ptr thread) : m_thread(std::move(thread))
+{
+}
 
 int DistanceVector::init()
 {
     const auto expression = [this]()
     {
-        // sendDistanceDetect();
+        sendDistanceDetect();
 
         if (true == m_needToSyncDistaceVector)
         {
@@ -52,13 +54,34 @@ void DistanceVector::stop()
     m_thread->stop();
 }
 
-void DistanceVector::addNeighbourNode(const NodeId& nodeId)
+void DistanceVector::setNeighbourNode(const NodeIds& nodeIds)
 {
     std::unique_lock<std::mutex> ulock(x_dvInfo);
-    m_dvInfos[nodeId] = std::make_shared<NodeInfo>();
+
+    std::ranges::for_each(nodeIds, [this](const NodeId& nodeId)
+    {
+        if (m_dvInfos.end() == m_dvInfos.find(nodeId))
+        {
+            m_dvInfos[nodeId] = std::make_shared<NodeInfo>();
+        }
+    });
+
+    std::ranges::for_each(m_dvInfos, [this, nodeIds](const auto& dvInfo)
+    {
+        if (nodeIds.end() == std::find(nodeIds.begin(), nodeIds.end(), dvInfo.first))
+        {
+            dvInfo.second->distance = c_unreachableDistance;
+        }
+    });
+
+    std::ranges::for_each(m_dvInfos, [this, nodeIds](const auto& dvInfo)
+    {
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "node id: ", dvInfo.first, ", distance: ", dvInfo.second->distance);
+    });
 }
 
-int DistanceVector::setNightbourUnreachable(const NodeId& nodeId){
+int DistanceVector::setNightbourUnreachable(const NodeId& nodeId)
+{
     std::unique_lock<std::mutex> ulock(x_dvInfo);
 
     auto iter = m_dvInfos.find(nodeId);
@@ -205,6 +228,11 @@ int DistanceVector::handleDistanceDetectReply(const NodeId& fromNodeId, const Pa
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "node not found in neighbour map");
         return -1;
     }
+
+    std::ranges::for_each(m_dvInfos, [](const auto& dvInfo)
+    {
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "node id: ", dvInfo.first, ", distance: ", dvInfo.second->distance);
+    });
 
     return 0;
 }

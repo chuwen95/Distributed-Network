@@ -3,6 +3,8 @@
 //
 
 #include "SessionAliveChecker.h"
+
+#include "P2PSession.h"
 #include "csm-utilities/Logger.h"
 
 using namespace csm::service;
@@ -15,26 +17,37 @@ int SessionAliveChecker::init()
 {
     const auto expression = [this]()
     {
-        std::vector<int> offlinefds;
+        std::vector<std::pair<SessionId, P2PSession::WPtr>> offlineSessions;
 
         {
-            std::unique_lock<std::mutex> ulock(x_sessionLastRecvTime);
+            std::unique_lock<std::mutex> ulock(x_sessions);
 
-            for (auto iter = m_sessionLastRecvTime.begin(); iter != m_sessionLastRecvTime.end(); ++iter)
+            for (auto iter = m_sessions.begin(); iter != m_sessions.end();)
             {
-                if (iter->second.first == iter->second.second)
+                P2PSession::Ptr p2pSession = iter->second.lock();
+                if (nullptr == p2pSession)
                 {
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session offline, fd: ", iter->first,
-                               ", last count: ", iter->second.first, ", current count: ", iter->second.second);
-                    offlinefds.emplace_back(iter->first);
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session may already been destoryed, session id: ", iter->first);
+                    iter = m_sessions.erase(iter);
+                    continue;
                 }
-                iter->second.first = iter->second.second;
+
+                if (true == p2pSession->isHeartbeatTimeout())
+                {
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session heartbeat timeout, session id: ", iter->first);
+                    offlineSessions.emplace_back(iter->first, iter->second);
+                    iter = m_sessions.erase(iter);
+                }
+                else
+                {
+                    ++iter;
+                }
             }
         }
 
         if (nullptr != m_timeoutHandler)
         {
-            m_timeoutHandler(offlinefds);
+            m_timeoutHandler(offlineSessions);
         }
     };
     m_thread = std::make_shared<utilities::Thread>();
@@ -59,60 +72,41 @@ int SessionAliveChecker::stop()
     return 0;
 }
 
-void SessionAliveChecker::setTimeoutHandler(std::function<void(const std::vector<int>&)> handler)
+void SessionAliveChecker::setTimeoutHandler(
+    std::function<void(const std::vector<std::pair<SessionId, P2PSession::WPtr>> &)> handler)
 {
     m_timeoutHandler = std::move(handler);
 }
 
-int SessionAliveChecker::addSession(const int fd)
+int SessionAliveChecker::addSession(const SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr)
 {
-    std::unique_lock<std::mutex> ulock(x_sessionLastRecvTime);
+    std::unique_lock<std::mutex> ulock(x_sessions);
 
-    auto iter = m_sessionLastRecvTime.find(fd);
-    if (m_sessionLastRecvTime.end() != iter)
+    if (m_sessions.end() != m_sessions.find(sessionId))
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session already exist, fd: ", fd);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session already exist, session id: ", sessionId);
         return -1;
     }
+    m_sessions.emplace(sessionId, std::move(p2pSessionWeakPtr));
 
-    m_sessionLastRecvTime.emplace(fd, std::make_pair(0, 1));
-
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add session successfully, fd: ", fd);
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add session successfully, session id: ", sessionId);
 
     return 0;
 }
 
-int SessionAliveChecker::removeSession(const int fd)
+int SessionAliveChecker::removeSession(const SessionId sessionId)
 {
-    std::unique_lock<std::mutex> ulock(x_sessionLastRecvTime);
+    std::unique_lock<std::mutex> ulock(x_sessions);
 
-    auto iter = m_sessionLastRecvTime.find(fd);
-    if (m_sessionLastRecvTime.end() == iter)
+    auto iter = m_sessions.find(sessionId);
+    if (m_sessions.end() == iter)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session not exist, fd: ", fd);
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session not exist, session id: ", sessionId);
         return -1;
     }
-    m_sessionLastRecvTime.erase(iter);
+    m_sessions.erase(iter);
 
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session remove successfully, fd: ", fd);
-
-    return 0;
-}
-
-int SessionAliveChecker::refreshSessionLastRecvTime(const int fd)
-{
-    std::unique_lock<std::mutex> ulock(x_sessionLastRecvTime);
-
-    auto iter = m_sessionLastRecvTime.find(fd);
-    if (m_sessionLastRecvTime.end() == iter)
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session not exist, fd: ", fd);
-        return -1;
-    }
-
-    iter->second.second = (iter->second.second + 1) % c_aliveCountCircle;
-    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "refresh session last recv time, fd: ", fd,
-               ", first: ", iter->second.first, ", second: ", iter->second.second);
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session remove successfully, session id: ", sessionId);
 
     return 0;
 }

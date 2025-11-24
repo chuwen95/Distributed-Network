@@ -4,6 +4,8 @@
 
 #include "SessionDestroyer.h"
 
+#include "csm-utilities/Logger.h"
+
 using namespace csm::service;
 
 int SessionDestroyer::init()
@@ -20,7 +22,8 @@ int SessionDestroyer::init()
         {
             if (nullptr != m_destoryHandler)
             {
-                std::pair<int, int> sessionInfo;
+                SessionDestoryInfo info;
+
                 {
                     std::unique_lock<std::mutex> ulock(x_waitingDestroySessionInfos);
 
@@ -29,14 +32,18 @@ int SessionDestroyer::init()
                         break;
                     }
 
-                    sessionInfo = m_waitingDestroySessionInfos.front();
+                    info = m_waitingDestroySessionInfos.front();
+
                     m_waitingDestroySessionInfos.pop();
                 }
 
-                m_destoryHandler(sessionInfo.first, sessionInfo.second);
+                m_destoryHandler(info);
             }
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(m_destroyInterval));
+            if (0 != m_destroyInterval)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(m_destroyInterval));
+            }
         }
     };
     m_thread = std::make_shared<utilities::Thread>();
@@ -62,27 +69,26 @@ int SessionDestroyer::stop()
     return 0;
 }
 
-int SessionDestroyer::addSession(const int fd, const int flag)
+void SessionDestroyer::addSession(const SessionDestoryInfo& session)
 {
     std::unique_lock<std::mutex> ulock(x_waitingDestroySessionInfos);
-    m_waitingDestroySessionInfos.emplace(fd, flag);
+
+    m_waitingDestroySessionInfos.push(session);
     m_waitingDestroySessionInfosCv.notify_all();
-
-    return 0;
 }
 
-int SessionDestroyer::addSessions(const std::vector<std::pair<int, int>>& sessionInfos)
+void SessionDestroyer::addSessions(const std::vector<SessionDestoryInfo>& infos)
 {
     std::unique_lock<std::mutex> ulock(x_waitingDestroySessionInfos);
-    for (const std::pair<int, int>& sessionInfo : sessionInfos)
-    {
-        m_waitingDestroySessionInfos.emplace(sessionInfo.first, sessionInfo.second);
-    }
 
-    return 0;
+    for (const SessionDestoryInfo& info : infos)
+    {
+        m_waitingDestroySessionInfos.emplace(info);
+    }
+    m_waitingDestroySessionInfosCv.notify_all();
 }
 
-void SessionDestroyer::setHandler(const std::function<int(const int, const int)> handler)
+void SessionDestroyer::setHandler(std::function<void(const SessionDestoryInfo& info)> handler)
 {
     m_destoryHandler = std::move(handler);
 }

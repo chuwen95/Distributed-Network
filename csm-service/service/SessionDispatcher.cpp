@@ -4,18 +4,14 @@
 
 #include "SessionDispatcher.h"
 
+#include <algorithm>
+
 using namespace csm::service;
 
-SessionDispatcher::SessionDispatcher(std::size_t redispatchInterval, const std::string& hostId, std::size_t slaveReactorSize)
-    : m_redispatchInterval(redispatchInterval), m_id(hostId), m_slaveReactorSize(slaveReactorSize)
+SessionDispatcher::SessionDispatcher(std::size_t slaveReactorSize) : m_slaveReactorSize(slaveReactorSize)
 {
-    for (std::size_t i = 0; i < m_slaveReactorSize; ++i)
-    {
-        m_slaveReactorFdSize.emplace_back(std::make_unique<std::atomic_uint32_t>());
-    }
+    std::fill_n(std::back_inserter(m_slaveReactorSessionSize), slaveReactorSize, 0);
 }
-
-SessionDispatcher::~SessionDispatcher() {}
 
 int SessionDispatcher::init()
 {
@@ -34,32 +30,15 @@ int SessionDispatcher::init()
             return;
         }
 
+        auto iter = std::ranges::min_element(m_slaveReactorSessionSize.begin(), m_slaveReactorSessionSize.end());
         {
             // 记录客户端fd所在的SlaveRactor
-            std::unique_lock<std::mutex> ulock(x_fdSlaveReactorIndex);
-            m_fdSlaveReactorIndex[sessionInfo->fd] = m_slaveReactorIndexWhichHasLeastFd;
+            std::unique_lock<std::mutex> ulock(x_sessionIdSlaveReactorIndex);
+            m_sessionIdSlaveReactorIndex[sessionInfo->p2pSession->sessionId()] = *iter;
         }
 
-        sessionInfo->callback(m_slaveReactorIndexWhichHasLeastFd);
-
-        // 一定间隔后刷新拥有最少数量的SlaveReactor
-        static std::size_t s_refreshTime{0};
-
-        ++s_refreshTime;
-        if (0 == s_refreshTime % m_redispatchInterval)
-        {
-            // 寻找管理最少client fd的SlaveReactor的index
-            std::size_t maxSize = std::numeric_limits<std::size_t>::max();
-            for (std::size_t i = 0; i < m_slaveReactorSize; ++i)
-            {
-                if (maxSize > *(m_slaveReactorFdSize[i]))
-                {
-                    maxSize = *(m_slaveReactorFdSize[i]);
-                    m_slaveReactorIndexWhichHasLeastFd = i;
-                }
-            }
-            s_refreshTime = 0;
-        }
+        sessionInfo->callback(*iter);
+        ++m_slaveReactorSessionSize[*iter];
     };
     m_thread = std::make_shared<utilities::Thread>();
     m_thread->setFunc(expression);
@@ -85,34 +64,35 @@ int SessionDispatcher::stop()
     return 0;
 }
 
-int SessionDispatcher::addSession(const int fd, std::function<void(const std::size_t slaveReactorIndex)> callback)
+int SessionDispatcher::addSession(P2PSession::Ptr p2pSession, std::function<void(std::size_t slaveReactorIndex)> callback)
 {
-    m_p2pSessionsQueue.try_emplace(std::make_shared<SessionInfo>(fd, callback));
+    m_p2pSessionsQueue.try_emplace(std::make_shared<SessionInfo>(p2pSession, std::move(callback)));
 
     return 0;
 }
 
-int SessionDispatcher::removeFdSlaveReactorRelation(const int fd)
+int SessionDispatcher::removeSessionIdSlaveReactorRelation(const SessionId sessionId)
 {
-    std::unique_lock<std::mutex> ulock(x_fdSlaveReactorIndex);
+    std::unique_lock<std::mutex> ulock(x_sessionIdSlaveReactorIndex);
 
-    auto iter = m_fdSlaveReactorIndex.find(fd);
-    if (m_fdSlaveReactorIndex.end() == iter)
+    auto iter = m_sessionIdSlaveReactorIndex.find(sessionId);
+    if (m_sessionIdSlaveReactorIndex.end() == iter)
     {
         return -1;
     }
 
-    m_fdSlaveReactorIndex.erase(fd);
+    // 移除关联关系
+    m_sessionIdSlaveReactorIndex.erase(sessionId);
 
     return 0;
 }
 
-int SessionDispatcher::getSlaveReactorIndexByFd(const int fd)
+int SessionDispatcher::getSlaveReactorIndexBySessionId(const SessionId sessionId)
 {
-    std::unique_lock<std::mutex> ulock(x_fdSlaveReactorIndex);
+    std::unique_lock<std::mutex> ulock(x_sessionIdSlaveReactorIndex);
 
-    auto iter = m_fdSlaveReactorIndex.find(fd);
-    if (m_fdSlaveReactorIndex.end() == iter)
+    auto iter = m_sessionIdSlaveReactorIndex.find(sessionId);
+    if (m_sessionIdSlaveReactorIndex.end() == iter)
     {
         return -1;
     }

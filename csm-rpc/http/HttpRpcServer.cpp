@@ -9,14 +9,15 @@
 
 using namespace csm::rpc;
 
-HttpRpcServer::HttpRpcServer(RpcConfig::Ptr rpcConfig) : RpcServer(std::move(rpcConfig))
+HttpRpcServer::HttpRpcServer(tool::NodeConfig* nodeConfig, std::unique_ptr<httplib::Server> httpServer,
+                             service::P2PService* p2pService) :
+    m_nodeConfig(nodeConfig), m_httpServer(std::move(httpServer)), m_p2pService(p2pService)
 {
-    m_httpServer = std::make_shared<httplib::Server>();
 }
 
 int HttpRpcServer::init()
 {
-    m_httpServer->Post("/boardcastRawString", [this](const httplib::Request &req, httplib::Response &res) {
+    m_httpServer->Post("/boardcastRawString", [this](const httplib::Request& req, httplib::Response& res) {
         // LOG->write(utilities::LogType::Log_Info, FILE_INFO, "recv raw string: : ", req.body);
 
         packetprocess::PacketRawString packetRawString;
@@ -25,7 +26,7 @@ int HttpRpcServer::init()
         std::vector<char> data(packetRawString.packetLength());
         packetRawString.encode(data.data(), data.size());
 
-        m_rpcConfig->p2pService()->boardcastModuleMessage(protocol::ModuleID::rpc, data);
+        m_p2pService->boardcastModuleMessage(protocol::ModuleID::rpc, data);
     });
 
     return 0;
@@ -34,7 +35,7 @@ int HttpRpcServer::init()
 int HttpRpcServer::start()
 {
     std::thread([this]() {
-        m_httpServer->listen(m_rpcConfig->nodeConfig()->httpRpcIp(), m_rpcConfig->nodeConfig()->httpRpcPort());
+        m_httpServer->listen(m_nodeConfig->httpRpcIp(), m_nodeConfig->httpRpcPort());
     }).detach();
 
     return 0;

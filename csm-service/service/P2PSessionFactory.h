@@ -16,7 +16,10 @@ namespace csm
         class P2PSessionFactory
         {
         public:
-            P2PSession::Ptr create(const int fd, const std::size_t readBufferSize, const std::size_t writeBufferSize);
+            P2PSession::Ptr create(int fd, std::size_t readBufferSize, std::size_t writeBufferSize);
+
+        private:
+            std::atomic_uint64_t m_sessionId{1};
         };
 
     } // namespace service

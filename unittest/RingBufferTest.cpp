@@ -514,21 +514,21 @@ int main(int argc, char* argv[])
         std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << "putOnePacketTest failed" << std::endl;
         return -1;
     }
-    std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " putOnePacketTest successfully" << std::endl;
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " putOnePacketTest successfully" << std::endl;
 
     if(-1 == fullBufferTest())
     {
         std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " fullBufferTest failed" << std::endl;
         return -1;
     }
-    std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " fullBufferTest successfully" << std::endl;
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " fullBufferTest successfully" << std::endl;
 
     if(-1 == fullBufferUseWriteDataTest())
     {
         std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " fullBufferUseWriteDataTest failed" << std::endl;
         return -1;
     }
-    std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " fullBufferUseWriteDataTest successfully" << std::endl;
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " fullBufferUseWriteDataTest successfully" << std::endl;
 
     std::cout << "no error" << std::endl;
 

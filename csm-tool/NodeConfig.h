@@ -20,18 +20,17 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<NodeConfig>;
 
-            NodeConfig() = default;
-            ~NodeConfig() = default;
+            explicit NodeConfig(std::string configFile);
 
         public:
-            int init(const std::string &configFile);
+            int init();
 
         public:
             std::string configFile() const;
 
             // [cluster]
             // 本节点的id
-            NodeId id() const;
+            NodeId nodeId() const;
             // 集群中所有的服务器id
             const NodeIds& clusterServerIds() const;
 
@@ -97,12 +96,12 @@ namespace csm
             std::string m_configDir;
 
             // [info]
-            NodeId m_id;
+            NodeId m_nodeId;
             NodeIds m_clusterServerIds;
 
             // [raft]
-            std::uint32_t m_minRandomVoteTimeout;
-            std::uint32_t m_maxRandomVoteTimeout;
+            std::uint32_t m_minRandomVoteTimeout{150};
+            std::uint32_t m_maxRandomVoteTimeout{300};
 
             // [rpc]
             std::string m_httpRpcIp{ "127.0.0.1" };

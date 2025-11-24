@@ -6,10 +6,10 @@
 
 using namespace csm::consensus;
 
-RaftConfig::RaftConfig(const NodeId &nodeId, std::int32_t minElectionTimeout, std::int32_t maxElectionTimeout, service::P2PService::Ptr p2pService,
+RaftConfig::RaftConfig(const NodeId &nodeId, std::int32_t minElectionTimeout, std::int32_t maxElectionTimeout, service::P2PService* p2pService,
     PersistentState::Ptr persistentState, VolatileState::Ptr volatileState, LeaderState::Ptr leaderState,
     ClusterConfigurationManager::Ptr clusterConfigurationManager, stmclog::StateMachineLog::Ptr stateMachineLog) :
-    m_nodeId(nodeId), m_minElectionTimeout(minElectionTimeout), m_maxElectionTimeout(maxElectionTimeout), m_p2pService(std::move(p2pService)),
+    m_nodeId(nodeId), m_minElectionTimeout(minElectionTimeout), m_maxElectionTimeout(maxElectionTimeout), m_p2pService(p2pService),
     m_persistentState(std::move(persistentState)), m_volatileState(std::move(volatileState)), m_leaderState(std::move(leaderState)),
     m_clusterConfigurationManager(std::move(clusterConfigurationManager)), m_stateMachineLog(std::move(stateMachineLog))
 { }
@@ -29,7 +29,7 @@ std::int32_t RaftConfig::maxElectionTimeout()
     return m_maxElectionTimeout;
 }
 
-csm::service::P2PService::Ptr RaftConfig::p2pService()
+csm::service::P2PService* RaftConfig::p2pService()
 {
     return m_p2pService;
 }

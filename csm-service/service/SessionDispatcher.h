@@ -28,8 +28,8 @@ namespace csm
              * @param slaveReactors     要管理的子Reactor
              * @return
              */
-            SessionDispatcher(std::size_t redispatchInterval, const std::string& id, std::size_t slaveReactorSize);
-            ~SessionDispatcher();
+            explicit SessionDispatcher(std::size_t slaveReactorSize);
+            ~SessionDispatcher() = default;
 
         public:
             int init();
@@ -38,40 +38,34 @@ namespace csm
 
             int stop();
 
-            int addSession(const int fd, std::function<void(const std::size_t slaveReactorIndex)> callback);
+            int addSession(P2PSession::Ptr p2pSession, std::function<void(std::size_t slaveReactorIndex)> callback);
 
-            int removeFdSlaveReactorRelation(const int fd);
+            int removeSessionIdSlaveReactorRelation(SessionId sessionId);
 
-            int getSlaveReactorIndexByFd(const int fd);
+            int getSlaveReactorIndexBySessionId(SessionId sessionId);
 
         private:
-            std::size_t m_redispatchInterval;
-            std::string m_id;
             std::size_t m_slaveReactorSize;
+            std::vector<std::size_t> m_slaveReactorSessionSize;
 
             // 新上线的客户端队列，等待分发到各个SlaveReactor
             struct SessionInfo
             {
                 using Ptr = std::shared_ptr<SessionInfo>;
 
-                SessionInfo(const int f, std::function<void(const std::size_t slaveReactorIndex)> c)
-                    : fd(f), callback(std::move(c))
+                SessionInfo(P2PSession::Ptr p, std::function<void(const std::size_t slaveReactorIndex)> c)
+                    : p2pSession(std::move(p)), callback(std::move(c))
                 {
                 }
 
-                int fd;
-                std::function<void(const std::size_t slaveReactorIndex)> callback;
+                P2PSession::Ptr p2pSession;
+                std::function<void(std::size_t slaveReactorIndex)> callback;
             };
             moodycamel::BlockingReaderWriterQueue<SessionInfo::Ptr> m_p2pSessionsQueue;
 
-            // 当前管理最少fd的SlaveReactor index（非实时刷新）
-            std::size_t m_slaveReactorIndexWhichHasLeastFd{0};
-            // 每个SlaveReactor管理的fd数量
-            std::vector<std::unique_ptr<std::atomic_uint32_t>> m_slaveReactorFdSize;
-
-            // clientfd是谁那个SlaveReactor管理的，clientfd=>SlaveReactor index
-            std::mutex x_fdSlaveReactorIndex;
-            std::unordered_map<int, std::size_t> m_fdSlaveReactorIndex;
+            // sessionId是谁那个SlaveReactor管理的，sessionId=>SlaveReactor index
+            std::mutex x_sessionIdSlaveReactorIndex;
+            std::unordered_map<SessionId, std::size_t> m_sessionIdSlaveReactorIndex;
 
             std::atomic_bool m_isTerminate{false};
             utilities::Thread::Ptr m_thread;

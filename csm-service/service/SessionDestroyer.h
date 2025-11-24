@@ -7,6 +7,7 @@
 
 #include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
+#include "P2PSession.h"
 
 namespace csm
 {
@@ -14,13 +15,25 @@ namespace csm
     namespace service
     {
 
+        struct SessionDestoryInfo
+        {
+            SessionDestoryInfo() = default;
+
+            explicit SessionDestoryInfo(SessionId s, P2PSession::WPtr p, int f = 0, bool i = false) :
+                sessionId(s), p2pSessionWeakPtr(p), flag(f), isFromAliveChecker(i)
+            {
+            }
+
+            SessionId sessionId;
+            P2PSession::WPtr p2pSessionWeakPtr;
+            int flag;
+            bool isFromAliveChecker;
+        };
+
         class SessionDestroyer
         {
         public:
             using Ptr = std::shared_ptr<SessionDestroyer>;
-
-            SessionDestroyer() = default;
-            ~SessionDestroyer() = default;
 
         public:
             int init();
@@ -29,21 +42,22 @@ namespace csm
 
             int stop();
 
-            void setHandler(const std::function<int(const int fd, const int flag)> handler);
+            void setHandler(std::function<void(const SessionDestoryInfo& info)> handler);
 
-            int addSession(const int fd, const int flag = 0);
+            void addSession(const SessionDestoryInfo& session);
 
-            int addSessions(const std::vector<std::pair<int, int>>& clients);
+            void addSessions(const std::vector<SessionDestoryInfo>& sessions);
 
         private:
-            std::function<int(const int fd, const int flag)> m_destoryHandler;
+            std::function<void(const SessionDestoryInfo& info)> m_destoryHandler;
 
-            std::atomic_int m_destroyInterval{5};
+            std::atomic_int m_destroyInterval{1};
             utilities::Thread::Ptr m_thread;
 
             std::mutex x_waitingDestroySessionInfos;
             std::condition_variable m_waitingDestroySessionInfosCv;
-            std::queue<std::pair<int, int>> m_waitingDestroySessionInfos;
+
+            std::queue<SessionDestoryInfo> m_waitingDestroySessionInfos;
         };
 
     } // namespace service

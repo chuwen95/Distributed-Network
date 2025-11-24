@@ -13,6 +13,10 @@
 
 using namespace csm::service;
 
+Acceptor::Acceptor(std::shared_ptr<P2PSessionFactory> p2pSessionFactory) : m_p2pSessionFactory(std::move(p2pSessionFactory))
+{
+}
+
 int Acceptor::init(const int fd)
 {
     const auto expression = [this, listenfd = fd]()
@@ -57,15 +61,18 @@ int Acceptor::init(const int fd)
                 LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "set socket recv buffer size to ",
                            utilities::Socket::c_defaultSocketRecvBufferSize, " successfully, fd: ", clientfd);
 
-                P2PSession::Ptr p2pSession =
-                    P2PSessionFactory().create(clientfd, c_p2pSessionReadBufferSize, c_p2pSessionWriteBufferSize);
+                P2PSession::Ptr p2pSession = m_p2pSessionFactory->create(clientfd, c_p2pSessionReadBufferSize,
+                                                                         c_p2pSessionWriteBufferSize);
                 p2pSession->init();
-                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "create P2PSession successfully, fd: ", clientfd);
+                LOG->write(utilities::LogType::Log_Info, FILE_INFO, "create P2PSession successfully, fd: ", clientfd,
+                           ", session id: ", p2pSession->sessionId());
 
                 if (nullptr != m_newClientCallback)
                 {
-                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send P2PSession to SessionDispatcher, fd: ", clientfd);
-                    m_newClientCallback(clientfd, p2pSession);
+                    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send P2PSession to SessionDispatcher, fd: ", clientfd,
+                               ", session id: ",
+                               p2pSession->sessionId());
+                    m_newClientCallback(p2pSession);
                 }
             }
         } while (-1 != clientfd);
@@ -101,7 +108,7 @@ int Acceptor::onConnect()
     return 0;
 }
 
-void Acceptor::setNewClientCallback(std::function<void(int, P2PSession::Ptr)> newClientCallback)
+void Acceptor::setNewClientCallback(std::function<void(P2PSession::Ptr p2pSession)> newClientCallback)
 {
-    m_newClientCallback = newClientCallback;
+    m_newClientCallback = std::move(newClientCallback);
 }

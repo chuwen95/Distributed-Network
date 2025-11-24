@@ -19,7 +19,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<AppLogInitializer>;
 
-            AppLogInitializer(tool::NodeConfig::Ptr nodeConfig);
+            AppLogInitializer(tool::NodeConfig* nodeConfig);
             ~AppLogInitializer() = default;
 
         public:
@@ -30,7 +30,7 @@ namespace csm
             int stop();
 
         private:
-            tool::NodeConfig::Ptr m_nodeConfig;
+            tool::NodeConfig* m_nodeConfig;
         };
 
     } // initializer

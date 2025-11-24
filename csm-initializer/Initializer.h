@@ -24,12 +24,9 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<Initializer>;
 
-            Initializer() = default;
-            ~Initializer() = default;
+            explicit Initializer(std::string configPath);
 
         public:
-            int initConfig(const std::string &configPath);
-
             int init();
 
             int start();
@@ -40,13 +37,14 @@ namespace csm
             int initP2PServiceModuleMessageHandler();
 
         private:
-            tool::NodeConfig::Ptr m_nodeConfig;
+            std::string m_configPath;
+            std::unique_ptr<tool::NodeConfig> m_nodeConfig;
 
-            StorageInitializer::Ptr m_storageInitializer;
-            AppLogInitializer::Ptr m_logInitializer;
-            P2PServiceInitializer::Ptr m_p2pServiceInitializer;
-            RpcInitializer::Ptr m_rpcInitializer;
-            ConsensusInitializer::Ptr m_consensusInitializer;
+            std::unique_ptr<StorageInitializer> m_storageInitializer;
+            std::unique_ptr<AppLogInitializer> m_logInitializer;
+            std::unique_ptr<P2PServiceInitializer> m_p2pServiceInitializer;
+            std::unique_ptr<RpcInitializer> m_rpcInitializer;
+            std::unique_ptr<ConsensusInitializer> m_consensusInitializer;
         };
 
     } // initializer

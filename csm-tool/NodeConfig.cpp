@@ -13,10 +13,12 @@ using namespace csm::tool;
 
 constexpr std::uint32_t c_maxClusterServerNum{ 9999 };
 
-int NodeConfig::init(const std::string &configFile)
+NodeConfig::NodeConfig(std::string configFile) : m_configFile(std::move(configFile))
 {
-    m_configFile = configFile;
+}
 
+int NodeConfig::init()
+{
     inipp::Ini<char> ini;
     std::ifstream file(m_configFile);
     if(false == file.is_open())
@@ -45,9 +47,9 @@ std::string NodeConfig::configFile() const
     return m_configFile;
 }
 
-csm::NodeId NodeConfig::id() const
+csm::NodeId NodeConfig::nodeId() const
 {
-    return m_id;
+    return m_nodeId;
 }
 
 const csm::NodeIds& NodeConfig::clusterServerIds() const
@@ -186,7 +188,7 @@ T getValue(inipp::Ini<char>& ini, const std::string&sectionName, const std::stri
 int NodeConfig::parseClusterConfig(inipp::Ini<char> &ini)
 {
     // 本节点ID
-    m_id = getValue(ini, "cluster", "id", m_id);
+    m_nodeId = getValue(ini, "cluster", "id", m_nodeId);
 
     // 集群中所有服务器ID
     std::string servers = getValue(ini, "cluster", "servers", std::string());

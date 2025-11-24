@@ -9,10 +9,8 @@
 
 using namespace csm::service;
 
-SessionDataDecoder::SessionDataDecoder(P2PSessionManager::Ptr p2pSessionManager, PayloadFactory::Ptr payloadFactory,
-                                       utilities::ThreadPool::Ptr decodeWorkers)
-    : m_p2pSessionManager(std::move(p2pSessionManager)), m_payloadFactory(std::move(payloadFactory)),
-      m_decodeWorkers(std::move(decodeWorkers))
+SessionDataDecoder::SessionDataDecoder(PayloadFactory::Ptr payloadFactory, utilities::ThreadPool::Ptr decodeWorkers)
+    : m_payloadFactory(std::move(payloadFactory)), m_decodeWorkers(std::move(decodeWorkers))
 {
 }
 
@@ -43,17 +41,17 @@ int SessionDataDecoder::stop()
     return m_decodeWorkers->stop();
 }
 
-int SessionDataDecoder::addSessionData(const int fd, const char* data, const std::size_t dataLen)
+void SessionDataDecoder::addSessionData(const SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, const char* data, const std::size_t dataLen)
 {
     std::shared_ptr<std::vector<char>> buffer = std::make_shared<std::vector<char>>(data, data + dataLen);
     memcpy(buffer->data(), data, dataLen);
 
-    const auto decode = [this, fd, captureBuffer = std::move(buffer)]()
+    const auto decode = [this, sessionId, captureSession = std::move(p2pSessionWeakPtr), captureBuffer = std::move(buffer)]()
     {
-        P2PSession::Ptr p2pSession = m_p2pSessionManager->session(fd);
+        P2PSession::Ptr p2pSession = captureSession.lock();
         if (nullptr == p2pSession)
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find P2PSession failed, fd: ", fd);
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session may disconnected and destoryed, session id: ", sessionId);
             return;
         }
 
@@ -66,9 +64,9 @@ int SessionDataDecoder::addSessionData(const int fd, const char* data, const std
 
         // 将数据写入到缓冲区尾部
         utilities::RingBuffer::Ptr& readBuffer = p2pSession->readBuffer();
-        if (-1 == writeDataToP2PSessionReadBuffer(fd, readBuffer, captureBuffer))
+        if (-1 == writeDataToP2PSessionReadBuffer(p2pSession->sessionId(), readBuffer, captureBuffer))
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "write data to buffer failed, fd: ", fd,
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "write data to buffer failed, session id: ", p2pSession->sessionId(),
                        ", data size: ", captureBuffer->size());
             return;
         }
@@ -95,24 +93,22 @@ int SessionDataDecoder::addSessionData(const int fd, const char* data, const std
 
             if (nullptr != m_packetHandler)
             {
-                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "received packet from fd: ", fd,
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "received packet from fd: ", p2pSession->fd(),
                            ", packet type: ", header->type());
-                m_packetHandler(fd, header, payload);
+                m_packetHandler(p2pSession->sessionId(), captureSession, header, payload);
             }
         }
     };
     m_decodeWorkers->push(decode);
-
-    return 0;
 }
 
 void SessionDataDecoder::setPacketHandler(
-    std::function<int(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler)
+    std::function<void(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler)
 {
     m_packetHandler = std::move(handler);
 }
 
-int SessionDataDecoder::writeDataToP2PSessionReadBuffer(const int fd, const utilities::RingBuffer::Ptr& readBuffer,
+int SessionDataDecoder::writeDataToP2PSessionReadBuffer(SessionId sessionId, const utilities::RingBuffer::Ptr& readBuffer,
                                                         const std::shared_ptr<std::vector<char>>& buffer)
 {
     int ret = readBuffer->writeData(buffer->data(), buffer->size());
@@ -126,7 +122,7 @@ int SessionDataDecoder::writeDataToP2PSessionReadBuffer(const int fd, const util
     if (-1 == ret)
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "increaseUsedSpace failed, space: ", readBuffer->space(),
-                   ", data len: ", buffer->size(), ", fd: ", fd);
+                   ", data len: ", buffer->size(), ", sessionId: ", sessionId);
         assert(-1 != ret);
     }
 

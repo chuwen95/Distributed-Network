@@ -5,10 +5,10 @@
 #ifndef COPYSTATEMACHINE_SESSIONDATAPROCESSOR_H
 #define COPYSTATEMACHINE_SESSIONDATAPROCESSOR_H
 
-#include "P2PSessionManager.h"
 #include "csm-common/Common.h"
 #include "csm-service/protocol/header/PacketHeader.h"
 #include "csm-service/protocol/payload/PayloadFactory.h"
+#include "P2PSession.h"
 #include "csm-utilities/ThreadPool.h"
 
 namespace csm
@@ -22,9 +22,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<SessionModuleDataProcessor>;
 
-            SessionModuleDataProcessor(P2PSessionManager::Ptr p2pSessionManager,
-                                       utilities::ThreadPool::Ptr normalPacketProcessor);
-            ~SessionModuleDataProcessor() = default;
+            explicit SessionModuleDataProcessor(utilities::ThreadPool::Ptr normalPacketProcessor);
 
         public:
             int init();
@@ -33,7 +31,8 @@ namespace csm
 
             int stop();
 
-            void addPacket(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload);
+            void addPacket(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, PacketHeader::Ptr header,
+                           PayloadBase::Ptr payload);
 
             /**
              * @brief 注册包处理回调
@@ -41,17 +40,14 @@ namespace csm
              * @param handler
              */
             void registerPacketHandler(PacketType packetType,
-                                       std::function<int(const int fd, PacketHeader::Ptr, PayloadBase::Ptr packet)> handler);
+                                       std::function<void(SessionId, P2PSession::WPtr p2pSessionWeakPtr, PacketHeader::Ptr,
+                                                          PayloadBase::Ptr)> handler);
 
         private:
-            int processPackets(int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload);
-
-        private:
-            P2PSessionManager::Ptr m_p2pSessionManager;
             utilities::ThreadPool::Ptr m_normalPacketProcessor;
 
-            std::unordered_map<PacketType, std::function<int(const int fd, PacketHeader::Ptr, PayloadBase::Ptr packet)>>
-                m_packetHandler;
+            std::unordered_map<PacketType, std::function<void(SessionId, P2PSession::WPtr, PacketHeader::Ptr,
+                                                              PayloadBase::Ptr)>> m_packetHandler;
         };
 
     } // namespace service

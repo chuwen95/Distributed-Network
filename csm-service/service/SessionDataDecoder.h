@@ -11,7 +11,7 @@
 #include "csm-service/protocol/header/PacketHeader.h"
 #include "csm-service/protocol/payload/PayloadBase.h"
 #include "csm-service/protocol/payload/PayloadFactory.h"
-#include "csm-service/service/P2PSessionManager.h"
+#include "csm-service/service/P2PSession.h"
 #include "csm-utilities/ThreadPool.h"
 
 namespace csm
@@ -25,8 +25,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<SessionDataDecoder>;
 
-            SessionDataDecoder(P2PSessionManager::Ptr p2pSessionManager, PayloadFactory::Ptr factory,
-                               utilities::ThreadPool::Ptr decodeWorkers);
+            explicit SessionDataDecoder(PayloadFactory::Ptr factory, utilities::ThreadPool::Ptr decodeWorkers);
             ~SessionDataDecoder() = default;
 
         public:
@@ -41,11 +40,11 @@ namespace csm
             /**
              * @brief 添加recv到的数据到P2PSession中的大接收缓冲区中
              *
-             * @param fd
+             * @param sessionId
              * @param data
              * @return
              */
-            int addSessionData(const int fd, const char* data, const std::size_t dataLen);
+            void addSessionData(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, const char* data, std::size_t dataLen);
 
             /**
              * @brief 设置包处理回调
@@ -53,29 +52,28 @@ namespace csm
              * @param handler
              * @return
              */
-            void setPacketHandler(std::function<int(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler);
+            void setPacketHandler(
+                std::function<void(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler);
 
         private:
-            int writeDataToP2PSessionReadBuffer(const int fd, const utilities::RingBuffer::Ptr& readBuffer,
+            int writeDataToP2PSessionReadBuffer(SessionId sessionId, const utilities::RingBuffer::Ptr& readBuffer,
                                                 const std::shared_ptr<std::vector<char>>& buffer);
 
             PacketHeader::Ptr decodePacketHeader(const utilities::RingBuffer::Ptr& readBuffer);
             PayloadBase::Ptr decodePacketPayload(const PacketHeader::Ptr& header, const utilities::RingBuffer::Ptr& readBuffer);
 
         private:
-            P2PSessionManager::Ptr m_p2pSessionManager;
             PayloadFactory::Ptr m_payloadFactory;
 
             std::atomic_bool m_running{false};
             utilities::ThreadPool::Ptr m_decodeWorkers;
 
-            std::function<int(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> m_packetHandler;
+            std::function<void(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, PacketHeader::Ptr header, PayloadBase::Ptr payload)> m_packetHandler;
         };
 
     }
 
 }
-
 
 
 #endif //SESSIONDATADECODER_H

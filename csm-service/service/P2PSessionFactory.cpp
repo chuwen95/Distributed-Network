@@ -5,6 +5,7 @@
 #include "P2PSessionFactory.h"
 
 #include "csm-utilities/RingBuffer.h"
+#include "csm-utilities/UUIDTool.h"
 
 using namespace csm::service;
 
@@ -15,5 +16,8 @@ P2PSession::Ptr P2PSessionFactory::create(const int fd, const std::size_t readBu
     utilities::RingBuffer::Ptr writeBuffer = std::make_shared<utilities::RingBuffer>(writeBufferSize);
     writeBuffer->init();
 
-    return std::make_shared<P2PSession>(fd, readBuffer, writeBuffer);
+    P2PSession::Ptr p2pSession = std::make_shared<P2PSession>(fd, m_sessionId, readBuffer, writeBuffer);
+    ++m_sessionId;
+
+    return p2pSession;
 }

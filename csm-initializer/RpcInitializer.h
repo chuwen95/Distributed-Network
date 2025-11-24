@@ -5,7 +5,9 @@
 #ifndef TCPNETWORK_RPCINITIALIZER_H
 #define TCPNETWORK_RPCINITIALIZER_H
 
-#include "csm-rpc/RpcFactory.h"
+#include "csm-tool/NodeConfig.h"
+#include "csm-service/service/P2PService.h"
+#include "csm-rpc/framework/RpcServer.h"
 
 namespace csm
 {
@@ -16,9 +18,7 @@ namespace csm
         class RpcInitializer
         {
         public:
-            using Ptr = std::shared_ptr<RpcInitializer>;
-
-            RpcInitializer(tool::NodeConfig::Ptr nodeConfig, service::P2PService::Ptr tcpService);
+            explicit RpcInitializer(tool::NodeConfig* nodeConfig, service::P2PService* p2pService);
             ~RpcInitializer() = default;
 
         public:
@@ -28,12 +28,12 @@ namespace csm
 
             int stop();
 
-            rpc::RpcServer::Ptr httpRpcServer();
-            rpc::RpcServer::Ptr tcpRpcServer();
+            rpc::RpcServer* httpRpcServer();
+            rpc::RpcServer* tcpRpcServer();
 
         private:
-            rpc::RpcServer::Ptr m_httpRpcServer;
-            rpc::RpcServer::Ptr m_tcpRpcServer;
+            std::unique_ptr<rpc::RpcServer> m_httpRpcServer;
+            std::unique_ptr<rpc::RpcServer> m_tcpRpcServer;
         };
 
     } // initializer

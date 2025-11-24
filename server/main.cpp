@@ -30,11 +30,7 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    csm::initializer::Initializer initializer;
-    if(-1 == initializer.initConfig(argv[1]))
-    {
-        return -1;
-    }
+    csm::initializer::Initializer initializer(argv[1]);
     if(-1 == initializer.init())
     {
         return -1;

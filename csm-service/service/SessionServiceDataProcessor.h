@@ -7,10 +7,11 @@
 
 #include "csm-common/Common.h"
 
-#include <concurrentqueue/blockingconcurrentqueue.h>
+#include "concurrentqueue/moodycamel/blockingconcurrentqueue.h"
 
 #include "csm-service/protocol/header/PacketHeader.h"
 #include "csm-service/protocol/payload/PayloadBase.h"
+#include "P2PSession.h"
 #include "csm-utilities/Thread.h"
 
 namespace csm
@@ -23,8 +24,7 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<SessionServiceDataProcessor>;
 
-            SessionServiceDataProcessor(utilities::Thread::Ptr thread);
-            ~SessionServiceDataProcessor() = default;
+            explicit SessionServiceDataProcessor(utilities::Thread::Ptr thread);
 
         public:
             int init();
@@ -35,30 +35,34 @@ namespace csm
             // 不考虑该方法被多线程调用
             int stop();
 
-            int addPacket(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload);
+            int addPacket(SessionId sessionId, P2PSession::WPtr p2pSession, PacketHeader::Ptr header, PayloadBase::Ptr payload);
 
-            void registerPacketHandler(const PacketType packetType,
-                                       std::function<int(int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler);
+            void registerPacketHandler(PacketType packetType,
+                                       std::function<void(SessionId sessionId, P2PSession::WPtr p2pSession,
+                                                          PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler);
 
         private:
             struct SessionServiceData
             {
-                SessionServiceData() = default;
-                SessionServiceData(const int f, PacketHeader::Ptr h, PayloadBase::Ptr p)
-                    : fd(f), header(std::move(h)), payload(std::move(p))
+                using Ptr = std::shared_ptr<SessionServiceData>;
+
+                explicit SessionServiceData(SessionId si, P2PSession::WPtr ps, PacketHeader::Ptr ph, PayloadBase::Ptr pb)
+                    : sessionId(si), p2pSessionWeakPtr(std::move(ps)), header(std::move(ph)), payload(std::move(pb))
                 {
                 }
 
-                int fd;
+                SessionId sessionId;
+                P2PSession::WPtr p2pSessionWeakPtr;
                 PacketHeader::Ptr header;
                 PayloadBase::Ptr payload;
             };
-            moodycamel::BlockingConcurrentQueue<SessionServiceData> m_sessionServiceDatas;
+
+            moodycamel::BlockingConcurrentQueue<SessionServiceData::Ptr> m_sessionServiceDatas;
 
             std::atomic_bool m_running{false};
 
-            std::unordered_map<PacketType, std::function<int(int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)>>
-                m_packetHandlers;
+            std::unordered_map<PacketType, std::function<void(SessionId, P2PSession::WPtr, PacketHeader::Ptr, PayloadBase::Ptr)>>
+            m_packetHandlers;
             utilities::Thread::Ptr m_thread;
         };
 

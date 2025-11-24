@@ -8,17 +8,21 @@
 
 using namespace csm::service;
 
-SessionServiceDataProcessor::SessionServiceDataProcessor(utilities::Thread::Ptr thread) : m_thread(std::move(thread)) {}
+SessionServiceDataProcessor::SessionServiceDataProcessor(utilities::Thread::Ptr thread) : m_thread(std::move(thread))
+{
+}
 
 int SessionServiceDataProcessor::init()
 {
     const auto serviceDataProcess = [this]()
     {
-        SessionServiceData sessionServiceData;
-        if (false == m_sessionServiceDatas.wait_dequeue_timed(sessionServiceData, 100000))
+        if (false == m_running)
         {
             return;
         }
+
+        SessionServiceData::Ptr sessionServiceData;
+        m_sessionServiceDatas.wait_dequeue(sessionServiceData);
 
         if (false == m_running)
         {
@@ -26,20 +30,19 @@ int SessionServiceDataProcessor::init()
         }
 
         LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
-                   "packet type: ", static_cast<int>(sessionServiceData.header->type()), ", fd: ", sessionServiceData.fd);
-        auto iter = m_packetHandlers.find(sessionServiceData.header->type());
+                   "packet type: ", static_cast<int>(sessionServiceData->header->type()), ", session id: ",
+                   sessionServiceData->sessionId);
+
+        auto iter = m_packetHandlers.find(sessionServiceData->header->type());
         if (m_packetHandlers.end() != iter)
         {
-            if (0 != iter->second(sessionServiceData.fd, sessionServiceData.header, sessionServiceData.payload))
-            {
-                LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                           "process packet failed, type: ", static_cast<int>(sessionServiceData.header->type()));
-            }
+            iter->second(sessionServiceData->sessionId, sessionServiceData->p2pSessionWeakPtr, sessionServiceData->header,
+                         sessionServiceData->payload);
         }
         else
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                       "packet handler not register, type: ", static_cast<int>(sessionServiceData.header->type()));
+                       "packet handler not register, type: ", static_cast<int>(sessionServiceData->header->type()));
         }
     };
     m_thread->setFunc(serviceDataProcess);
@@ -70,18 +73,24 @@ int SessionServiceDataProcessor::stop()
     }
 
     m_running = false;
+    m_sessionServiceDatas.enqueue(nullptr);
     m_thread->stop();
 
     return 0;
 }
 
-int SessionServiceDataProcessor::addPacket(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)
+int SessionServiceDataProcessor::addPacket(const SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr,
+                                           PacketHeader::Ptr header, PayloadBase::Ptr payload)
 {
-    return true == m_sessionServiceDatas.enqueue(SessionServiceData(fd, header, payload)) ? 0 : -1;
+    SessionServiceData::Ptr sessionServiceData = std::make_shared<SessionServiceData>(
+        sessionId, std::move(p2pSessionWeakPtr), std::move(header), std::move(payload));
+    return true == m_sessionServiceDatas.enqueue(sessionServiceData);
 }
 
 void SessionServiceDataProcessor::registerPacketHandler(
-    const PacketType packetType, std::function<int(int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler)
+    const PacketType packetType,
+    std::function<void(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, PacketHeader::Ptr header,
+                       PayloadBase::Ptr payload)> handler)
 {
     m_packetHandlers[packetType] = std::move(handler);
 }

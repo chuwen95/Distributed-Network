@@ -6,9 +6,11 @@
 #define HTTPRPCSERVER_H
 
 #include "csm-common/Common.h"
-#include "csm-rpc/config/RpcConfig.h"
-#include "csm-rpc/common/RpcServer.h"
+
 #include <httplib.h>
+
+#include "csm-rpc/framework/RpcServer.h"
+#include "csm-service/service/P2PService.h"
 
 namespace csm
 {
@@ -19,10 +21,9 @@ namespace csm
         class HttpRpcServer : public RpcServer
         {
         public:
-            using Ptr = std::shared_ptr<HttpRpcServer>;
-
-            HttpRpcServer(RpcConfig::Ptr rpcConfig);
-            ~HttpRpcServer() = default;
+            explicit HttpRpcServer(tool::NodeConfig* nodeConfig, std::unique_ptr<httplib::Server> server,
+                                   service::P2PService* service);
+            ~HttpRpcServer() override = default;
 
         public:
             int init() override;
@@ -32,7 +33,9 @@ namespace csm
             int stop() override;
 
         private:
-            std::shared_ptr<httplib::Server> m_httpServer;
+            tool::NodeConfig* m_nodeConfig{nullptr};
+            std::unique_ptr<httplib::Server> m_httpServer{nullptr};
+            service::P2PService* m_p2pService{nullptr};
         };
 
     }

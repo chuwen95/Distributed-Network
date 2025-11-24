@@ -19,18 +19,22 @@ namespace csm
         constexpr std::size_t c_p2pSessionReadBufferSize{16 * 1024};
         constexpr std::size_t c_p2pSessionWriteBufferSize{16 * 1024};
 
+        using SessionId = std::uint64_t;
+
         class P2PSession
         {
         public:
             using Ptr = std::shared_ptr<P2PSession>;
+            using WPtr = std::weak_ptr<P2PSession>;
 
-            P2PSession(int fd, utilities::RingBuffer::Ptr readBuffer, utilities::RingBuffer::Ptr writeBuffer);
-            ~P2PSession() = default;
+            explicit P2PSession(int fd, SessionId sessionId, utilities::RingBuffer::Ptr readBuffer,
+                                utilities::RingBuffer::Ptr writeBuffer);
 
         public:
             int init();
 
             int fd() const;
+            SessionId sessionId() const;
 
             std::mutex& readBufferMutex();
             utilities::RingBuffer::Ptr& readBuffer();
@@ -38,17 +42,8 @@ namespace csm
             std::mutex& writeBufferMutex();
             utilities::RingBuffer::Ptr& writeBuffer();
 
-            void setNodeId(std::string id);
-            std::string nodeId() const;
-
-            void setNodeOnlineTimestamp(std::uint32_t timestamp);
-            /**
-             * @brief 获取客户端上线的时间戳，供业务线程池用，业务线程池放入任务的时候会记录放入任务那一刻的时间戳
-             * 如果客户端不存在此函数返回-1，表示客户端已经离线，直接丢弃任务
-             * 如果任务时间戳小于客户端上线时间戳，可能是客户端离线后又上线但是fd分配的是一样的
-             * @return
-             */
-            std::uint32_t clientOnlineTimestamp() const;
+            void setNodeId(NodeId id);
+            NodeId nodeId() const;
 
             template <typename... Args> void setPeerHostEndPointInfo(Args... args)
             {
@@ -59,24 +54,20 @@ namespace csm
 
             const HostEndPointInfo& peerHostEndPointInfo() const;
 
-            void setHandshakeUuid(std::string uuid);
-            std::string handshakeUuid() const;
-
             bool isWaitingDisconnect() const;
             void setWaitingDisconnect(bool value);
 
+            void setSlaveReactorIndex(std::size_t index);
+            std::size_t slaveReactorIndex() const;
+
+            bool isHeartbeatTimeout();
+            void refreshHeartbeat();
+
         public:
-            int m_fd{-1};
+            const int m_fd{-1};
+            const SessionId m_sessionId{0};
 
-            struct NodeInfo
-            {
-                NodeInfo() = default;
-                NodeInfo(const std::string_view idParam, const std::uint32_t ts) : id(idParam), onlineTimestamp(ts) {}
-
-                NodeId id;
-                std::uint32_t onlineTimestamp{0};
-            };
-            NodeInfo m_nodeInfo;
+            NodeId m_nodeId;
 
             std::mutex x_readBuffer;
             utilities::RingBuffer::Ptr m_readBuffer;
@@ -84,9 +75,13 @@ namespace csm
             utilities::RingBuffer::Ptr m_writeBuffer;
 
             HostEndPointInfo m_peerHostEndPointInfo;
-            std::string m_handshakeUuid;
 
-            std::atomic_bool m_isWaitingDisconnect{ false };
+            std::atomic_bool m_isWaitingDisconnect{false};
+
+            std::size_t m_slaveReactorIndex;
+
+            int m_lastRecvCount{0};
+            int m_recvCount{1};
         };
 
     } // server

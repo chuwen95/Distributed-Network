@@ -7,6 +7,7 @@
 
 #include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
+#include "P2PSession.h"
 
 namespace csm
 {
@@ -19,9 +20,6 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<SessionAliveChecker>;
 
-            SessionAliveChecker() = default;
-            ~SessionAliveChecker() = default;
-
         public:
             int init();
 
@@ -29,38 +27,30 @@ namespace csm
 
             int stop();
 
-            void setTimeoutHandler(std::function<void(const std::vector<int>&)> handler);
+            void setTimeoutHandler(std::function<void(const std::vector<std::pair<SessionId, P2PSession::WPtr>> &)> handler);
 
             /**
              * @brief 添加要监测是否在线的客户端
              *
-             * @param fd
+             * @param sessionId
              * @return
              */
-            int addSession(int fd);
+            int addSession(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr);
 
             /**
              * @brief 移除要监测是否在线的客户端
              *
-             * @param fd
+             * @param sessionId
              * @return
              */
-            int removeSession(int fd);
-
-            /**
-             * @brief 客户端收到了数据，更新最后收到数据的时间戳
-             *
-             * @param fd
-             * @return
-             */
-            int refreshSessionLastRecvTime(int fd);
+            int removeSession(SessionId sessionId);
 
         private:
-            std::mutex x_sessionLastRecvTime;
-            std::unordered_map<int, std::pair<std::uint32_t, std::uint32_t>> m_sessionLastRecvTime;
+            std::mutex x_sessions;
+            std::unordered_map<std::uint64_t, P2PSession::WPtr> m_sessions;
 
             utilities::Thread::Ptr m_thread;
-            std::function<void(const std::vector<int> &)> m_timeoutHandler;
+            std::function<void(const std::vector<std::pair<SessionId, P2PSession::WPtr>>&)> m_timeoutHandler;
         };
 
     } // server

@@ -5,10 +5,11 @@
 #ifndef TCPNETWORK_HOSTSINFOMANAGER_H
 #define TCPNETWORK_HOSTSINFOMANAGER_H
 
-#include <csm-framework/cluster/Common.h>
+#include "csm-common/Common.h"
+#include "csm-framework/cluster/Common.h"
 
 #include "HostEndPointInfo.h"
-#include "csm-common/Common.h"
+#include "csm-service/service/P2PSession.h"
 
 namespace csm
 {
@@ -19,13 +20,11 @@ namespace csm
         class HostsInfoManager
         {
         public:
-            using Ptr = std::shared_ptr<HostsInfoManager>;
-
-            HostsInfoManager(std::string nodesFile);
+            explicit HostsInfoManager(std::string nodesFile);
             ~HostsInfoManager() = default;
 
             using Hosts =
-                std::unordered_map<HostEndPointInfo, std::pair<std::string, std::uint64_t>, HostEndPointInfo::hashFunction>;
+                std::unordered_map<HostEndPointInfo, std::pair<NodeId, std::uint64_t>, HostEndPointInfo::hashFunction>;
 
         public:
             int init();
@@ -39,34 +38,25 @@ namespace csm
              * @param id
              * @return
              */
-            int setHostId(const HostEndPointInfo& endPointInfo, const std::string& id);
+            int setHostId(const HostEndPointInfo& endPointInfo, const NodeId& nodeId);
 
             /**
              * @brief 将id和fd对应起来
              *
-             * @param id
+             * @param nodeId
              * @param fd
              * @return
              */
-            int addHostIdInfo(const std::string& id, int fd, const std::string& uuid);
+            int addHostIdInfo(const NodeId& nodeId, SessionId sessionId);
 
             /**
              * @brief 将id和fd对应起来
              *
-             * @param id
+             * @param nodeId
              * @param fd
              * @return
              */
-            int setHostIdInfo(const std::string& id, int fd, const std::string& uuid);
-
-            /**
-             * @brief 将id和fd对应起来
-             *
-             * @param id
-             * @param fd
-             * @return
-             */
-            int removeHostIdInfo(const std::string& id, const std::string& uuid);
+            int removeHostIdInfo(const NodeId& nodeId, SessionId sessionId);
 
             /**
              * @brief 清空Host的id，Host掉线的时候会调用该函数
@@ -79,21 +69,11 @@ namespace csm
             /**
              * brief 根据id得到fd
              *
-             * @param id
+             * @param nodeId
              * @param fd
              * @return
              */
-            int getHostFdById(const NodeId& id, int& fd);
-
-            /**
-             * brief 判断host是否在线
-             *
-             * @param id
-             * @param fd
-             * @param uuid
-             * @return
-             */
-            bool isHostIdExist(const NodeId& id, int& fd, std::string& uuid);
+            int getSessionId(const NodeId& nodeId, SessionId& sessionId);
 
             /**
              * brief 判断host是否在线
@@ -108,33 +88,25 @@ namespace csm
              *
              * @return
              */
-            std::uint32_t onlineClientSize();
+            std::vector<csm::NodeId> onlineNodeIds();
 
             /**
              * brief 获取所有在线客户端
              *
              * @return
              */
-            std::vector<std::pair<std::string, int>> getAllOnlineClients();
-
-            /**
-             * brief 等待至少一个节点连接成功
-             * @param timeout       [in]超时（单位：毫秒）
-             *
-             * @return
-             */
-            bool waitAtLeastOneNodeConnected(int timeout);
+            std::vector<std::pair<NodeId, SessionId>> getAllHosts();
 
         private:
             std::string m_nodesFile;
 
-            // HostEndPointInfo => <Client ID, ClientInfoReply包时间戳>
+            // HostEndPointInfo => <Node ID, ClientInfoReply包时间戳>
             // 当对端回复ClientInfoReply后，second会有值，如果second有值，说明连上了
             std::mutex x_hosts;
             Hosts m_hosts;
 
-            // Client ID => fd, handshakeUuid
-            std::unordered_map<std::string, std::pair<int, std::string>> m_nodeIdInfos;
+            // Node ID => SessionId
+            std::unordered_map<NodeId, SessionId> m_nodeIdInfos;
         };
 
     } // service

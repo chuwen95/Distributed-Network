@@ -6,7 +6,6 @@
 #define RPCSERVER_H
 
 #include "csm-common/Common.h"
-#include "csm-rpc/config/RpcConfig.h"
 
 namespace csm
 {
@@ -17,9 +16,6 @@ namespace csm
         class RpcServer
         {
         public:
-            using Ptr = std::shared_ptr<RpcServer>;
-
-            RpcServer(RpcConfig::Ptr rpcConfig) : m_rpcConfig(std::move(rpcConfig)) { }
             virtual ~RpcServer() = default;
 
         public:
@@ -28,9 +24,6 @@ namespace csm
             virtual int start() = 0;
 
             virtual int stop() = 0;
-
-        protected:
-            RpcConfig::Ptr m_rpcConfig;
         };
 
     }

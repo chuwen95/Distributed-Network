@@ -6,7 +6,7 @@
 
 struct LogLevelResetHandler
 {
-    static csm::tool::NodeConfig::Ptr nodeConfig;
+    static csm::tool::NodeConfig* nodeConfig;
 
     static void handle(int sig)
     {
@@ -18,12 +18,11 @@ struct LogLevelResetHandler
                                                                      "reload log config successfully, log level: ", static_cast<int>(nodeConfig->logType()));
     }
 };
-
-csm::tool::NodeConfig::Ptr LogLevelResetHandler::nodeConfig = nullptr;
+csm::tool::NodeConfig* LogLevelResetHandler::nodeConfig = nullptr;
 
 using namespace csm::initializer;
 
-AppLogInitializer::AppLogInitializer(tool::NodeConfig::Ptr nodeConfig) : m_nodeConfig(std::move(nodeConfig))
+AppLogInitializer::AppLogInitializer(tool::NodeConfig* nodeConfig) : m_nodeConfig(nodeConfig)
 {}
 
 int AppLogInitializer::init()

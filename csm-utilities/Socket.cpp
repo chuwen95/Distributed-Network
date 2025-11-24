@@ -29,8 +29,7 @@ int Socket::create()
 
 int Socket::close(const int fd)
 {
-    ::close(fd);
-    return 0;
+    return ::close(fd);
 }
 
 int Socket::setNonBlock(const int fd)

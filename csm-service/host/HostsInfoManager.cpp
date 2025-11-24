@@ -7,11 +7,14 @@
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/StringTool.h"
 
+#include <google/protobuf/message.h>
 #include <json/json.h>
 
 using namespace csm::service;
 
-HostsInfoManager::HostsInfoManager(std::string nodesFile) : m_nodesFile(std::move(nodesFile)) {}
+HostsInfoManager::HostsInfoManager(std::string nodesFile) : m_nodesFile(std::move(nodesFile))
+{
+}
 
 int HostsInfoManager::init()
 {
@@ -64,7 +67,7 @@ auto HostsInfoManager::getHosts() -> const Hosts&
     return m_hosts;
 }
 
-int HostsInfoManager::setHostId(const service::HostEndPointInfo& endPointInfo, const std::string& id)
+int HostsInfoManager::setHostId(const HostEndPointInfo& endPointInfo, const NodeId& nodeId)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
     auto iter = m_hosts.find(endPointInfo);
@@ -72,59 +75,50 @@ int HostsInfoManager::setHostId(const service::HostEndPointInfo& endPointInfo, c
     {
         return -1;
     }
-    iter->second.first = id;
+    iter->second.first = nodeId;
     return 0;
 }
 
-int HostsInfoManager::addHostIdInfo(const std::string& id, const int fd, const std::string& uuid)
+int HostsInfoManager::addHostIdInfo(const NodeId& nodeId, const SessionId sessionId)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
-    auto iter = m_nodeIdInfos.find(id);
+    auto iter = m_nodeIdInfos.find(nodeId);
     if (m_nodeIdInfos.end() != iter)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "host already exist");
+        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "node already exist", nodeId, ", session id: ", sessionId);
         return -1;
     }
-    m_nodeIdInfos.emplace(id, std::make_pair(fd, uuid));
+
+    m_nodeIdInfos.emplace(nodeId, sessionId);
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "node ", nodeId, ", add session id: ", sessionId);
 
     return 0;
 }
 
-int HostsInfoManager::setHostIdInfo(const std::string& id, const int fd, const std::string& uuid)
+int HostsInfoManager::removeHostIdInfo(const NodeId& nodeId, const SessionId sessionId)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
-    auto iter = m_nodeIdInfos.find(id);
+
+    auto iter = m_nodeIdInfos.find(nodeId);
     if (m_nodeIdInfos.end() == iter)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "host already exist");
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "host node id not exist, id: ", nodeId);
         return -1;
     }
-    iter->second.first = fd;
-    iter->second.second = uuid;
 
-    return 0;
-}
+    if (sessionId != iter->second)
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session id not correct, id: ", nodeId, ", session id: ", sessionId,
+                   ", expected session id: ", iter->second);
+        return -1;
+    }
 
-int HostsInfoManager::removeHostIdInfo(const std::string& id, const std::string& uuid)
-{
-    std::unique_lock<std::mutex> ulock(x_hosts);
-    auto iter = m_nodeIdInfos.find(id);
-    if (m_nodeIdInfos.end() == iter)
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "host id not exist, id: ", id);
-        return -1;
-    }
-    if (iter->second.second != uuid)
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "uuid not match, id: ", id);
-        return -1;
-    }
     m_nodeIdInfos.erase(iter);
 
     return 0;
 }
 
-int HostsInfoManager::setHostNotConnected(const service::HostEndPointInfo& endPointInfo)
+int HostsInfoManager::setHostNotConnected(const HostEndPointInfo& endPointInfo)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
     auto iter = m_hosts.find(endPointInfo);
@@ -139,37 +133,26 @@ int HostsInfoManager::setHostNotConnected(const service::HostEndPointInfo& endPo
     return 0;
 }
 
-int HostsInfoManager::getHostFdById(const NodeId& id, int& fd)
+int HostsInfoManager::getSessionId(const NodeId& nodeId, SessionId& sessionId)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
-    auto iter = m_nodeIdInfos.find(id);
+
+    auto iter = m_nodeIdInfos.find(nodeId);
     if (m_nodeIdInfos.end() == iter)
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "host not exist");
         return -1;
     }
 
-    fd = iter->second.first;
+    sessionId = iter->second;
+
     return 0;
 }
 
-bool HostsInfoManager::isHostIdExist(const NodeId& id, int& fd, std::string& uuid)
+bool HostsInfoManager::isHostIdExist(const NodeId& nodeId)
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
-    auto iter = m_nodeIdInfos.find(id);
-    if (m_nodeIdInfos.end() == iter)
-    {
-        return false;
-    }
-    fd = iter->second.first;
-    uuid = iter->second.second;
-    return true;
-}
-
-bool HostsInfoManager::isHostIdExist(const NodeId& id)
-{
-    std::unique_lock<std::mutex> ulock(x_hosts);
-    auto iter = m_nodeIdInfos.find(id);
+    auto iter = m_nodeIdInfos.find(nodeId);
     if (m_nodeIdInfos.end() == iter)
     {
         return false;
@@ -177,40 +160,28 @@ bool HostsInfoManager::isHostIdExist(const NodeId& id)
     return true;
 }
 
-std::uint32_t HostsInfoManager::onlineClientSize()
+std::vector<csm::NodeId> HostsInfoManager::onlineNodeIds()
 {
     std::unique_lock<std::mutex> ulock(x_hosts);
-    return m_nodeIdInfos.size();
+
+    std::vector<NodeId> nodeIds;
+    for (auto iter = m_nodeIdInfos.begin(); iter != m_nodeIdInfos.end(); ++iter)
+    {
+        nodeIds.emplace_back(iter->first);
+    }
+
+    return nodeIds;
 }
 
-std::vector<std::pair<csm::NodeId, int>> HostsInfoManager::getAllOnlineClients()
+std::vector<std::pair<csm::NodeId, SessionId>> HostsInfoManager::getAllHosts()
 {
-    std::vector<std::pair<NodeId, int>> onlineClients;
+    std::vector<std::pair<NodeId, SessionId>> onlineHosts;
 
     std::unique_lock<std::mutex> ulock(x_hosts);
-    for (const auto& [nodeId, fdUuid] : m_nodeIdInfos)
+    for (const auto& [nodeId, sessionId] : m_nodeIdInfos)
     {
-        onlineClients.emplace_back(nodeId, fdUuid.first);
+        onlineHosts.emplace_back(nodeId, sessionId);
     }
 
-    return std::move(onlineClients);
-}
-
-bool HostsInfoManager::waitAtLeastOneNodeConnected(const int timeout)
-{
-    utilities::ElapsedTime timestamp;
-    timestamp.update();
-    while (onlineClientSize() < 1 && timestamp.getElapsedTimeInMilliSec() < timeout)
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    }
-
-    if (onlineClientSize() < 1)
-    {
-        return false;
-    }
-    else
-    {
-        return true;
-    }
+    return onlineHosts;
 }

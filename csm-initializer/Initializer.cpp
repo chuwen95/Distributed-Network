@@ -6,16 +6,21 @@
 
 using namespace csm::initializer;
 
-int Initializer::initConfig(const std::string &configPath)
+Initializer::Initializer(std::string configPath) : m_configPath(std::move(configPath))
 {
-    m_nodeConfig = std::make_shared<tool::NodeConfig>();
-    return m_nodeConfig->init(configPath);
 }
 
 int Initializer::init()
 {
+    m_nodeConfig = std::make_unique<tool::NodeConfig>(m_configPath);
+    if (-1 == m_nodeConfig->init())
+    {
+        std::cerr << "Init config failed" << std::endl;
+        return -1;
+    }
+
     // 初始化log
-    m_logInitializer = std::make_shared<AppLogInitializer>(m_nodeConfig);
+    m_logInitializer = std::make_unique<AppLogInitializer>(m_nodeConfig.get());
     if (-1 == m_logInitializer->init())
     {
         std::cerr << "LogInitializer init failed" << std::endl;
@@ -28,7 +33,7 @@ int Initializer::init()
     }
 
     // 初始化P2PService
-    m_p2pServiceInitializer = std::make_shared<P2PServiceInitializer>(m_nodeConfig);
+    m_p2pServiceInitializer = std::make_unique<P2PServiceInitializer>(m_nodeConfig.get());
     if (-1 == m_p2pServiceInitializer->init())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "TcpServiceInitializer init failed");
@@ -37,7 +42,7 @@ int Initializer::init()
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "TcpServiceInitializer init successfully");
 
     // 初始化Rpc
-    m_rpcInitializer = std::make_shared<RpcInitializer>(m_nodeConfig, m_p2pServiceInitializer->p2pService());
+    m_rpcInitializer = std::make_unique<RpcInitializer>(m_nodeConfig.get(), m_p2pServiceInitializer->p2pService());
     if (-1 == m_rpcInitializer->init())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "RpcInitializer init failed");
@@ -96,8 +101,7 @@ int Initializer::stop()
 int Initializer::initP2PServiceModuleMessageHandler()
 {
     m_p2pServiceInitializer->p2pService()->registerModulePacketHandler(protocol::ModuleID::raft,
-        [this](const NodeId& nodeId, const std::vector<char>& data) -> int
-        {
+        [this](const NodeId& nodeId, const std::vector<char>& data) -> int {
             return m_consensusInitializer->raft()->handleMessage(nodeId, data);
         });
 

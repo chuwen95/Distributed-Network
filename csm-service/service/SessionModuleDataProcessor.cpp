@@ -7,9 +7,8 @@
 
 using namespace csm::service;
 
-SessionModuleDataProcessor::SessionModuleDataProcessor(P2PSessionManager::Ptr p2pSessionManager,
-                                                       utilities::ThreadPool::Ptr normalPacketProcessor)
-    : m_p2pSessionManager(std::move(p2pSessionManager)), m_normalPacketProcessor(std::move(normalPacketProcessor))
+SessionModuleDataProcessor::SessionModuleDataProcessor(utilities::ThreadPool::Ptr normalPacketProcessor)
+    : m_normalPacketProcessor(std::move(normalPacketProcessor))
 {
 }
 
@@ -28,28 +27,24 @@ int SessionModuleDataProcessor::stop()
     return m_normalPacketProcessor->stop();
 }
 
-void SessionModuleDataProcessor::addPacket(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)
+void SessionModuleDataProcessor::addPacket(const SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, PacketHeader::Ptr header, PayloadBase::Ptr payload)
 {
-    const auto packetProcess = [this, fd, capture_header = std::move(header), capture_payload = std::move(payload)]()
+    const auto packetProcess = [this, sessionId, captureSession = std::move(p2pSessionWeakPtr), captureHeader = std::move(header), capturePayload = std::move(payload)]()
     {
-        processPackets(fd, capture_header, capture_payload);
+        auto iter = m_packetHandler.find(captureHeader->type());
+        if (m_packetHandler.end() == iter)
+        {
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "find packet type handler failed, type: {}", captureHeader->type());
+            return;
+        }
+
+        iter->second(sessionId, captureSession, captureHeader, capturePayload);
     };
     m_normalPacketProcessor->push(packetProcess);
 }
 
 void SessionModuleDataProcessor::registerPacketHandler(
-    const PacketType packetType, std::function<int(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr packet)> handler)
+    const PacketType packetType, std::function<void(const SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, PacketHeader::Ptr header, PayloadBase::Ptr packet)> handler)
 {
     m_packetHandler.emplace(packetType, std::move(handler));
-}
-
-int SessionModuleDataProcessor::processPackets(const int fd, PacketHeader::Ptr header, PayloadBase::Ptr payload)
-{
-    auto iter = m_packetHandler.find(header->type());
-    if (m_packetHandler.end() != iter)
-    {
-        return iter->second(fd, header, payload);
-    }
-
-    return 0;
 }

@@ -19,6 +19,7 @@
 #include <memory>
 #include <queue>
 #include <random>
+#include <list>
 #include <set>
 #include <sstream>
 #include <stack>

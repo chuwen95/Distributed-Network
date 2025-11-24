@@ -5,10 +5,11 @@
 #ifndef TCPNETWORK_HOST_H
 #define TCPNETWORK_HOST_H
 
+#include "csm-common/Common.h"
 #include "HostEndPointInfo.h"
 #include "HostsInfoManager.h"
-#include "csm-common/Common.h"
-#include "csm-service//service/P2PSession.h"
+#include "csm-service/service/P2PSession.h"
+#include "csm-service/service/P2PSessionFactory.h"
 #include "csm-utilities/Thread.h"
 
 namespace csm
@@ -20,9 +21,8 @@ namespace csm
         class HostsConnector
         {
         public:
-            using Ptr = std::shared_ptr<HostsConnector>;
-
-            HostsConnector(HostsInfoManager::Ptr hostsInfoManager);
+            explicit HostsConnector(HostsInfoManager* hostsInfoManager,
+                                    std::shared_ptr<P2PSessionFactory> p2pSessionFactory);
             ~HostsConnector() = default;
 
         public:
@@ -32,22 +32,25 @@ namespace csm
 
             int stop();
 
-            int registerConnectHandler(std::function<void(const int, P2PSession::Ptr)> connectHandler);
+            void registerConnectHandler(std::function<void(P2PSession::Ptr)> connectHandler);
 
             int setHostConnected(const HostEndPointInfo& hostEndPointInfo);
 
-            int setHostConnectedByFd(int fd);
+            void setOnlineNodesCallback(std::function<void(const NodeIds&)> callback);
 
         private:
             std::mutex x_connectingHosts;
             // ip:port => pair<fd, start_connect_timestamp>
             std::unordered_map<HostEndPointInfo, std::pair<int, std::int64_t>, HostEndPointInfo::hashFunction> m_connectingHosts;
 
-            HostsInfoManager::Ptr m_hostsInfoManager;
+            HostsInfoManager* m_hostsInfoManager;
+            std::shared_ptr<P2PSessionFactory> m_p2pSessionFactory;
 
             utilities::Thread::Ptr m_thread;
 
-            std::function<void(const int, P2PSession::Ptr)> m_connectHandler;
+            std::function<void(P2PSession::Ptr)> m_connectHandler;
+
+            std::function<void(const NodeIds&)> m_onlineNodesCallback;
         };
 
     } // namespace service

@@ -14,8 +14,8 @@ using namespace csm::service;
 
 constexpr std::int32_t c_heartbeatInterval{5000};
 
-HostsHeartbeatService::HostsHeartbeatService(const std::string& hostId, HostsInfoManager::Ptr hostsInfoManager)
-    : m_hostId(hostId), m_hostInfoManager(std::move(hostsInfoManager))
+HostsHeartbeatService::HostsHeartbeatService(const std::string& hostId, HostsInfoManager* hostsInfoManager)
+    : m_hostId(hostId), m_hostInfoManager(hostsInfoManager)
 {
 }
 
@@ -37,19 +37,19 @@ int HostsHeartbeatService::init()
                 std::vector<char> buffer = PacketEncodeHelper<PacketType::PT_HeartBeat, std::nullopt_t>::encode();
                 if (nullptr != m_heartBeatSender)
                 {
-                    int fd{-1};
-                    if (0 != m_hostInfoManager->getHostFdById(host.second.first, fd))
+                    SessionId sessionId;
+                    if (0 != m_hostInfoManager->getSessionId(host.second.first, sessionId))
                     {
                         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "get host fd failed, host: ", host.second.first);
                         return;
                     }
-                    if (0 != m_heartBeatSender(fd, buffer))
+                    if (0 != m_heartBeatSender(sessionId, buffer))
                     {
                         LOG->write(utilities::LogType::Log_Error, FILE_INFO,
-                                   "send heart beat failed, to host: ", host.second.first, ", fd: ", fd);
+                                   "send heart beat failed, to host: ", host.second.first, ", session id: ", sessionId);
                     }
                     LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                               "send heart beat successfully, to host: ", host.second.first, ", fd: ", fd);
+                               "send heart beat successfully, to host: ", host.second.first, ", session id: ", sessionId);
 
                     host.second.second = curTimestamp;
                 }

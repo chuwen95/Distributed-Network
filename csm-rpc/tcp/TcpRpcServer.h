@@ -5,8 +5,8 @@
 #ifndef TCPRPCSERVER_H
 #define TCPRPCSERVER_H
 
-#include "csm-rpc/common/RpcServer.h"
-#include "csm-service/P2PServiceFactory.h"
+#include "csm-rpc/framework/RpcServer.h"
+#include "csm-service/factory/ServerServiceFactory.h"
 
 namespace csm
 {
@@ -19,8 +19,8 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<TcpRpcServer>;
 
-            TcpRpcServer(RpcConfig::Ptr rpcConfig);
-            ~TcpRpcServer() = default;
+            explicit TcpRpcServer(std::unique_ptr<service::ServerService> service);
+            ~TcpRpcServer() override = default;
 
         public:
             int init() override;
@@ -30,7 +30,7 @@ namespace csm
             int stop() override;
 
         private:
-            service::P2PService::Ptr m_tcpService;
+            std::unique_ptr<service::ServerService> m_tcpService{nullptr};
         };
 
     }

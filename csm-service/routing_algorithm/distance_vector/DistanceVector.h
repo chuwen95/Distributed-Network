@@ -49,7 +49,7 @@ namespace csm
              *
              * @param nodeId
              */
-            void addNeighbourNode(const NodeId& nodeId);
+            void setNeighbourNode(const NodeIds& nodeId);
 
             /**
              * @brief 设置邻居节点不可达

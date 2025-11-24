@@ -18,9 +18,7 @@ namespace csm
         class HostsHeartbeatService
         {
         public:
-            using Ptr = std::shared_ptr<HostsHeartbeatService>;
-
-            HostsHeartbeatService(const std::string& hostId, HostsInfoManager::Ptr hostsInfoManager);
+            explicit HostsHeartbeatService(const std::string& hostId, HostsInfoManager* hostsInfoManager);
             ~HostsHeartbeatService() = default;
 
         public:
@@ -34,7 +32,7 @@ namespace csm
 
         private:
             std::string m_hostId;
-            HostsInfoManager::Ptr m_hostInfoManager;
+            HostsInfoManager* m_hostInfoManager;
             std::function<int(const int fd, const std::vector<char>& data)> m_heartBeatSender;
 
             utilities::Thread::Ptr m_thread;

@@ -5,8 +5,9 @@
 #ifndef TCPSERVER_ACCEPTOR_H
 #define TCPSERVER_ACCEPTOR_H
 
-#include "P2PSession.h"
 #include "csm-common/Common.h"
+#include "P2PSession.h"
+#include "P2PSessionFactory.h"
 #include "csm-utilities/Thread.h"
 
 namespace csm
@@ -18,13 +19,10 @@ namespace csm
         class Acceptor
         {
         public:
-            using Ptr = std::shared_ptr<Acceptor>;
-
-            Acceptor() = default;
-            ~Acceptor() = default;
+            explicit Acceptor(std::shared_ptr<P2PSessionFactory> p2pSessionFactory);
 
         public:
-            int init(const int fd);
+            int init(int fd);
 
             int start();
 
@@ -32,14 +30,16 @@ namespace csm
 
             int onConnect();
 
-            void setNewClientCallback(std::function<void(int, P2PSession::Ptr)> newClientCallback);
+            void setNewClientCallback(std::function<void(P2PSession::Ptr p2pSession)> newClientCallback);
 
         private:
+            std::shared_ptr<P2PSessionFactory> m_p2pSessionFactory;
+
             std::mutex x_connect;
             std::condition_variable m_connectCv;
 
             // 客户端初始化完成回调
-            std::function<void(int, P2PSession::Ptr)> m_newClientCallback;
+            std::function<void(P2PSession::Ptr)> m_newClientCallback;
 
             std::atomic_bool m_isTerminate{false};
             utilities::Thread::Ptr m_thread;

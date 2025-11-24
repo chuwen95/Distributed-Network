@@ -6,7 +6,7 @@
 #define TCPSERVER_THREADPOOL_H
 
 #include "csm-common/Common.h"
-#include "concurrentqueue/blockingconcurrentqueue.h"
+#include "concurrentqueue/moodycamel/blockingconcurrentqueue.h"
 
 namespace csm
 {

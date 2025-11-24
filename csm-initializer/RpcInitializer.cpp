@@ -3,14 +3,16 @@
 //
 
 #include "RpcInitializer.h"
-#include "csm-rpc/RpcFactory.h"
+
+#include "csm-rpc/tcp/TcpRpcFactory.h"
+#include "csm-rpc/http/HttpRpcFactory.h"
 
 using namespace csm::initializer;
 
-RpcInitializer::RpcInitializer(tool::NodeConfig::Ptr nodeConfig, service::P2PService::Ptr p2pService)
+RpcInitializer::RpcInitializer(tool::NodeConfig* nodeConfig, service::P2PService* p2pService)
 {
-    rpc::RpcFactory rpcFactory(nodeConfig, p2pService);
-    m_httpRpcServer = rpcFactory.createRpc(rpc::RpcServerType::HttpRpcServer);
+    std::unique_ptr<rpc::RpcFactory> rpcFactory = std::make_unique<rpc::HttpRpcFactory>(nodeConfig, p2pService);
+    m_httpRpcServer = rpcFactory->create();
 #if 0
     m_tcpRpcServer = rpcFactory.createRpc(rpc::RpcServerType::TcpRpcServer);
 #endif
@@ -64,13 +66,13 @@ int RpcInitializer::stop()
     return 0;
 }
 
-csm::rpc::RpcServer::Ptr RpcInitializer::httpRpcServer()
+csm::rpc::RpcServer* RpcInitializer::httpRpcServer()
 {
-    return m_httpRpcServer;
+    return m_httpRpcServer.get();
 }
 
-csm::rpc::RpcServer::Ptr RpcInitializer::tcpRpcServer()
+csm::rpc::RpcServer* RpcInitializer::tcpRpcServer()
 {
-    return m_tcpRpcServer;
+    return m_tcpRpcServer.get();
 }
 
