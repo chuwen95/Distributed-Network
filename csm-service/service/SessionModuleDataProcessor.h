@@ -25,8 +25,6 @@ namespace csm
             explicit SessionModuleDataProcessor(utilities::ThreadPool::Ptr normalPacketProcessor);
 
         public:
-            int init();
-
             int start();
 
             int stop();

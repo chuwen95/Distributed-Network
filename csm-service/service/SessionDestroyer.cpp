@@ -46,9 +46,7 @@ int SessionDestroyer::init()
             }
         }
     };
-    m_thread = std::make_shared<utilities::Thread>();
-    m_thread->setFunc(expression);
-    m_thread->setName("destoryer");
+    m_thread = std::make_unique<utilities::Thread>(expression, 0, "destoryer");
 
     return 0;
 }

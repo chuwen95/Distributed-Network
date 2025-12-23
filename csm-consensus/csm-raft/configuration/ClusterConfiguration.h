@@ -54,7 +54,4 @@ namespace csm
 
 }
 
-
-
-
 #endif //CLUSTERCONFIG_H

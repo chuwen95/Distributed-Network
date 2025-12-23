@@ -56,10 +56,7 @@ int HostsHeartbeatService::init()
             }
         }
     };
-    m_thread = std::make_shared<utilities::Thread>();
-    m_thread->setFunc(expression);
-    m_thread->setInterval(c_heartbeatInterval);
-    m_thread->setName("host_heartbeat");
+    m_thread = std::make_unique<utilities::Thread>(expression, c_heartbeatInterval, "host_heartbeat");
 
     return 0;
 }

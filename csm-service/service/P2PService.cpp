@@ -179,13 +179,6 @@ int P2PService::init()
             return packetHandler(p2pSession->nodeId(), payloadModuleMessage->payload());
         });
 
-    if (-1 == m_serviceConfig->sessionModuleDataProcessor()->init())
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session module data processor init failed");
-        return -1;
-    }
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "session module data processor init successfully");
-
     if (-1 == initServer())
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "init server failed");
@@ -255,7 +248,7 @@ int P2PService::start()
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start hosts heartbeat service successfully");
 
     // 启动距离向量服务
-    // m_serviceConfig->distanceVector()->start();
+    m_serviceConfig->distanceVector()->start();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "start distance vector successfully");
 
     // 启动host连接服务
@@ -275,15 +268,13 @@ int P2PService::stop()
 
     m_serviceConfig->sessionAliveChecker()->stop();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop client heartbeat checker successfully");
-
     m_serviceConfig->hostsHeartbeatService()->stop();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop hosts heartbeat service successfully");
+    m_serviceConfig->hostsConnector()->stop();
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop hosts connector successfully");
 
     m_serviceConfig->distanceVector()->stop();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop distance vector successfully");
-
-    m_serviceConfig->hostsConnector()->stop();
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop hosts connector successfully");
 
     m_serviceConfig->sessionDataDecoder()->stop();
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "stop session data decoder successfully");
@@ -517,10 +508,6 @@ int P2PService::initClient()
         return -1;
     }
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "HostsHeartbeatService init successfully");
-
-    m_serviceConfig->hostsConnector()->setOnlineNodesCallback([this](const NodeIds& nodeIds) {
-        m_serviceConfig->distanceVector()->setNeighbourNode(nodeIds);
-    });
 
     m_serviceConfig->hostsConnector()->registerConnectHandler(
         [this](P2PSession::Ptr p2pSession) {

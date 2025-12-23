@@ -14,8 +14,7 @@ using namespace csm::service;
 constexpr std::size_t c_maxEvent{500};
 constexpr int c_epollTimeout{500};
 
-SlaveReactor::SlaveReactor(const int reactorId)
-    : m_reactorId(reactorId)
+SlaveReactor::SlaveReactor(const int reactorId) : m_reactorId(reactorId)
 {
     m_recvBuffer.resize(utilities::Socket::c_defaultSocketRecvBufferSize);
 }
@@ -39,7 +38,8 @@ int SlaveReactor::init()
     m_exitFd = eventfd(0, EFD_NONBLOCK);
     if (-1 == m_exitFd)
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "create eventfd failed, errno: ", errno, ", ", strerror(errno));
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "create eventfd failed, errno: ", errno, ", ",
+                   strerror(errno));
         return -1;
     }
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "create eventfd successfully, m_exitFd: ", m_exitFd);
@@ -54,7 +54,8 @@ int SlaveReactor::init()
     }
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "add exit event fd to epoll successfully");
 
-    const auto expression = [this]() {
+    const auto expression = [this]()
+    {
         struct epoll_event ev[c_maxEvent];
         int nready = epoll_wait(m_epfd, ev, c_maxEvent, -1);
 
@@ -65,7 +66,8 @@ int SlaveReactor::init()
 
         if (-1 == nready)
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "epoll_wait failed, errno: ", errno, ", ", strerror(errno));
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "epoll_wait failed, errno: ", errno, ", ",
+                       strerror(errno));
             return -1;
         }
         else if (0 == nready)
@@ -97,7 +99,8 @@ int SlaveReactor::init()
                 int readLen = recv(p2pSession->fd(), m_recvBuffer.data(), m_recvBuffer.size(), 0);
                 if (readLen < 0) // 没有数据再需要读取
                 {
-                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client may be offline, readlen: -1, session id: ",
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO,
+                               "client may be offline, readlen: -1, session id: ",
                                sessionId);
 
                     disconnectSession(p2pSession);
@@ -105,7 +108,8 @@ int SlaveReactor::init()
                 }
                 else if (0 == readLen)
                 {
-                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client may be offline, readlen: 0, session id: ",
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO,
+                               "client may be offline, readlen: 0, session id: ",
                                sessionId);
 
                     disconnectSession(p2pSession);
@@ -121,7 +125,8 @@ int SlaveReactor::init()
             {
                 if (true == p2pSession->isWaitingDisconnect())
                 {
-                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "P2PSession is waiting for disconnect, session id: ",
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO,
+                               "P2PSession is waiting for disconnect, session id: ",
                                sessionId);
                     continue;
                 }
@@ -149,14 +154,16 @@ int SlaveReactor::init()
                     epoll_ctl(m_epfd, EPOLL_CTL_MOD, p2pSession->fd(), &ev);
 
                     LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
-                               "send data successfully, remove epollout event, session id: ", sessionId, ", sendlen: ", sendLen);
+                               "send data successfully, remove epollout event, session id: ", sessionId, ", sendlen: ",
+                               sendLen);
                 }
                 else if (sendLen < length)
                 {
                     writeBuffer->decreaseUsedSpace(sendLen);
                     x_writeBuffer.unlock();
 
-                    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "sendLen less then data length, session id: ", sessionId,
+                    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "sendLen less then data length, session id: ",
+                               sessionId,
                                ", sendlen: ", sendLen);
                 }
                 else if (-1 == sendLen)
@@ -166,14 +173,16 @@ int SlaveReactor::init()
                     if (EAGAIN == errno || EWOULDBLOCK == errno)
                     {
                         // 这种情况理应不会发生
-                        LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "sendLen = -1, session id: ", sessionId, ", errno: ",
+                        LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "sendLen = -1, session id: ", sessionId,
+                                   ", errno: ",
                                    errno, ", ",
                                    strerror(errno));
                     }
                     else if (ECONNRESET == errno || EPIPE == errno)
                     {
                         // 表明对端断开连接
-                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client maybe offline, session id: ", sessionId,
+                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client maybe offline, session id: ",
+                                   sessionId,
                                    ", errno: ", errno,
                                    ", ", strerror(errno));
 
@@ -185,9 +194,7 @@ int SlaveReactor::init()
 
         return 0;
     };
-    m_thread = std::make_shared<utilities::Thread>();
-    m_thread->setFunc(expression);
-    m_thread->setName("slav_reac_" + std::to_string(m_reactorId));
+    m_thread = std::make_unique<utilities::Thread>(expression, 0, "slav_reac_" + std::to_string(m_reactorId));
 
     return 0;
 }
@@ -215,7 +222,8 @@ int SlaveReactor::stop()
 
 int SlaveReactor::addSession(const int fd, P2PSession::Ptr p2pSession)
 {
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "SlaveReactor ", m_reactorId, " try to add session to epoll, fd: ",
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "SlaveReactor ", m_reactorId,
+               " try to add session to epoll, fd: ",
                fd, ", session id: ", p2pSession->sessionId());
 
     struct epoll_event ev;
@@ -242,13 +250,15 @@ int SlaveReactor::addSession(const int fd, P2PSession::Ptr p2pSession)
     return 0;
 }
 
-void SlaveReactor::setDisconnectHandler(std::function<void(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr)> handler)
+void SlaveReactor::setDisconnectHandler(
+    std::function<void(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr)> handler)
 {
     m_disconnectHandler = std::move(handler);
 }
 
 void SlaveReactor::setSessionDataHandler(
-    std::function<void(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, const char* data, std::size_t dataLen)> handler)
+    std::function<void(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, const char* data,
+                       std::size_t dataLen)> handler)
 {
     m_sessionDataHandler = std::move(handler);
 }
@@ -333,7 +343,8 @@ int SlaveReactor::sendData(P2PSession::Ptr p2pSession, const std::vector<char>& 
                     epoll_ctl(m_epfd, EPOLL_CTL_MOD, p2pSession->fd(), &ev);
 
                     LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
-                               "socket write kernel buffer full, wait for epollout, session id: ", p2pSession->sessionId());
+                               "socket write kernel buffer full, wait for epollout, session id: ",
+                               p2pSession->sessionId());
                 }
                 else if (ECONNRESET == errno || EPIPE == errno)
                 [[unlikely]]

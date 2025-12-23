@@ -5,25 +5,33 @@
 #ifndef PACKETTYPE_H
 #define PACKETTYPE_H
 
-enum class PacketType
+namespace csm
 {
-    PT_None,
+    namespace service
+    {
 
-    // handshake
-    PT_ClientInfo,
-    PT_ClientInfoReply,
+        enum class PacketType
+        {
+            PT_None,
 
-    // heartbeat
-    PT_HeartBeat,
-    PT_HeartBeatReply,
+            // handshake
+            PT_ClientInfo,
+            PT_ClientInfoReply,
 
-    // distance_vector -> distance detect
-    PT_DistanceDetect,
-    PT_DistanceDetectReply,
-    PT_DistanceVector,
+            // heartbeat
+            PT_HeartBeat,
+            PT_HeartBeatReply,
 
-    // message
-    PT_ModuleMessage
-};
+            // distance_vector -> distance detect
+            PT_DistanceDetect,
+            PT_DistanceDetectReply,
+            PT_DistanceVector,
+
+            // message
+            PT_ModuleMessage
+        };
+
+    }
+}
 
 #endif // PACKETTYPE_H

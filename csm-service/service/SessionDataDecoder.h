@@ -29,8 +29,6 @@ namespace csm
             ~SessionDataDecoder() = default;
 
         public:
-            int init();
-
             // 不考虑该方法被多线程调用
             int start();
 

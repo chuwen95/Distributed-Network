@@ -14,11 +14,6 @@ SessionDataDecoder::SessionDataDecoder(PayloadFactory::Ptr payloadFactory, utili
 {
 }
 
-int SessionDataDecoder::init()
-{
-    return m_decodeWorkers->init();
-}
-
 int SessionDataDecoder::start()
 {
     if (true == m_running)

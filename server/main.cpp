@@ -52,6 +52,7 @@ int main(int argc, char* argv[])
 
     std::cout << "Initializer start successfully" << std::endl;
 
+#if 1
     ExitHandler exitHandler;
     signal(SIGTERM, &ExitHandler::exitHandler);
     signal(SIGABRT, &ExitHandler::exitHandler);
@@ -59,13 +60,11 @@ int main(int argc, char* argv[])
 
     while(false == exitHandler.shouldExit())
     {
-#ifdef FOR_TEST
-        initializer.m_tcpServiceInitializer->tcpService()->boardcastModuleMessage(1, data);
-        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
-#else
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-#endif
     }
+#else
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+#endif
 
     initializer.stop();
 

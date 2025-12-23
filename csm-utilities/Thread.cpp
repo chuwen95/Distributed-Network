@@ -3,48 +3,36 @@
 //
 #include "Thread.h"
 
+#include "Logger.h"
+
 using namespace csm::utilities;
+
+Thread::Thread(std::function<void()> func, std::uint32_t interval, std::string name) : m_func(std::move(func)),
+    m_interval(interval), m_name(name)
+{
+}
 
 Thread::~Thread()
 {
     stop();
 }
 
-void Thread::setFunc(std::function<void()> func)
+void Thread::start()
 {
-    m_func = std::move(func);
-}
-
-void Thread::setInterval(std::uint32_t interval)
-{
-    m_interval = interval;
-}
-
-void Thread::setName(std::string_view name)
-{
-    m_name = name;
-}
-
-int Thread::start()
-{
-    if (nullptr == m_func)
-    {
-        return -1;
-    }
-
     std::unique_lock<std::mutex> ulock(x_startStop);
 
     if (true == m_isRunning)
     {
-        return -1;
+        return;
     }
 
-    const auto expression = [this]() {
+    m_thread = std::jthread([this](std::stop_token st)
+    {
 #ifdef __linux__
         pthread_setname_np(pthread_self(), m_name.c_str());
 #endif
 
-        while (true == m_isRunning)
+        while (false == st.stop_requested())
         {
             m_func();
 
@@ -54,11 +42,8 @@ int Thread::start()
                 m_cv.wait_for(ulock, std::chrono::milliseconds(m_interval));
             }
         }
-    };
+    });
     m_isRunning = true;
-    m_thread = std::make_unique<std::thread>(expression);
-
-    return 0;
 }
 
 void Thread::stop()
@@ -70,7 +55,9 @@ void Thread::stop()
         return;
     }
 
-    m_isRunning = false;
+    m_thread.request_stop();
     m_cv.notify_one();
-    m_thread->join();
+    m_thread.join();
+
+    m_isRunning = false;
 }

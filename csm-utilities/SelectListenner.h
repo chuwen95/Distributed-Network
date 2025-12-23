@@ -17,12 +17,6 @@ namespace csm
         class SelectListenner
         {
         public:
-            using Ptr = std::shared_ptr<SelectListenner>;
-
-            SelectListenner() = default;
-            ~SelectListenner() = default;
-
-        public:
             void setListenFd(int fd);
 
             /**
@@ -42,7 +36,7 @@ namespace csm
             int m_listenfd;
             std::function<void()> m_connectHandler;
 
-            Thread::Ptr m_thread;
+            std::unique_ptr<utilities::Thread> m_thread;
         };
 
     } // components

@@ -50,10 +50,7 @@ int SessionAliveChecker::init()
             m_timeoutHandler(offlineSessions);
         }
     };
-    m_thread = std::make_shared<utilities::Thread>();
-    m_thread->setFunc(expression);
-    m_thread->setInterval(c_aliveTimeout);
-    m_thread->setName("ses_alive_chk");
+    m_thread = std::make_unique<utilities::Thread>(expression, c_aliveTimeout, "ses_alive_chk");
 
     return 0;
 }

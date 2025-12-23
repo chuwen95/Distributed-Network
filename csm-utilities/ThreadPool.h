@@ -26,12 +26,10 @@ namespace csm
              * @param threadNum  线程池线程数量
              * @param threadName    线程池线程名
              */
-            ThreadPool(const std::size_t threadNum, const std::string_view threadName);
+            ThreadPool(std::size_t threadNum, std::string_view threadName);
             ~ThreadPool() = default;
 
         public:
-            int init();
-
             /**
              * @brief   开启线程池
              */
@@ -69,7 +67,7 @@ namespace csm
              *
              * @param isTerminate   线程池终止标志
              */
-            void setIsTerminate(const bool isTerminate);
+            void setIsTerminate(bool isTerminate);
 
             /**
              * @brief   整个线程池终止标志

@@ -5,6 +5,9 @@
 #include "SessionDispatcher.h"
 
 #include <algorithm>
+#include <google/protobuf/message.h>
+
+#include "csm-utilities/Logger.h"
 
 using namespace csm::service;
 
@@ -25,7 +28,7 @@ int SessionDispatcher::init()
         SessionInfo::Ptr sessionInfo{nullptr};
         m_p2pSessionsQueue.wait_dequeue(sessionInfo);
 
-        if (nullptr == sessionInfo)
+        if (true == m_isTerminate)
         {
             return;
         }
@@ -40,10 +43,7 @@ int SessionDispatcher::init()
         sessionInfo->callback(*iter);
         ++m_slaveReactorSessionSize[*iter];
     };
-    m_thread = std::make_shared<utilities::Thread>();
-    m_thread->setFunc(expression);
-    m_thread->setInterval(1);
-    m_thread->setName("session_dispa");
+    m_thread = std::make_unique<utilities::Thread>(expression, 1, "session_dispa");
 
     return 0;
 }

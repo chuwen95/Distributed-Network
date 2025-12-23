@@ -39,7 +39,7 @@ std::unique_ptr<ServerService> ServerServiceFactory::create()
     std::unique_ptr<SessionDataDecoder> sessionDataDecoder =
         createSessionDataDecoder(m_nodeConfig->sessionDataDecoderWorkerNum());
     // 网络模组包处理器
-    std::unique_ptr<SessionServiceDataProcessor> sessionSericeDataProcessor = createServiceDataProcessor();
+    std::unique_ptr<SessionServiceDataProcessor> sessionSericeDataProcessor = std::make_unique<SessionServiceDataProcessor>();
     // 其他模组包处理器
     std::unique_ptr<SessionModuleDataProcessor> sessionModuleDataProcessor =
         createModuleDataProcessor(m_nodeConfig->moduleDataProcessWorkerNum());
@@ -61,12 +61,6 @@ std::unique_ptr<SessionDataDecoder> ServerServiceFactory::createSessionDataDecod
         std::make_shared<utilities::ThreadPool>(m_nodeConfig->sessionDataDecoderWorkerNum(), "sess_dt_deco");
 
     return std::make_unique<SessionDataDecoder>(payloadFactory, sessionDataDecoder);
-}
-
-std::unique_ptr<SessionServiceDataProcessor> ServerServiceFactory::createServiceDataProcessor()
-{
-    utilities::Thread::Ptr thread = std::make_shared<utilities::Thread>();
-    return std::make_unique<SessionServiceDataProcessor>(thread);
 }
 
 std::unique_ptr<SessionModuleDataProcessor> ServerServiceFactory::createModuleDataProcessor(std::size_t workerNum)

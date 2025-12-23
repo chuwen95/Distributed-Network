@@ -35,7 +35,7 @@ namespace csm
             HostsInfoManager* m_hostInfoManager;
             std::function<int(const int fd, const std::vector<char>& data)> m_heartBeatSender;
 
-            utilities::Thread::Ptr m_thread;
+            std::unique_ptr<utilities::Thread> m_thread;
         };
 
     } // namespace service

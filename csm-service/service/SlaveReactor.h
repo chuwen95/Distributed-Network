@@ -91,7 +91,7 @@ namespace csm
             std::unordered_map<SessionId, P2PSession::Ptr> m_p2pSessions;
 
             std::atomic_bool m_isTerminate{false};
-            utilities::Thread::Ptr m_thread;
+            std::unique_ptr<utilities::Thread> m_thread;
 
             // 用于退出的fd
             int m_exitFd;

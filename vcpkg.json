@@ -16,6 +16,7 @@
         "jsoncpp",
         "stduuid",
         "cpp-httplib",
-        "rocksdb"
+        "rocksdb",
+        "gtest"
     ]
 }

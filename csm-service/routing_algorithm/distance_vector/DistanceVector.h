@@ -25,9 +25,7 @@ namespace csm
         class DistanceVector
         {
         public:
-            using Ptr = std::shared_ptr<DistanceVector>;
-
-            explicit DistanceVector(utilities::Thread::Ptr thread);
+            explicit DistanceVector(const NodeIds& nodes);
             ~DistanceVector() = default;
 
         public:
@@ -43,21 +41,6 @@ namespace csm
              * @param sender
              */
             void setPacketSender(std::function<int(const NodeId& nodeId, const std::vector<char>& data)> sender);
-
-            /**
-             *@brief 添加邻居节点
-             *
-             * @param nodeId
-             */
-            void setNeighbourNode(const NodeIds& nodeId);
-
-            /**
-             * @brief 设置邻居节点不可达
-             *
-             * @param nodeId
-             * @return
-             */
-            int setNightbourUnreachable(const NodeId& nodeId);
 
             /**
              * @brief 处理网络数据包
@@ -79,10 +62,10 @@ namespace csm
             bool queryNodeDistanceWithoutLock(const NodeId& nodeId, std::uint32_t& distance);
 
         private:
+            std::vector<NodeId> m_neighbours;
+
             struct NodeInfo
             {
-                using Ptr = std::shared_ptr<NodeInfo>;
-
                 NodeInfo() = default;
                 explicit NodeInfo(NodeId n) : nextHop(std::move(n)) {}
 
@@ -90,12 +73,13 @@ namespace csm
                 std::uint32_t distance{c_unreachableDistance}; // 到达目标节点的距离
             };
 
-            std::mutex x_dvInfo;
-            std::set<NodeId> m_neighbours;
-            std::unordered_map<NodeId, NodeInfo::Ptr> m_dvInfos;
+            std::mutex x_dvInfos;
+            std::unordered_map<NodeId, NodeInfo> m_dvInfos;
+
+            std::unordered_map<NodeId, std::unordered_map<NodeId, std::uint32_t>> m_neighboursDVInfo;
 
             std::function<int(const NodeId& nodeId, const std::vector<char>& data)> m_packetSender;
-            utilities::Thread::Ptr m_thread{nullptr};
+            std::unique_ptr<utilities::Thread> m_thread{nullptr};
 
             std::uint64_t m_distanceDetectSeq{0};
             std::atomic_bool m_needToSyncDistaceVector{false};

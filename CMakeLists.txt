@@ -48,6 +48,4 @@ add_subdirectory(csm-initializer)
 add_subdirectory(server)
 add_subdirectory(client)
 
-if(DEFINED TEST)
-    add_subdirectory(unittest)
-endif ()
+add_subdirectory(unittest)

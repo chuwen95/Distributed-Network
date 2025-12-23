@@ -11,19 +11,14 @@ ThreadPool::ThreadPool(const std::size_t size, const std::string_view threadName
     m_threadNum(size), m_threadName(threadName)
 {}
 
-int ThreadPool::init()
+int ThreadPool::start()
 {
+    std::unique_lock<std::mutex> ulock(x_isTerminate);
+
     if (m_threadNum < 1)
     {
         return -1;
     }
-
-    return 0;
-}
-
-int ThreadPool::start()
-{
-    std::unique_lock<std::mutex> ulock(x_isTerminate);
 
     const auto expression = [this](const int id) {
         std::string tname = m_threadName + "-" + std::to_string(id);

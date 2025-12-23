@@ -42,7 +42,7 @@ namespace csm
             std::function<void(P2PSession::Ptr)> m_newClientCallback;
 
             std::atomic_bool m_isTerminate{false};
-            utilities::Thread::Ptr m_thread;
+            std::unique_ptr<utilities::Thread> m_thread;
         };
 
     } // namespace service

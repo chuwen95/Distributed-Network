@@ -13,13 +13,16 @@ RingBuffer::RingBuffer(std::size_t size) : m_size(size)
 {
 }
 
-RingBuffer::~RingBuffer()
-{
-}
-
 int RingBuffer::init()
 {
-    m_buffer.resize(m_size);
+    try
+    {
+        m_buffer.resize(m_size);
+    }
+    catch (...)
+    {
+        return -1;
+    }
 
     return 0;
 }
@@ -29,7 +32,7 @@ int RingBuffer::uninit()
     return 0;
 }
 
-int RingBuffer::writeData(const char *data, const std::size_t len)
+int RingBuffer::writeData(const char* data, const std::size_t len)
 {
     std::size_t remainSpace = space();
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO, ", len: ", len, ", remainSpace: ", remainSpace);
@@ -41,13 +44,15 @@ int RingBuffer::writeData(const char *data, const std::size_t len)
     if (m_startOffset > m_endOffset)
     {
         memcpy(m_buffer.data() + m_endOffset, data, len);
-    } else
+    }
+    else
     {
         int spaceAfterEndOffset = m_size - m_endOffset;
         if (spaceAfterEndOffset > len)
         {
             memcpy(m_buffer.data() + m_endOffset, data, len);
-        } else
+        }
+        else
         {
             memcpy(m_buffer.data() + m_endOffset, data, spaceAfterEndOffset);
             memcpy(m_buffer.data(), data + spaceAfterEndOffset, len - spaceAfterEndOffset);
@@ -57,11 +62,12 @@ int RingBuffer::writeData(const char *data, const std::size_t len)
     return 0;
 }
 
-int RingBuffer::readData(const std::size_t size, const std::size_t offset, std::vector<char> &data)
+int RingBuffer::readData(const std::size_t size, const std::size_t offset, std::vector<char>& data)
 {
     int usedDataLength = dataLength();
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                  "usedDataLength: ", usedDataLength, "size: ", size, ", m_startOffset: ", m_startOffset, ", m_endOffset: ", m_endOffset);
+               "usedDataLength: ", usedDataLength, "size: ", size, ", m_startOffset: ", m_startOffset,
+               ", m_endOffset: ", m_endOffset);
     if (usedDataLength < size || data.size() != size)
     {
         return -1;
@@ -70,16 +76,18 @@ int RingBuffer::readData(const std::size_t size, const std::size_t offset, std::
     if (m_startOffset < m_endOffset)
     {
         memcpy(data.data(), m_buffer.data() + m_startOffset + offset, size);
-    } else
+    }
+    else
     {
         std::size_t firstCopySize = m_size - (m_startOffset + offset);
-        if (size > firstCopySize)    // 如果需要获取的数据大于m_startOffset到缓冲区尾部的数据
+        if (size > firstCopySize) // 如果需要获取的数据大于m_startOffset到缓冲区尾部的数据
         {
             // 首先拷贝从m_startOffset到缓冲区结束的所有数据
             memcpy(data.data(), m_buffer.data() + m_startOffset + offset, firstCopySize);
             // 再从缓冲区头部拷贝剩下长度的数据
             memcpy(data.data() + firstCopySize, m_buffer.data(), size - firstCopySize);
-        } else    // 需要获取的数据小于等于m_startOffset到缓冲区尾部的数据
+        }
+        else // 需要获取的数据小于等于m_startOffset到缓冲区尾部的数据
         {
             std::size_t startOffset = (m_startOffset + offset) % m_size;
             memcpy(data.data(), m_buffer.data() + startOffset, size);
@@ -88,7 +96,7 @@ int RingBuffer::readData(const std::size_t size, const std::size_t offset, std::
     return 0;
 }
 
-char *RingBuffer::data()
+char* RingBuffer::data()
 {
     return m_buffer.data();
 }
@@ -111,7 +119,7 @@ std::size_t RingBuffer::size()
 std::size_t RingBuffer::dataLength()
 {
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                  "m_startOffset: ", m_startOffset, ", m_endOffset", m_endOffset);
+               "m_startOffset: ", m_startOffset, ", m_endOffset", m_endOffset);
     if (m_endOffset >= m_startOffset)
     {
         return m_endOffset - m_startOffset;
@@ -125,16 +133,16 @@ std::size_t RingBuffer::dataLength()
 std::size_t RingBuffer::space()
 {
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                  "m_startOffset: ", m_startOffset, ", m_endOffset", m_endOffset);
+               "m_startOffset: ", m_startOffset, ", m_endOffset", m_endOffset);
     // 保留2个字节不使用，避免m_startOffset > m_endOffset的情况下写入会导致m_endOffset == m_startOffset
     if (m_startOffset == m_endOffset)
     {
         return m_size - c_reservedSpace;
-    } else if (m_startOffset < m_endOffset)
+    }
+    else if (m_startOffset < m_endOffset)
     {
         if ((m_endOffset + c_reservedSpace) % m_size == m_startOffset)
         {
-
             /**
              * 0 0 0 0 0 0 0 0 0 0
              * s                       e
@@ -146,7 +154,8 @@ std::size_t RingBuffer::space()
             return 0;
         }
         return (m_size - m_endOffset) + m_startOffset - c_reservedSpace;
-    } else
+    }
+    else
     {
         /**
          * 0 0 0 0 0 0 0 0 0 0
@@ -162,11 +171,12 @@ void RingBuffer::clear()
     m_endOffset = 0;
 }
 
-int RingBuffer::getBufferAndLengthForWrite(char *&buffer, std::size_t &length)
+int RingBuffer::getBufferAndLengthForWrite(char*& buffer, std::size_t& length)
 {
     std::size_t remainSpace = space();
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                  "remainSpace: ", remainSpace, ", length: ", length, ", m_startOffset: ", m_startOffset, ", m_endOffset: ", m_endOffset);
+               "remainSpace: ", remainSpace, ", length: ", length, ", m_startOffset: ", m_startOffset,
+               ", m_endOffset: ", m_endOffset);
     if (0 == remainSpace)
     {
         return -1;
@@ -178,11 +188,13 @@ int RingBuffer::getBufferAndLengthForWrite(char *&buffer, std::size_t &length)
         if (m_startOffset >= c_reservedSpace)
         {
             length = m_size - m_endOffset;
-        } else
+        }
+        else
         {
             length = m_size - (c_reservedSpace - m_startOffset) - m_endOffset;
         }
-    } else
+    }
+    else
     {
         length = m_startOffset - m_endOffset - c_reservedSpace;
     }
@@ -203,11 +215,12 @@ int RingBuffer::increaseUsedSpace(const std::size_t size)
     return 0;
 }
 
-int RingBuffer::getBufferForRead(const std::size_t size, char *&buffer)
+int RingBuffer::getBufferForRead(const std::size_t size, char*& buffer)
 {
     std::size_t usedDataLength = dataLength();
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                  "usedDataLength: ", usedDataLength, "size: ", size, ", m_startOffset: ", m_startOffset, ", m_endOffset: ", m_endOffset);
+               "usedDataLength: ", usedDataLength, "size: ", size, ", m_startOffset: ", m_startOffset,
+               ", m_endOffset: ", m_endOffset);
     if (dataLength() < size)
     {
         return -1;
@@ -232,7 +245,8 @@ int RingBuffer::decreaseUsedSpace(const std::size_t size)
 {
     std::size_t usedDataLength = dataLength();
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                  "usedDataLength: ", usedDataLength, ", size", size, ", m_startOffset: ", m_startOffset, ", m_endOffset: ", m_endOffset);
+               "usedDataLength: ", usedDataLength, ", size", size, ", m_startOffset: ", m_startOffset,
+               ", m_endOffset: ", m_endOffset);
     if (usedDataLength < size)
     {
         return -1;
@@ -259,11 +273,12 @@ int RingBuffer::decreaseUsedSpace(const std::size_t size)
     return 0;
 }
 
-int RingBuffer::getContinuousData(char *&buffer, std::size_t &size)
+int RingBuffer::getContinuousData(char*& buffer, std::size_t& size)
 {
     std::size_t usedDataLength = dataLength();
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO,
-                  "usedDataLength: ", usedDataLength, ", size", size, ", m_startOffset: ", m_startOffset, ", m_endOffset: ", m_endOffset);
+               "usedDataLength: ", usedDataLength, ", size", size, ", m_startOffset: ", m_startOffset,
+               ", m_endOffset: ", m_endOffset);
     if (0 == usedDataLength)
     {
         return -1;

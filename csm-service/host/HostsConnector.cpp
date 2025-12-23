@@ -241,20 +241,12 @@ int HostsConnector::init()
         {
             std::vector<NodeId> onlineHosts = m_hostsInfoManager->onlineNodeIds();
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "online node size: ", onlineHosts.size());
-
-            if (nullptr != m_onlineNodesCallback)
-            {
-                m_onlineNodesCallback(onlineHosts);
-            }
         }
         printCircle = (printCircle + 1) % 6;
 
         return 0;
     };
-    m_thread = std::make_shared<utilities::Thread>();
-    m_thread->setFunc(expression);
-    m_thread->setInterval(500);
-    m_thread->setName("host_connector");
+    m_thread = std::make_unique<utilities::Thread>(expression, 500, "host_connector");
 
     return 0;
 }
@@ -288,9 +280,4 @@ int HostsConnector::setHostConnected(const HostEndPointInfo& hostEndPointInfo)
     m_connectingHosts.erase(iter);
 
     return 0;
-}
-
-void HostsConnector::setOnlineNodesCallback(std::function<void(const NodeIds&)> callback)
-{
-    m_onlineNodesCallback = std::move(callback);
 }

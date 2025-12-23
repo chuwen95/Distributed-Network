@@ -40,7 +40,7 @@ std::unique_ptr<P2PService> P2PServiceFactory::create()
     std::unique_ptr<SessionDataDecoder> sessionDataDecoder =
         createSessionDataDecoder(m_nodeConfig->sessionDataDecoderWorkerNum());
     // 网络模组包处理器
-    std::unique_ptr<SessionServiceDataProcessor> sessionSericeDataProcessor = createServiceDataProcessor();
+    std::unique_ptr<SessionServiceDataProcessor> sessionSericeDataProcessor = std::make_unique<SessionServiceDataProcessor>();
     // 其他模组包处理器
     std::unique_ptr<SessionModuleDataProcessor> sessionModuleDataProcessor =
         createModuleDataProcessor(m_nodeConfig->moduleDataProcessWorkerNum());
@@ -74,12 +74,6 @@ std::unique_ptr<SessionDataDecoder> P2PServiceFactory::createSessionDataDecoder(
     return std::make_unique<SessionDataDecoder>(payloadFactory, sessionDataDecoder);
 }
 
-std::unique_ptr<SessionServiceDataProcessor> P2PServiceFactory::createServiceDataProcessor()
-{
-    utilities::Thread::Ptr thread = std::make_shared<utilities::Thread>();
-    return std::make_unique<SessionServiceDataProcessor>(thread);
-}
-
 std::unique_ptr<SessionModuleDataProcessor> P2PServiceFactory::createModuleDataProcessor(std::size_t workerNum)
 {
     utilities::ThreadPool::Ptr normalPacketProcessor = std::make_shared<utilities::ThreadPool>(workerNum, "sess_dt_proc");
@@ -88,6 +82,5 @@ std::unique_ptr<SessionModuleDataProcessor> P2PServiceFactory::createModuleDataP
 
 std::unique_ptr<DistanceVector> P2PServiceFactory::createDistanceVector()
 {
-    utilities::Thread::Ptr thread = std::make_shared<utilities::Thread>();
-    return std::make_unique<DistanceVector>(thread);
+    return std::make_unique<DistanceVector>(m_nodeConfig->clusterServerIds());
 }

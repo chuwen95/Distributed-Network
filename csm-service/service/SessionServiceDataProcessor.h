@@ -18,14 +18,8 @@ namespace csm
 {
     namespace service
     {
-
         class SessionServiceDataProcessor
         {
-        public:
-            using Ptr = std::shared_ptr<SessionServiceDataProcessor>;
-
-            explicit SessionServiceDataProcessor(utilities::Thread::Ptr thread);
-
         public:
             int init();
 
@@ -35,7 +29,8 @@ namespace csm
             // 不考虑该方法被多线程调用
             int stop();
 
-            int addPacket(SessionId sessionId, P2PSession::WPtr p2pSession, PacketHeader::Ptr header, PayloadBase::Ptr payload);
+            int addPacket(SessionId sessionId, P2PSession::WPtr p2pSession, PacketHeader::Ptr header,
+                          PayloadBase::Ptr payload);
 
             void registerPacketHandler(PacketType packetType,
                                        std::function<void(SessionId sessionId, P2PSession::WPtr p2pSession,
@@ -46,7 +41,8 @@ namespace csm
             {
                 using Ptr = std::shared_ptr<SessionServiceData>;
 
-                explicit SessionServiceData(SessionId si, P2PSession::WPtr ps, PacketHeader::Ptr ph, PayloadBase::Ptr pb)
+                explicit SessionServiceData(SessionId si, P2PSession::WPtr ps, PacketHeader::Ptr ph,
+                                            PayloadBase::Ptr pb)
                     : sessionId(si), p2pSessionWeakPtr(std::move(ps)), header(std::move(ph)), payload(std::move(pb))
                 {
                 }
@@ -61,11 +57,10 @@ namespace csm
 
             std::atomic_bool m_running{false};
 
-            std::unordered_map<PacketType, std::function<void(SessionId, P2PSession::WPtr, PacketHeader::Ptr, PayloadBase::Ptr)>>
-            m_packetHandlers;
-            utilities::Thread::Ptr m_thread;
+            std::unordered_map<PacketType, std::function<void(SessionId, P2PSession::WPtr, PacketHeader::Ptr,
+                                                              PayloadBase::Ptr)>> m_packetHandlers;
+            std::unique_ptr<utilities::Thread> m_thread;
         };
-
     }
 }
 

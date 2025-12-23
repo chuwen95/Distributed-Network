@@ -36,8 +36,6 @@ namespace csm
 
             int setHostConnected(const HostEndPointInfo& hostEndPointInfo);
 
-            void setOnlineNodesCallback(std::function<void(const NodeIds&)> callback);
-
         private:
             std::mutex x_connectingHosts;
             // ip:port => pair<fd, start_connect_timestamp>
@@ -46,11 +44,9 @@ namespace csm
             HostsInfoManager* m_hostsInfoManager;
             std::shared_ptr<P2PSessionFactory> m_p2pSessionFactory;
 
-            utilities::Thread::Ptr m_thread;
+            std::unique_ptr<utilities::Thread> m_thread;
 
             std::function<void(P2PSession::Ptr)> m_connectHandler;
-
-            std::function<void(const NodeIds&)> m_onlineNodesCallback;
         };
 
     } // namespace service

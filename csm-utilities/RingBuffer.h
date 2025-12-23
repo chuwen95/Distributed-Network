@@ -18,8 +18,8 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<RingBuffer>;
 
-            RingBuffer(std::size_t size);
-            ~RingBuffer();
+            explicit RingBuffer(std::size_t size);
+            ~RingBuffer() = default;
 
         public:
             /**

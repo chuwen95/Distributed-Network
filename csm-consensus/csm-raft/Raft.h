@@ -77,7 +77,7 @@ namespace csm
             // 选举超时时间点
             std::atomic<double> m_electionTimeoutPoint;
             // 选举线程
-            utilities::Thread::Ptr m_electionThread;
+            std::unique_ptr<utilities::Thread> m_electionThread{nullptr};
         };
 
     }

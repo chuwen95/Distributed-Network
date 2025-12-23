@@ -12,11 +12,6 @@ SessionModuleDataProcessor::SessionModuleDataProcessor(utilities::ThreadPool::Pt
 {
 }
 
-int SessionModuleDataProcessor::init()
-{
-    return m_normalPacketProcessor->init();
-}
-
 int SessionModuleDataProcessor::start()
 {
     return m_normalPacketProcessor->start();

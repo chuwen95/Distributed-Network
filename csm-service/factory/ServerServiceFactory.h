@@ -26,8 +26,6 @@ namespace csm
             tool::NodeConfig* m_nodeConfig;
             // 创建数据解码器
             std::unique_ptr<SessionDataDecoder> createSessionDataDecoder(std::size_t workerNum);
-            // 创建网络模块包处理器
-            std::unique_ptr<SessionServiceDataProcessor> createServiceDataProcessor();
             // 创建其他模组包处理器
             std::unique_ptr<SessionModuleDataProcessor> createModuleDataProcessor(std::size_t workerNum);
         };

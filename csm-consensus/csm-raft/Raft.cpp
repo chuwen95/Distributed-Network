@@ -158,10 +158,7 @@ int Raft::initElectionThread()
             break;
         }
     };
-    m_electionThread = std::make_shared<utilities::Thread>();
-    m_electionThread->setFunc(electionThread);
-    m_electionThread->setInterval(10);
-    m_electionThread->setName("raft_vote");
+    m_electionThread = std::make_unique<utilities::Thread>(electionThread, 10, "raft_vote");
 
     return 0;
 }

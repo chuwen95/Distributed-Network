@@ -32,10 +32,6 @@ namespace csm
         class Logger
         {
         public:
-            Logger() = default;
-            ~Logger() = default;
-
-        public:
             void setEnableFileLog(bool enableFileLog);
 
             void setLogDirPath(const std::string &logDirPath);
@@ -128,7 +124,7 @@ namespace csm
             std::vector<char> m_buffer;
 
             std::atomic_bool m_isTerminate{false};
-            Thread::Ptr m_thread;
+            std::unique_ptr<Thread> m_thread;
 
             bool m_consoleOutput{false};
             LogType m_logLevel{LogType::Log_Info};

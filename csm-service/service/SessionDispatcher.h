@@ -18,8 +18,6 @@ namespace csm
         class SessionDispatcher
         {
         public:
-            using Ptr = std::shared_ptr<SessionDispatcher>;
-
             /**
              *
              * @param redispatchInterval
@@ -68,7 +66,7 @@ namespace csm
             std::unordered_map<SessionId, std::size_t> m_sessionIdSlaveReactorIndex;
 
             std::atomic_bool m_isTerminate{false};
-            utilities::Thread::Ptr m_thread;
+            std::unique_ptr<utilities::Thread> m_thread;
         };
 
     } // service

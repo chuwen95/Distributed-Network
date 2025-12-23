@@ -8,10 +8,6 @@
 
 using namespace csm::service;
 
-SessionServiceDataProcessor::SessionServiceDataProcessor(utilities::Thread::Ptr thread) : m_thread(std::move(thread))
-{
-}
-
 int SessionServiceDataProcessor::init()
 {
     const auto serviceDataProcess = [this]()
@@ -45,9 +41,7 @@ int SessionServiceDataProcessor::init()
                        "packet handler not register, type: ", static_cast<int>(sessionServiceData->header->type()));
         }
     };
-    m_thread->setFunc(serviceDataProcess);
-    m_thread->setInterval(1);
-    m_thread->setName("serv_data_proc");
+    m_thread = std::make_unique<utilities::Thread>(serviceDataProcess, 1, "serv_data_proc");
 
     return 0;
 }

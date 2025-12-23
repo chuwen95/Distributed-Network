@@ -52,7 +52,7 @@ namespace csm
             std::function<void(const SessionDestoryInfo& info)> m_destoryHandler;
 
             std::atomic_int m_destroyInterval{1};
-            utilities::Thread::Ptr m_thread;
+            std::unique_ptr<utilities::Thread> m_thread;
 
             std::mutex x_waitingDestroySessionInfos;
             std::condition_variable m_waitingDestroySessionInfosCv;

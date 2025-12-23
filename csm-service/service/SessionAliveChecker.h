@@ -5,6 +5,8 @@
 #ifndef SESSIONALIVECHECKER_H
 #define SESSIONALIVECHECKER_H
 
+#include <google/protobuf/message.h>
+
 #include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
 #include "P2PSession.h"
@@ -17,9 +19,6 @@ namespace csm
 
         class SessionAliveChecker
         {
-        public:
-            using Ptr = std::shared_ptr<SessionAliveChecker>;
-
         public:
             int init();
 
@@ -49,7 +48,7 @@ namespace csm
             std::mutex x_sessions;
             std::unordered_map<std::uint64_t, P2PSession::WPtr> m_sessions;
 
-            utilities::Thread::Ptr m_thread;
+            std::unique_ptr<utilities::Thread> m_thread;
             std::function<void(const std::vector<std::pair<SessionId, P2PSession::WPtr>>&)> m_timeoutHandler;
         };
 
