@@ -1,11 +1,12 @@
-cmake_minimum_required(VERSION 3.20)
+find_package(GTest CONFIG REQUIRED)
 
-project(unittest)
+include(GoogleTest)
+enable_testing()
+
+set(TARGET GTest::gtest PROPERTY CXX_STANDARD 17)
+set(TARGET GTest::gtest_main PROPERTY CXX_STANDARD 17)
 
 add_executable(RingBufferTest RingBufferTest.cpp)
-target_link_libraries(RingBufferTest PUBLIC utilities packetprocess)
+target_link_libraries(RingBufferTest PUBLIC utilities packetprocess service GTest::gtest GTest::gtest_main)
 
-find_package(httplib CONFIG REQUIRED)
-
-add_executable(HttpLibTest HttpLibTest.cpp)
-target_link_libraries(HttpLibTest PUBLIC utilities httplib::httplib)
+gtest_discover_tests(RingBufferTest)

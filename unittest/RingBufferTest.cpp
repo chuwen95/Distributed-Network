@@ -2,26 +2,31 @@
 // Created by ChuWen on 9/15/23.
 //
 
-#include "libutilities/RingBuffer.h"
-#include "libpacketprocess/packet/PacketHeader.h"
-#include "libpacketprocess/packet/PacketRawString.h"
+#include <gtest/gtest.h>
 
-int putOnePacketTest()
+#include "csm-utilities/RingBuffer.h"
+#include "csm-service/protocol/header/PacketHeader.h"
+#include "csm-packetprocess/packet/PacketRawString.h"
+
+constexpr std::size_t c_bufferSize{32 * 1024};
+
+TEST(RingBufferTest, PutOnePacketTest)
 {
     // 创建大小32K的环形缓冲区
-    utilities::RingBuffer ringBuffer;
-    ringBuffer.init(32 * 1024);
+    csm::utilities::RingBuffer ringBuffer(c_bufferSize);
+    int ret = ringBuffer.init();
+    EXPECT_NE(-1, ret);
 
     // 请求包
-    packetprocess::PacketHeader packetHeader;
-    packetHeader.setType(packetprocess::PacketType::PT_RawString);
+    csm::service::PacketHeader packetHeader;
+    packetHeader.setType(csm::service::PacketType::PT_ModuleMessage);
 
-    packetprocess::PacketRawString rawStringPacket;
+    csm::packetprocess::PacketRawString rawStringPacket;
     rawStringPacket.setContent("hello");
 
     std::size_t headerLength = packetHeader.headerLength();
     std::size_t payloadLength = rawStringPacket.packetLength();
-    int rawStringLength = headerLength + payloadLength;
+    std::size_t rawStringLength = headerLength + payloadLength;
 
     packetHeader.setPayloadLength(payloadLength);
 
@@ -32,88 +37,55 @@ int putOnePacketTest()
     rawStringPacket.encode(rawStringBuffer.data() + headerLength, payloadLength);
 
     // 放一个包进去，然后取出
-    if (ringBuffer.space() < rawStringLength)
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " buffer space is not enough" << std::endl;
-        return -1;
-    }
+    EXPECT_GT (ringBuffer.space(), rawStringLength);
 
     char *buffer{nullptr};
     std::size_t len{0};
-    if (-1 == ringBuffer.getBufferAndLengthForWrite(buffer, len))
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " getBufferAndLengthForWrite, failed"
-                  << std::endl;
-        return -1;
-    }
+    ret = ringBuffer.getBufferAndLengthForWrite(buffer, len);
+    EXPECT_NE(-1, ret);
+
     memcpy(buffer, rawStringBuffer.data(), rawStringLength);
-    if (-1 == ringBuffer.increaseUsedSpace(rawStringLength))
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " increaseUsedSpace, failed" << std::endl;
-        return -1;
-    }
+    ret = ringBuffer.increaseUsedSpace(rawStringLength);
+    EXPECT_NE (-1, ret);
 
-    if (ringBuffer.dataLength() != rawStringLength)
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " ring buffer used space error, use space: " << ringBuffer.dataLength() << std::endl;
-        return -1;
-    }
+    EXPECT_EQ (ringBuffer.dataLength(), rawStringLength);
 
-    if (-1 == ringBuffer.getBufferForRead(headerLength, buffer))
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " getBufferForRead, size: " << headerLength << std::endl;
-        return -1;
-    }
+    ret = ringBuffer.getBufferForRead(headerLength, buffer);
+    EXPECT_NE (-1, ret);
 
     packetHeader.decode(buffer, headerLength);
-    if (false == packetHeader.isMagicMatch())
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " magic not match: " << std::endl;
-        return -1;
-    }
+    EXPECT_TRUE(packetHeader.isMagicMatch());
 
     std::vector<char> payloadBuffer;
     payloadBuffer.resize(packetHeader.payloadLength());
-    if (-1 == ringBuffer.readData(packetHeader.payloadLength(), headerLength, payloadBuffer))
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " readData failed, len: " << packetHeader.payloadLength() << std::endl;
-        return -1;
-    }
+    ret = ringBuffer.readData(packetHeader.payloadLength(), headerLength, payloadBuffer);
+    EXPECT_NE (-1, ret);
+
     ringBuffer.decreaseUsedSpace(headerLength + packetHeader.payloadLength());
+    EXPECT_EQ (0, ringBuffer.dataLength());
 
-    if (0 != ringBuffer.dataLength())
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " used space error, value: " << ringBuffer.dataLength() << std::endl;
-        return -1;
-    }
     rawStringPacket.decode(payloadBuffer.data(), payloadLength);
-
-    if (rawStringPacket.getContent() != "hello")
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " payload content error, value: " << rawStringPacket.getContent() << std::endl;
-        return -1;
-    }
-
-    return 0;
+    EXPECT_EQ(rawStringPacket.getContent(), "hello");
 }
 
 // 将缓冲区放满
-int fullBufferTest()
+TEST(RingBufferTest, fullBufferTest)
 {
     // 创建大小32K的环形缓冲区
-    utilities::RingBuffer ringBuffer;
-    ringBuffer.init(32 * 1024);
+    csm::utilities::RingBuffer ringBuffer(c_bufferSize);
+    int ret = ringBuffer.init();
+    EXPECT_NE(-1, ret);
 
     // 请求包
-    packetprocess::PacketHeader packetHeader;
-    packetHeader.setType(packetprocess::PacketType::PT_RawString);
+    csm::service::PacketHeader packetHeader;
+    packetHeader.setType(csm::service::PacketType::PT_ModuleMessage);
 
-    packetprocess::PacketRawString rawStringPacket;
+    csm::packetprocess::PacketRawString rawStringPacket;
     rawStringPacket.setContent("hello");
 
     std::size_t headerLength = packetHeader.headerLength();
     std::size_t payloadLength = rawStringPacket.packetLength();
-    int rawStringLength = headerLength + payloadLength;
+    std::size_t rawStringLength = headerLength + payloadLength;
 
     packetHeader.setPayloadLength(payloadLength);
 
@@ -124,43 +96,31 @@ int fullBufferTest()
     rawStringPacket.encode(rawStringBuffer.data() + headerLength, payloadLength);
 
     // 将缓冲区放满
-    int lastPacketCopyLength{0};
+    std::size_t lastPacketCopyLength{0};
     while(0 != ringBuffer.space())
     {
         char* buffer{nullptr};
         std::size_t len{0};
-        if(-1 == ringBuffer.getBufferAndLengthForWrite(buffer, len))
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " no space left" << std::endl;
-            break;
-        }
+        ret = ringBuffer.getBufferAndLengthForWrite(buffer, len);
+        EXPECT_NE(-1, ret);
 
         if(len >= rawStringLength)
         {
             memcpy(buffer, rawStringBuffer.data(), rawStringLength);
-            if(-1 == ringBuffer.increaseUsedSpace(rawStringLength))
-            {
-                std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " increaseUsedSpace error" << std::endl;
-                break;
-            }
+            ret = ringBuffer.increaseUsedSpace(rawStringLength);
+            EXPECT_NE(-1, ret);
         }
         else
         {
             memcpy(buffer, rawStringBuffer.data(), len);
-            if(-1 == ringBuffer.increaseUsedSpace(len))
-            {
-                std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " increaseUsedSpace error" << std::endl;
-                break;
-            }
+            ret = ringBuffer.increaseUsedSpace(len);
+            EXPECT_NE(-1, ret);
+
             lastPacketCopyLength = len;
         }
     }
 
-    if(0 != ringBuffer.space())
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " error" << std::endl;
-        return -1;
-    }
+    EXPECT_EQ(0, ringBuffer.space());
 
     // 消耗包
     while(true)
@@ -174,21 +134,17 @@ int fullBufferTest()
         char *buffer{nullptr};
         std::vector<char> bufferForBackspaceLessThanHeaderLength;
 
-        int ret = ringBuffer.getBufferForRead(headerLength, buffer);
+        ret = ringBuffer.getBufferForRead(headerLength, buffer);
         if(-2 == ret)
         {
             bufferForBackspaceLessThanHeaderLength.resize(headerLength);
             ringBuffer.readData(headerLength, 0, bufferForBackspaceLessThanHeaderLength);
             buffer = bufferForBackspaceLessThanHeaderLength.data();
         }
-        else if(-1 == ret)
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " getBufferForRead error" << std::endl;
-            return -1;
-        }
+        EXPECT_NE(-1, ret);
 
         packetHeader.decode(buffer, headerLength);
-        assert(true == packetHeader.isMagicMatch());
+        EXPECT_TRUE(packetHeader.isMagicMatch());
 
         // 尝试复制包数据
         std::size_t payloadLength = packetHeader.payloadLength();
@@ -200,67 +156,43 @@ int fullBufferTest()
 
         std::vector<char> payloadBuffer;
         payloadBuffer.resize(payloadLength);
-        if(-1 == (ret= ringBuffer.readData(payloadLength, headerLength, payloadBuffer)))
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " readData error" << std::endl;
-            return -1;
-        }
+        ret = ringBuffer.readData(payloadLength, headerLength, payloadBuffer);
+        EXPECT_NE(-1, ret);
 
         ringBuffer.decreaseUsedSpace(headerLength + payloadLength);
     }
 
-    if(lastPacketCopyLength != ringBuffer.dataLength())
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " error" << std::endl;
-        return -1;
-    }
+    EXPECT_EQ(lastPacketCopyLength, ringBuffer.dataLength());
 
     // 将之前未放完的包放进去
     int packetSum{0};
     if(0 != lastPacketCopyLength)
     {
-        if(-1 == ringBuffer.writeData(rawStringBuffer.data() + lastPacketCopyLength, rawStringLength - lastPacketCopyLength))
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " getBufferAndLengthForWrite error" << std::endl;
-            return -1;
-        }
-        ringBuffer.increaseUsedSpace(rawStringLength - lastPacketCopyLength);
+        ret = ringBuffer.writeData(rawStringBuffer.data() + lastPacketCopyLength, rawStringLength - lastPacketCopyLength);
+        EXPECT_NE(-1, ret);
 
+        ringBuffer.increaseUsedSpace(rawStringLength - lastPacketCopyLength);
         ++packetSum;
     }
 
-    if(rawStringLength != ringBuffer.dataLength())
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " error" << std::endl;
-        return -1;
-    }
+    EXPECT_EQ(rawStringLength, ringBuffer.dataLength());
 
     // 再放几个完整的包
     for(int i = 0; i < 50; ++i)
     {
         char* buffer{nullptr};
         std::size_t len{0};
-        if(-1 == ringBuffer.getBufferAndLengthForWrite(buffer, len))
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " no space left" << std::endl;
-            return -1;
-        }
+        ret = ringBuffer.getBufferAndLengthForWrite(buffer, len);
+        EXPECT_NE(-1, ret);
 
         memcpy(buffer, rawStringBuffer.data(), rawStringLength);
-        if(-1 == ringBuffer.increaseUsedSpace(rawStringLength))
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " increaseUsedSpace error" << std::endl;
-            return -1;
-        }
+        ret = ringBuffer.increaseUsedSpace(rawStringLength);
+        EXPECT_NE(-1, ret);
 
         ++packetSum;
     }
 
-    if(packetSum * rawStringLength != ringBuffer.dataLength())
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " error" << std::endl;
-        return -1;
-    }
+    EXPECT_EQ(packetSum * rawStringLength, ringBuffer.dataLength());
 
     // 消耗包
     int packetNum{0};
@@ -269,24 +201,20 @@ int fullBufferTest()
         char *buffer{nullptr};
         std::vector<char> bufferForBackspaceLessThanHeaderLength;
 
-        int ret = ringBuffer.getBufferForRead(headerLength, buffer);
+        ret = ringBuffer.getBufferForRead(headerLength, buffer);
         if(-2 == ret)
         {
             bufferForBackspaceLessThanHeaderLength.resize(headerLength);
             ringBuffer.readData(headerLength, 0, bufferForBackspaceLessThanHeaderLength);
             buffer = bufferForBackspaceLessThanHeaderLength.data();
         }
-        else if(-1 == ret)
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " getBufferForRead error, data length: " << ringBuffer.dataLength() << std::endl;
-            return -1;
-        }
+        EXPECT_NE(-1, ret);
 
         packetHeader.decode(buffer, headerLength);
-        assert(true == packetHeader.isMagicMatch());
+        EXPECT_TRUE(packetHeader.isMagicMatch());
 
         // 尝试复制包数据
-        std::size_t payloadLength = packetHeader.payloadLength();
+        payloadLength = packetHeader.payloadLength();
         if(ringBuffer.dataLength() - headerLength < payloadLength)
         {
             std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available payload pop finish" << std::endl;
@@ -295,42 +223,35 @@ int fullBufferTest()
 
         std::vector<char> payloadBuffer;
         payloadBuffer.resize(payloadLength);
-        if(-1 == (ret= ringBuffer.readData(payloadLength, headerLength, payloadBuffer)))
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " readData error" << std::endl;
-            return -1;
-        }
+        ret = ringBuffer.readData(payloadLength, headerLength, payloadBuffer);
+        EXPECT_NE(-1, ret);
 
         ringBuffer.decreaseUsedSpace(headerLength + payloadLength);
 
         ++packetNum;
     }
 
-    if(packetNum != packetSum || 0 != ringBuffer.dataLength() || ringBuffer.space() != 32 * 1024 - 2)
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " error" << std::endl;
-        return -1;
-    }
-
-    return 0;
+    EXPECT_EQ(packetNum, packetSum);
+    EXPECT_EQ(0, ringBuffer.dataLength());
+    EXPECT_EQ(ringBuffer.space(), c_bufferSize - 2);
 }
 
-int fullBufferUseWriteDataTest()
+TEST(RingBufferTest, FullBufferUseWriteDataTest)
 {
     // 创建大小32K的环形缓冲区
-    utilities::RingBuffer ringBuffer;
-    ringBuffer.init(32 * 1024);
+    csm::utilities::RingBuffer ringBuffer(c_bufferSize);
+    int ret = ringBuffer.init();
 
     // 请求包
-    packetprocess::PacketHeader packetHeader;
-    packetHeader.setType(packetprocess::PacketType::PT_RawString);
+    csm::service::PacketHeader packetHeader;
+    packetHeader.setType(csm::service::PacketType::PT_ModuleMessage);
 
-    packetprocess::PacketRawString rawStringPacket;
+    csm::packetprocess::PacketRawString rawStringPacket;
     rawStringPacket.setContent("hello");
 
     std::size_t headerLength = packetHeader.headerLength();
     std::size_t payloadLength = rawStringPacket.packetLength();
-    int rawStringLength = headerLength + payloadLength;
+    std::size_t rawStringLength = headerLength + payloadLength;
 
     packetHeader.setPayloadLength(payloadLength);
 
@@ -341,20 +262,14 @@ int fullBufferUseWriteDataTest()
     rawStringPacket.encode(rawStringBuffer.data() + headerLength, payloadLength);
 
     // 添加包，直到缓冲区放不下为止
-    int packetSize = 32 * 1024 / rawStringLength;
+    std::size_t packetSize = c_bufferSize / rawStringLength;
     for(int i = 0; i < packetSize; ++i)
     {
-        if(-1 == ringBuffer.writeData(rawStringBuffer.data(), rawStringLength))
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " no space left" << std::endl;
-            return -1;
-        }
+        ret = ringBuffer.writeData(rawStringBuffer.data(), rawStringLength);
+        EXPECT_NE(-1, ret);
 
-        if(-1 == ringBuffer.increaseUsedSpace(rawStringLength))
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " increaseUsedSpace error" << std::endl;
-            return -1;
-        }
+        ret = ringBuffer.increaseUsedSpace(rawStringLength);
+        EXPECT_NE(-1, ret);
     }
 
     // 消耗包
@@ -369,24 +284,20 @@ int fullBufferUseWriteDataTest()
         char *buffer{nullptr};
         std::vector<char> bufferForBackspaceLessThanHeaderLength;
 
-        int ret = ringBuffer.getBufferForRead(headerLength, buffer);
+        ret = ringBuffer.getBufferForRead(headerLength, buffer);
         if(-2 == ret)
         {
             bufferForBackspaceLessThanHeaderLength.resize(headerLength);
             ringBuffer.readData(headerLength, 0, bufferForBackspaceLessThanHeaderLength);
             buffer = bufferForBackspaceLessThanHeaderLength.data();
         }
-        else if(-1 == ret)
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " getBufferForRead error" << std::endl;
-            return -1;
-        }
+        EXPECT_NE(-1, ret);
 
         packetHeader.decode(buffer, headerLength);
-        assert(true == packetHeader.isMagicMatch());
+        EXPECT_TRUE(packetHeader.isMagicMatch());
 
         // 尝试复制包数据
-        std::size_t payloadLength = packetHeader.payloadLength();
+        payloadLength = packetHeader.payloadLength();
         if(ringBuffer.dataLength() - headerLength < payloadLength)
         {
             std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available payload pop finish" << std::endl;
@@ -395,56 +306,35 @@ int fullBufferUseWriteDataTest()
 
         std::vector<char> payloadBuffer;
         payloadBuffer.resize(payloadLength);
-        if(-1 == (ret= ringBuffer.readData(payloadLength, headerLength, payloadBuffer)))
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " readData error" << std::endl;
-            return -1;
-        }
+        ret = ringBuffer.readData(payloadLength, headerLength, payloadBuffer);
+        EXPECT_NE(-1, ret);
 
         ringBuffer.decreaseUsedSpace(headerLength + payloadLength);
 
-        packetprocess::PacketRawString rawStringPacket;
+        csm::packetprocess::PacketRawString rawStringPacket;
         rawStringPacket.decode(payloadBuffer.data(), payloadLength);
-        if(rawStringPacket.getContent() != "hello")
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " payload error" << std::endl;
-            return -1;
-        }
+        EXPECT_EQ(rawStringPacket.getContent(), "hello");
     }
 
     // 再放50包
     for(int i = 0; i < 50; ++i)
     {
-        if(-1 == ringBuffer.writeData(rawStringBuffer.data(), rawStringLength))
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " no space left" << std::endl;
-            return -1;
-        }
+        ret = ringBuffer.writeData(rawStringBuffer.data(), rawStringLength);
+        EXPECT_NE(-1, ret);
 
-        if(-1 == ringBuffer.increaseUsedSpace(rawStringLength))
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " increaseUsedSpace error" << std::endl;
-            return -1;
-        }
+        ret = ringBuffer.increaseUsedSpace(rawStringLength);
+        EXPECT_NE(-1, ret);
     }
 
-    if(51 * rawStringLength != ringBuffer.dataLength())
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " error" << std::endl;
-        return -1;
-    }
+    EXPECT_EQ(51 * rawStringLength, ringBuffer.dataLength());
 
     std::size_t startOffset =  ringBuffer.startOffset();
     for(std::size_t i = 0; i < 51; ++i)
     {
         for(std::size_t j = 0; j < rawStringLength; ++j)
         {
-            int offset = (startOffset + i * rawStringLength + j) % (32 * 1024);
-            if(*(ringBuffer.data() + offset) != rawStringBuffer[j])
-            {
-                std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " payload error, offset: " << offset << ", j: " << j << std::endl;
-                return -1;
-            }
+            std::size_t offset = (startOffset + i * rawStringLength + j) % (c_bufferSize);
+            EXPECT_EQ(*(ringBuffer.data() + offset), rawStringBuffer[j]);
         }
     }
 
@@ -454,7 +344,7 @@ int fullBufferUseWriteDataTest()
         char *buffer{nullptr};
         std::vector<char> bufferForBackspaceLessThanHeaderLength;
 
-        int ret = ringBuffer.getBufferForRead(headerLength, buffer);
+        ret = ringBuffer.getBufferForRead(headerLength, buffer);
         if(-2 == ret)
         {
             //std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " getBufferForRead ret -2, payload num: " << i << std::endl;
@@ -462,17 +352,13 @@ int fullBufferUseWriteDataTest()
             ringBuffer.readData(headerLength, 0, bufferForBackspaceLessThanHeaderLength);
             buffer = bufferForBackspaceLessThanHeaderLength.data();
         }
-        else if(-1 == ret)
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " getBufferForRead error, data length: " << ringBuffer.dataLength() << std::endl;
-            return -1;
-        }
+        EXPECT_NE(-1, ret);
 
         packetHeader.decode(buffer, headerLength);
         assert(true == packetHeader.isMagicMatch());
 
         // 尝试复制包数据
-        std::size_t payloadLength = packetHeader.payloadLength();
+        payloadLength = packetHeader.payloadLength();
         if(ringBuffer.dataLength() - headerLength < payloadLength)
         {
             std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " available payload pop finish" << std::endl;
@@ -481,56 +367,22 @@ int fullBufferUseWriteDataTest()
 
         std::vector<char> payloadBuffer;
         payloadBuffer.resize(payloadLength);
-        if(-1 == (ret= ringBuffer.readData(payloadLength, headerLength, payloadBuffer)))
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " readData error" << std::endl;
-            return -1;
-        }
+        ret = ringBuffer.readData(payloadLength, headerLength, payloadBuffer);
+        EXPECT_NE(-1, ret);
 
         ringBuffer.decreaseUsedSpace(headerLength + payloadLength);
 
-        packetprocess::PacketRawString rawStringPacket;
+        csm::packetprocess::PacketRawString rawStringPacket;
         rawStringPacket.decode(payloadBuffer.data(), payloadLength);
-        if(rawStringPacket.getContent() != "hello")
-        {
-            std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " payload error, i: " << i << std::endl;
-            return -1;
-        }
+        EXPECT_EQ(rawStringPacket.getContent(), "hello");
     }
 
-    if(0 != ringBuffer.dataLength() || ringBuffer.space() != 32 * 1024 - 2)
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " error" << std::endl;
-        return -1;
-    }
-
-    return 0;
+    EXPECT_EQ(0, ringBuffer.dataLength());
+    EXPECT_EQ(ringBuffer.space(), c_bufferSize - 2);
 }
 
 int main(int argc, char* argv[])
 {
-    if(-1 == putOnePacketTest())
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << "putOnePacketTest failed" << std::endl;
-        return -1;
-    }
-    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " putOnePacketTest successfully" << std::endl;
-
-    if(-1 == fullBufferTest())
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " fullBufferTest failed" << std::endl;
-        return -1;
-    }
-    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " fullBufferTest successfully" << std::endl;
-
-    if(-1 == fullBufferUseWriteDataTest())
-    {
-        std::cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " fullBufferUseWriteDataTest failed" << std::endl;
-        return -1;
-    }
-    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " fullBufferUseWriteDataTest successfully" << std::endl;
-
-    std::cout << "no error" << std::endl;
-
-    return 0;
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
