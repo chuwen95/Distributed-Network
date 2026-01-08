@@ -123,7 +123,6 @@ namespace csm
             std::condition_variable m_bufferCv;
             std::vector<char> m_buffer;
 
-            std::atomic_bool m_isTerminate{false};
             std::unique_ptr<Thread> m_thread;
 
             bool m_consoleOutput{false};

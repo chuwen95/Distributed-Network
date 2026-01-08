@@ -28,7 +28,7 @@ namespace csm
 
             int stop();
 
-            int onConnect();
+            void onConnect();
 
             void setNewClientCallback(std::function<void(P2PSession::Ptr p2pSession)> newClientCallback);
 
@@ -41,7 +41,6 @@ namespace csm
             // 客户端初始化完成回调
             std::function<void(P2PSession::Ptr)> m_newClientCallback;
 
-            std::atomic_bool m_isTerminate{false};
             std::unique_ptr<utilities::Thread> m_thread;
         };
 

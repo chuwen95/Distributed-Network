@@ -10,9 +10,9 @@ using namespace csm::service;
 
 int SessionServiceDataProcessor::init()
 {
-    const auto serviceDataProcess = [this]()
+    const auto serviceDataProcess = [this](const std::stop_token& st)
     {
-        if (false == m_running)
+        if (true == st.stop_requested())
         {
             return;
         }
@@ -20,10 +20,11 @@ int SessionServiceDataProcessor::init()
         SessionServiceData::Ptr sessionServiceData;
         m_sessionServiceDatas.wait_dequeue(sessionServiceData);
 
-        if (false == m_running)
+        if (true == st.stop_requested())
         {
             return;
         }
+
 
         LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
                    "packet type: ", static_cast<int>(sessionServiceData->header->type()), ", session id: ",
@@ -48,12 +49,6 @@ int SessionServiceDataProcessor::init()
 
 int SessionServiceDataProcessor::start()
 {
-    if (true == m_running)
-    {
-        return 0;
-    }
-
-    m_running = true;
     m_thread->start();
 
     return 0;
@@ -61,14 +56,8 @@ int SessionServiceDataProcessor::start()
 
 int SessionServiceDataProcessor::stop()
 {
-    if (false == m_running)
-    {
-        return 0;
-    }
-
-    m_running = false;
-    m_sessionServiceDatas.enqueue(nullptr);
     m_thread->stop();
+    m_sessionServiceDatas.enqueue(nullptr);
 
     return 0;
 }

@@ -90,7 +90,6 @@ namespace csm
             std::shared_mutex x_p2pSessions;
             std::unordered_map<SessionId, P2PSession::Ptr> m_p2pSessions;
 
-            std::atomic_bool m_isTerminate{false};
             std::unique_ptr<utilities::Thread> m_thread;
 
             // 用于退出的fd

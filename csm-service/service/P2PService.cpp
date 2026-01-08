@@ -359,12 +359,10 @@ int P2PService::initServer()
     }
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "create socket successfully, fd: ", m_fd);
 
-#if 0
     if (-1 == utilities::Socket::setNonBlock(m_fd))
     {
         return -1;
     }
-#endif
 
     if (-1 == utilities::Socket::setReuseAddr(m_fd))
     {

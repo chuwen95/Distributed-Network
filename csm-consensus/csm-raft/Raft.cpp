@@ -130,7 +130,7 @@ int Raft::initElectionThread()
     // 计算下一个选举超时时间点
     m_electionTimeoutPoint = utilities::TimeTools::upTime() + generateRandomElectionTimeout();
 
-    const auto electionThread = [this]() {
+    const auto electionThread = [this](const std::stop_token& st) {
         switch (m_nodeIdentity)
         {
         case NodeIdentity::Leader:      // 如果本节点是领导者，则选举线程不用工作，等待节点身份变为非领导者

@@ -14,7 +14,7 @@ void SelectListenner::setListenFd(int fd)
 
 int SelectListenner::init()
 {
-    const auto expression = [this]() {
+    const auto expression = [this](const std::stop_token& st) {
         fd_set readfds;
 
         // 清空描述符集合
@@ -29,6 +29,11 @@ int SelectListenner::init()
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO, "select error, errno: ", errno, ", ", strerror(errno));
             return -1;
+        }
+
+        if (true == st.stop_requested())
+        {
+            return 0;
         }
 
         if (FD_ISSET(m_listenfd, &readfds))
@@ -63,5 +68,5 @@ int SelectListenner::stop()
 
 void SelectListenner::registerConnectHandler(std::function<void()> connectHandler)
 {
-    m_connectHandler = connectHandler;
+    m_connectHandler = std::move(connectHandler);
 }

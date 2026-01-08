@@ -10,7 +10,7 @@ using namespace csm::service;
 
 int SessionDestroyer::init()
 {
-    const auto expression = [this]()
+    const auto expression = [this](std::stop_token st)
     {
         {
             std::unique_lock<std::mutex> ulock(x_waitingDestroySessionInfos);
@@ -60,9 +60,9 @@ int SessionDestroyer::start()
 
 int SessionDestroyer::stop()
 {
+    m_thread->stop();
     m_destroyInterval = 0;
     m_waitingDestroySessionInfosCv.notify_all();
-    m_thread->stop();
 
     return 0;
 }

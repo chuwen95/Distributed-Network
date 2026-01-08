@@ -42,22 +42,16 @@ int Logger::init()
 
         m_buffer.resize(m_bufferSize);
 
-        const auto expression = [this]() {
-            if (true == m_isTerminate)
+        const auto expression = [this](const std::stop_token& st) {
+            if (true == st.stop_requested())
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(5));
                 return;
             }
 
             std::vector<char> buffer;
             {
                 std::unique_lock<std::mutex> ulock(x_buffer);
-                m_bufferCv.wait(ulock, [this]() { return false == m_buffer.empty() || true == m_isTerminate; });
-
-                if (true == m_isTerminate)
-                {
-                    return;
-                }
+                m_bufferCv.wait(ulock, [this, st]() { return false == m_buffer.empty() || true == st.stop_requested(); });
 
                 m_buffer.swap(buffer);
             }
@@ -86,9 +80,8 @@ int Logger::stop()
 {
     if (true == m_enableFileLog)
     {
-        m_isTerminate = true;
-        m_bufferCv.notify_one();
         m_thread->stop();
+        m_bufferCv.notify_one();
     }
 
     return 0;

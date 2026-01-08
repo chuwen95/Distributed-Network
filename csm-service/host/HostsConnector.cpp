@@ -24,7 +24,7 @@ HostsConnector::HostsConnector(HostsInfoManager* hostsInfoManager,
 
 int HostsConnector::init()
 {
-    const auto expression = [this]() {
+    const auto expression = [this](std::stop_token st) {
         HostsInfoManager::Hosts hosts = m_hostsInfoManager->getHosts();
         for (auto& host : hosts)
         {

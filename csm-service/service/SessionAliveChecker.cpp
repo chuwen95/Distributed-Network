@@ -15,7 +15,7 @@ constexpr std::size_t c_aliveCountCircle{10000000};
 
 int SessionAliveChecker::init()
 {
-    const auto expression = [this]()
+    const auto expression = [this](std::stop_token st)
     {
         std::vector<std::pair<SessionId, P2PSession::WPtr>> offlineSessions;
 

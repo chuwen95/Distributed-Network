@@ -11,16 +11,16 @@
 
 using namespace csm::service;
 
-SessionDispatcher::SessionDispatcher(std::size_t slaveReactorSize) : m_slaveReactorSize(slaveReactorSize)
+SessionDispatcher::SessionDispatcher(std::size_t slaveReactorSize) : m_slaveReactorSize(slaveReactorSize),
+                                                                     m_slaveReactorSessionSize(slaveReactorSize, 0)
 {
-    std::fill_n(std::back_inserter(m_slaveReactorSessionSize), slaveReactorSize, 0);
 }
 
 int SessionDispatcher::init()
 {
-    const auto expression = [this]()
+    const auto expression = [this](const std::stop_token& st)
     {
-        if (true == m_isTerminate)
+        if (true == st.stop_requested())
         {
             return;
         }
@@ -28,7 +28,7 @@ int SessionDispatcher::init()
         SessionInfo::Ptr sessionInfo{nullptr};
         m_p2pSessionsQueue.wait_dequeue(sessionInfo);
 
-        if (true == m_isTerminate)
+        if (true == st.stop_requested())
         {
             return;
         }
@@ -57,14 +57,14 @@ int SessionDispatcher::start()
 
 int SessionDispatcher::stop()
 {
-    m_isTerminate = true;
-    m_p2pSessionsQueue.emplace(nullptr);
     m_thread->stop();
+    m_p2pSessionsQueue.emplace(nullptr);
 
     return 0;
 }
 
-int SessionDispatcher::addSession(P2PSession::Ptr p2pSession, std::function<void(std::size_t slaveReactorIndex)> callback)
+int SessionDispatcher::addSession(P2PSession::Ptr p2pSession,
+                                  std::function<void(std::size_t slaveReactorIndex)> callback)
 {
     m_p2pSessionsQueue.try_emplace(std::make_shared<SessionInfo>(p2pSession, std::move(callback)));
 

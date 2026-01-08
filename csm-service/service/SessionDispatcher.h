@@ -65,7 +65,6 @@ namespace csm
             std::mutex x_sessionIdSlaveReactorIndex;
             std::unordered_map<SessionId, std::size_t> m_sessionIdSlaveReactorIndex;
 
-            std::atomic_bool m_isTerminate{false};
             std::unique_ptr<utilities::Thread> m_thread;
         };
 

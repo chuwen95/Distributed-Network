@@ -21,7 +21,7 @@ HostsHeartbeatService::HostsHeartbeatService(const std::string& hostId, HostsInf
 
 int HostsHeartbeatService::init()
 {
-    const auto expression = [this]()
+    const auto expression = [this](std::stop_token st)
     {
         HostsInfoManager::Hosts hosts = m_hostInfoManager->getHosts();
         for (auto& host : hosts)

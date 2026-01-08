@@ -36,7 +36,7 @@ AllowShortIfStatementsOnASingleLine: false  # 不允许 if 语句单独占一行
 AllowShortLoopsOnASingleLine: false # 不允许短的 for/while 循环写在一行
 
 # 列宽控制
-ColumnLimit: 130
+ColumnLimit: 150
 # 控制函数调用参数换行时对齐方式
 # AlignAfterOpenBracket: DontAlign
 # BinPackArguments: false

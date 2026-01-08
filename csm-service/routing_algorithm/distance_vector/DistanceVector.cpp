@@ -33,7 +33,7 @@ DistanceVector::DistanceVector(const NodeIds& nodeIds) : m_neighbours(nodeIds)
 
 int DistanceVector::init()
 {
-    const auto expression = [this]()
+    const auto expression = [this](std::stop_token st)
     {
         static int send_distance_detect_time{0};
 

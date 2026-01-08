@@ -54,12 +54,12 @@ int SlaveReactor::init()
     }
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "add exit event fd to epoll successfully");
 
-    const auto expression = [this]()
+    const auto expression = [this](const std::stop_token& st)
     {
         struct epoll_event ev[c_maxEvent];
         int nready = epoll_wait(m_epfd, ev, c_maxEvent, -1);
 
-        if (true == m_isTerminate)
+        if (true == st.stop_requested())
         {
             return 0;
         }
@@ -208,11 +208,10 @@ int SlaveReactor::start()
 
 int SlaveReactor::stop()
 {
-    m_isTerminate = true;
+    m_thread->stop();
 
     std::uint64_t num{1};
     write(m_exitFd, &num, sizeof(std::uint64_t));
-    m_thread->stop();
 
     close(m_exitFd);
     close(m_epfd);

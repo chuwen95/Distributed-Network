@@ -23,10 +23,8 @@ namespace csm
         public:
             int init();
 
-            // 不考虑该方法被多线程调用
             int start();
 
-            // 不考虑该方法被多线程调用
             int stop();
 
             int addPacket(SessionId sessionId, P2PSession::WPtr p2pSession, PacketHeader::Ptr header,
@@ -54,8 +52,6 @@ namespace csm
             };
 
             moodycamel::BlockingConcurrentQueue<SessionServiceData::Ptr> m_sessionServiceDatas;
-
-            std::atomic_bool m_running{false};
 
             std::unordered_map<PacketType, std::function<void(SessionId, P2PSession::WPtr, PacketHeader::Ptr,
                                                               PayloadBase::Ptr)>> m_packetHandlers;

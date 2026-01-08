@@ -7,8 +7,9 @@
 
 using namespace csm::utilities;
 
-Thread::Thread(std::function<void()> func, std::uint32_t interval, std::string name) : m_func(std::move(func)),
-    m_interval(interval), m_name(name)
+Thread::Thread(std::function<void(const std::stop_token& st)> func, std::uint32_t interval, std::string name) :
+    m_func(std::move(func)),
+    m_interval(interval), m_name(std::move(name))
 {
 }
 
@@ -21,12 +22,12 @@ void Thread::start()
 {
     std::unique_lock<std::mutex> ulock(x_startStop);
 
-    if (true == m_isRunning)
+    if (true == m_isStart)
     {
         return;
     }
 
-    m_thread = std::jthread([this](std::stop_token st)
+    m_thread = std::jthread([this](const std::stop_token& st)
     {
 #ifdef __linux__
         pthread_setname_np(pthread_self(), m_name.c_str());
@@ -34,7 +35,12 @@ void Thread::start()
 
         while (false == st.stop_requested())
         {
-            m_func();
+            m_func(st);
+
+            if (true == st.stop_requested())
+            {
+                continue;
+            }
 
             if (m_interval > 0)
             {
@@ -43,21 +49,20 @@ void Thread::start()
             }
         }
     });
-    m_isRunning = true;
+    m_isStart = true;
 }
 
 void Thread::stop()
 {
     std::unique_lock<std::mutex> ulock(x_startStop);
 
-    if (false == m_isRunning)
+    if (false == m_isStart)
     {
         return;
     }
 
     m_thread.request_stop();
     m_cv.notify_one();
-    m_thread.join();
 
-    m_isRunning = false;
+    m_isStart = false;
 }
