@@ -5,7 +5,7 @@
 #ifndef TCPSERVER_RINGBUFFER_H
 #define TCPSERVER_RINGBUFFER_H
 
-#include "csm-common/Common.h"
+#include <vector>
 
 namespace csm
 {
@@ -16,8 +16,6 @@ namespace csm
         class RingBuffer
         {
         public:
-            using Ptr = std::shared_ptr<RingBuffer>;
-
             explicit RingBuffer(std::size_t size);
             ~RingBuffer() = default;
 

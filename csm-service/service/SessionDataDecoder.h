@@ -5,7 +5,6 @@
 #ifndef SESSIONDATADECODER_H
 #define SESSIONDATADECODER_H
 
-#include <cstring>
 #include <memory>
 
 #include "csm-service/protocol/header/PacketHeader.h"
@@ -54,11 +53,11 @@ namespace csm
                 std::function<void(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler);
 
         private:
-            int writeDataToP2PSessionReadBuffer(SessionId sessionId, const utilities::RingBuffer::Ptr& readBuffer,
+            int writeDataToP2PSessionReadBuffer(SessionId sessionId, utilities::RingBuffer* readBuffer,
                                                 const std::shared_ptr<std::vector<char>>& buffer);
 
-            PacketHeader::Ptr decodePacketHeader(const utilities::RingBuffer::Ptr& readBuffer);
-            PayloadBase::Ptr decodePacketPayload(const PacketHeader::Ptr& header, const utilities::RingBuffer::Ptr& readBuffer);
+            PacketHeader::Ptr decodePacketHeader(utilities::RingBuffer* readBuffer);
+            PayloadBase::Ptr decodePacketPayload(const PacketHeader::Ptr& header, utilities::RingBuffer* readBuffer);
 
         private:
             PayloadFactory::Ptr m_payloadFactory;

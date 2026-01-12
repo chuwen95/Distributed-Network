@@ -7,7 +7,6 @@
 
 #include <shared_mutex>
 
-#include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
 #include "P2PSession.h"
 

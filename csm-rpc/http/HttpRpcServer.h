@@ -5,8 +5,6 @@
 #ifndef HTTPRPCSERVER_H
 #define HTTPRPCSERVER_H
 
-#include "csm-common/Common.h"
-
 #include <httplib.h>
 
 #include "csm-rpc/framework/RpcServer.h"

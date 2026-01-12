@@ -5,7 +5,6 @@
 #ifndef MESSAGEENCODEHELPER_H
 #define MESSAGEENCODEHELPER_H
 
-#include "csm-common/Common.h"
 #include "csm-consensus/csm-raft/protocol/packet/MessageBase.h"
 
 namespace csm

@@ -4,10 +4,17 @@
 
 #include "SlaveReactor.h"
 
+#include <shared_mutex>
+#include <cstring>
+#include <cassert>
+
+#include <sys/epoll.h>
+#include <sys/eventfd.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/Socket.h"
-
-#include <shared_mutex>
 
 using namespace csm::service;
 
@@ -131,7 +138,7 @@ int SlaveReactor::init()
                     continue;
                 }
 
-                utilities::RingBuffer::Ptr writeBuffer = p2pSession->writeBuffer();
+                utilities::RingBuffer* writeBuffer = p2pSession->writeBuffer();
                 assert(0 != writeBuffer->dataLength());
 
                 x_writeBuffer.lock();
@@ -294,7 +301,7 @@ int SlaveReactor::sendData(P2PSession::Ptr p2pSession, const std::vector<char>& 
     {
         x_writeBuffer.lock();
 
-        utilities::RingBuffer::Ptr writeBuffer = p2pSession->writeBuffer();
+        utilities::RingBuffer* writeBuffer = p2pSession->writeBuffer();
         if (0 == writeBuffer->dataLength())
         {
             int sendLen = send(p2pSession->fd(), data.data(), data.size(), 0);

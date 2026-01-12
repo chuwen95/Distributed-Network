@@ -5,8 +5,6 @@
 #ifndef TCPNETWORK_SERVERSERVICECONFIG_H
 #define TCPNETWORK_SERVERSERVICECONFIG_H
 
-#include "csm-common/Common.h"
-
 #include "csm-tool/NodeConfig.h"
 #include "csm-utilities/SelectListenner.h"
 #include "csm-service/service/Acceptor.h"

@@ -5,7 +5,9 @@
 #ifndef COPYSTATEMACHINE_STORAGE_H
 #define COPYSTATEMACHINE_STORAGE_H
 
-#include "csm-common/Common.h"
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace csm
 {

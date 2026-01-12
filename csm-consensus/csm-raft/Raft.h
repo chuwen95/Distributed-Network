@@ -5,7 +5,6 @@
 #ifndef RAFT_H
 #define RAFT_H
 
-#include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
 
 #include "RaftConfig.h"

@@ -5,7 +5,10 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include "csm-common/Common.h"
+#include <iostream>
+#include <fstream>
+#include <mutex>
+
 #include "Thread.h"
 #include "Singleton.h"
 #include "StringTool.h"

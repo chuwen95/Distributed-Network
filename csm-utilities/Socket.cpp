@@ -4,7 +4,14 @@
 
 #include "Socket.h"
 
-#include "csm-common/Common.h"
+#include <cstring>
+
+#ifdef __linux__
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#endif
+
 #include "csm-utilities/Logger.h"
 
 using namespace csm::utilities;

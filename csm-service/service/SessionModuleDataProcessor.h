@@ -5,7 +5,6 @@
 #ifndef COPYSTATEMACHINE_SESSIONDATAPROCESSOR_H
 #define COPYSTATEMACHINE_SESSIONDATAPROCESSOR_H
 
-#include "csm-common/Common.h"
 #include "csm-service/protocol/header/PacketHeader.h"
 #include "csm-service/protocol/payload/PayloadFactory.h"
 #include "P2PSession.h"

@@ -4,6 +4,10 @@
 
 #include "AppLogInitializer.h"
 
+#ifdef __linux__
+#include <signal.h>
+#endif
+
 struct LogLevelResetHandler
 {
     static csm::tool::NodeConfig* nodeConfig;

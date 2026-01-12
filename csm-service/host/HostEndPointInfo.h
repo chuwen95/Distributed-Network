@@ -5,7 +5,6 @@
 #ifndef TCPNETWORK_HOSTENDPOINTINFO_H
 #define TCPNETWORK_HOSTENDPOINTINFO_H
 
-#include "csm-common/Common.h"
 #include "csm-utilities/StringTool.h"
 
 namespace csm

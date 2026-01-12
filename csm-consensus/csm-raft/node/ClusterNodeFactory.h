@@ -5,8 +5,6 @@
 #ifndef COPYSTATEMACHINE_CLUSTERSERVERFACTORY_H
 #define COPYSTATEMACHINE_CLUSTERSERVERFACTORY_H
 
-#include "csm-common/Common.h"
-
 #include "ClusterLocalNode.h"
 #include "ClusterPeerNode.h"
 

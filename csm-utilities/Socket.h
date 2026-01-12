@@ -5,7 +5,7 @@
 #ifndef TCPSERVER_SOCKET_H
 #define TCPSERVER_SOCKET_H
 
-#include "csm-common/Common.h"
+#include <string_view>
 
 namespace csm
 {

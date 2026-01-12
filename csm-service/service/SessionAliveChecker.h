@@ -7,7 +7,6 @@
 
 #include <google/protobuf/message.h>
 
-#include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
 #include "P2PSession.h"
 

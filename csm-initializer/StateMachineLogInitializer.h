@@ -5,7 +5,6 @@
 #ifndef COPYSTATEMACHINE_STATEMACHINELOGINITIALIZER_H
 #define COPYSTATEMACHINE_STATEMACHINELOGINITIALIZER_H
 
-#include "csm-common/Common.h"
 #include "csm-tool/NodeConfig.h"
 #include "csm-storage/Storage.h"
 #include "csm-stmclog/StateMachineLog.h"

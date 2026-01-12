@@ -3,6 +3,9 @@
 //
 
 #include "SelectListenner.h"
+
+#include <cstring>
+
 #include "csm-utilities/Logger.h"
 
 using namespace csm::utilities;

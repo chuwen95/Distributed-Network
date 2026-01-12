@@ -5,6 +5,8 @@
 #ifndef PERSISTENTSTATE_H
 #define PERSISTENTSTATE_H
 
+#include <queue>
+
 #include "csm-framework/cluster/Common.h"
 #include "csm-consensus/csm-raft/storage/RaftMetadataStorage.h"
 #include "csm-stmclog/protocol/packet/Entry.h"

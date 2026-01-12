@@ -5,7 +5,6 @@
 #ifndef TCPSERVER_ACCEPTOR_H
 #define TCPSERVER_ACCEPTOR_H
 
-#include "csm-common/Common.h"
 #include "P2PSession.h"
 #include "P2PSessionFactory.h"
 #include "csm-utilities/Thread.h"

@@ -5,9 +5,10 @@
 #ifndef COPYSTATEMACHINE_SESSIONDESTROYER_H
 #define COPYSTATEMACHINE_SESSIONDESTROYER_H
 
-#include "csm-common/Common.h"
-#include "csm-utilities/Thread.h"
+#include <queue>
+
 #include "P2PSession.h"
+#include "csm-utilities/Thread.h"
 
 namespace csm
 {

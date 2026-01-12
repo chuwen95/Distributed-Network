@@ -5,7 +5,7 @@
 #ifndef TCPNETWORK_UUIDTOOL_H
 #define TCPNETWORK_UUIDTOOL_H
 
-#include "csm-common/Common.h"
+#include <string>
 
 namespace csm
 {

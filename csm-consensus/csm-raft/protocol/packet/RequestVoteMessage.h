@@ -5,8 +5,6 @@
 #ifndef REQUESTVOTEMSG_H
 #define REQUESTVOTEMSG_H
 
-#include "csm-common/Common.h"
-
 #include "csm-framework/cluster/Common.h"
 #include "MessageBase.h"
 #include "protocol/pb/RequestVote.pb.h"

@@ -5,7 +5,6 @@
 #ifndef COPYSTATEMACHINE_ROCKSDBSTORAGE_H
 #define COPYSTATEMACHINE_ROCKSDBSTORAGE_H
 
-#include "csm-common/Common.h"
 #include "Storage.h"
 
 #include "rocksdb/db.h"

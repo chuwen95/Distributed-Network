@@ -7,7 +7,6 @@
 
 #include <json/value.h>
 
-#include "csm-common/Common.h"
 #include "csm-utilities/Logger.h"
 
 namespace csm

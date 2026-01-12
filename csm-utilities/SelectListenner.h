@@ -5,7 +5,6 @@
 #ifndef TCPSERVER_SELECTLISTENNER_H
 #define TCPSERVER_SELECTLISTENNER_H
 
-#include "csm-common/Common.h"
 #include "csm-utilities/Thread.h"
 
 namespace csm

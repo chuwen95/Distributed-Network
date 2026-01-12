@@ -4,6 +4,10 @@
 
 #include "PacketHeader.h"
 
+#ifdef __linux__
+#include <netinet/in.h>
+#endif
+
 using namespace csm::service;
 
 bool PacketHeader::isMagicMatch()

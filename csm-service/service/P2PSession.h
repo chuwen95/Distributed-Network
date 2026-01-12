@@ -5,7 +5,9 @@
 #ifndef P2PSESSION_H
 #define P2PSESSION_H
 
-#include "csm-common/Common.h"
+#include <memory>
+#include <atomic>
+
 #include "csm-framework/cluster/Common.h"
 #include "csm-service/host/HostEndPointInfo.h"
 #include "csm-utilities/RingBuffer.h"
@@ -27,8 +29,8 @@ namespace csm
             using Ptr = std::shared_ptr<P2PSession>;
             using WPtr = std::weak_ptr<P2PSession>;
 
-            explicit P2PSession(int fd, SessionId sessionId, utilities::RingBuffer::Ptr readBuffer,
-                                utilities::RingBuffer::Ptr writeBuffer);
+            explicit P2PSession(int fd, SessionId sessionId, std::unique_ptr<utilities::RingBuffer> readBuffer,
+                                std::unique_ptr<utilities::RingBuffer> writeBuffer);
 
         public:
             int init();
@@ -37,10 +39,10 @@ namespace csm
             SessionId sessionId() const;
 
             std::mutex& readBufferMutex();
-            utilities::RingBuffer::Ptr& readBuffer();
+            utilities::RingBuffer* readBuffer();
 
             std::mutex& writeBufferMutex();
-            utilities::RingBuffer::Ptr& writeBuffer();
+            utilities::RingBuffer* writeBuffer();
 
             void setNodeId(NodeId id);
             NodeId nodeId() const;
@@ -70,9 +72,9 @@ namespace csm
             NodeId m_nodeId;
 
             std::mutex x_readBuffer;
-            utilities::RingBuffer::Ptr m_readBuffer;
+            std::unique_ptr<utilities::RingBuffer> m_readBuffer;
             std::mutex x_writeBuffer;
-            utilities::RingBuffer::Ptr m_writeBuffer;
+            std::unique_ptr<utilities::RingBuffer> m_writeBuffer;
 
             HostEndPointInfo m_peerHostEndPointInfo;
 

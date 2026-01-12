@@ -18,7 +18,7 @@ P2PServiceConfig::P2PServiceConfig(tool::NodeConfig* nodeConfig, std::unique_ptr
                                       std::unique_ptr<HostsInfoManager> hostsInfoManager,
                                       std::unique_ptr<HostsConnector> hostsConnector,
                                       std::unique_ptr<HostsHeartbeatService> hostHeartbeatService,
-                                      std::unique_ptr<DistanceVector> distanceVector)
+                                      std::unique_ptr<DistanceVectorImpl> distanceVector)
     : m_nodeConfig(nodeConfig), m_listenner(std::move(listenner)),
       m_acceptor(std::move(acceptor)), m_sessionAliveChecker(std::move(sessionAliveChecker)),
       m_slaveReactorPool(std::move(slaveReactorPool)),
@@ -97,7 +97,7 @@ HostsHeartbeatService* P2PServiceConfig::hostsHeartbeatService()
     return m_hostsHeartbeatService.get();
 }
 
-DistanceVector* P2PServiceConfig::distanceVector()
+DistanceVectorImpl* P2PServiceConfig::distanceVector()
 {
     return m_distanceVector.get();
 }

@@ -5,9 +5,9 @@
 #ifndef TCPNETWORK_HOSTSINFOMANAGER_H
 #define TCPNETWORK_HOSTSINFOMANAGER_H
 
-#include "csm-common/Common.h"
-#include "csm-framework/cluster/Common.h"
+#include <unordered_map>
 
+#include "csm-framework/cluster/Common.h"
 #include "HostEndPointInfo.h"
 #include "csm-service/service/P2PSession.h"
 

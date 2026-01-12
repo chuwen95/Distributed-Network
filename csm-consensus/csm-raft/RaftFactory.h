@@ -5,8 +5,6 @@
 #ifndef COPYSTATEMACHINE_RAFTFACTORY_H
 #define COPYSTATEMACHINE_RAFTFACTORY_H
 
-#include "csm-common/Common.h"
-
 #include "csm-consensus/csm-raft/Raft.h"
 #include "csm-tool/NodeConfig.h"
 #include "../../csm-service/service/P2PService.h"

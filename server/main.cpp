@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <signal.h>
+
 #include "csm-initializer/Initializer.h"
 #include "csm-packetprocess/packet/PacketRawString.h"
 

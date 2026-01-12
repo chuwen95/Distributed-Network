@@ -2,10 +2,12 @@
 // Created by ChuWen on 9/4/23.
 //
 
-#ifndef TCPSERVER_THREAD_H
-#define TCPSERVER_THREAD_H
+#ifndef COPYSTATEMACHINE_THREAD_H
+#define COPYSTATEMACHINE_THREAD_H
 
-#include "csm-common/Common.h"
+#include <thread>
+#include <functional>
+#include <condition_variable>
 
 namespace csm
 {
@@ -46,4 +48,4 @@ namespace csm
 }
 
 
-#endif //TCPSERVER_THREADPACKET_H
+#endif //COPYSTATEMACHINE_THREAD_H

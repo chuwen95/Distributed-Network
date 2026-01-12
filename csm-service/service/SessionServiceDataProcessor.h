@@ -5,8 +5,6 @@
 #ifndef SESSIONSERVICEDATAPROCESSOR_H
 #define SESSIONSERVICEDATAPROCESSOR_H
 
-#include "csm-common/Common.h"
-
 #include "concurrentqueue/moodycamel/blockingconcurrentqueue.h"
 
 #include "csm-service/protocol/header/PacketHeader.h"

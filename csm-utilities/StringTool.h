@@ -5,7 +5,9 @@
 #ifndef TCPNETWORK_STRINGTOOL_H
 #define TCPNETWORK_STRINGTOOL_H
 
-#include "csm-common/Common.h"
+#include <vector>
+#include <string>
+#include <sstream>
 
 namespace csm
 {

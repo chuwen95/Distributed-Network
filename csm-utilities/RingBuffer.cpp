@@ -3,6 +3,8 @@
 //
 
 #include "RingBuffer.h"
+
+#include <cstring>
 #include "Logger.h"
 
 using namespace csm::utilities;

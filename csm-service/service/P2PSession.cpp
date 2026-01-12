@@ -8,8 +8,8 @@
 
 using namespace csm::service;
 
-P2PSession::P2PSession(const int fd, const SessionId sessionId, utilities::RingBuffer::Ptr readBuffer,
-                       utilities::RingBuffer::Ptr writeBuffer)
+P2PSession::P2PSession(const int fd, const SessionId sessionId, std::unique_ptr<utilities::RingBuffer> readBuffer,
+                       std::unique_ptr<utilities::RingBuffer> writeBuffer)
     : m_fd(fd), m_sessionId(sessionId), m_readBuffer(std::move(readBuffer)), m_writeBuffer(std::move(writeBuffer))
 {
 }
@@ -35,9 +35,9 @@ std::mutex& P2PSession::readBufferMutex()
     return x_readBuffer;
 }
 
-csm::utilities::RingBuffer::Ptr& P2PSession::readBuffer()
+csm::utilities::RingBuffer* P2PSession::readBuffer()
 {
-    return m_readBuffer;
+    return m_readBuffer.get();
 }
 
 std::mutex& P2PSession::writeBufferMutex()
@@ -45,9 +45,9 @@ std::mutex& P2PSession::writeBufferMutex()
     return x_writeBuffer;
 }
 
-csm::utilities::RingBuffer::Ptr& P2PSession::writeBuffer()
+csm::utilities::RingBuffer* P2PSession::writeBuffer()
 {
-    return m_writeBuffer;
+    return m_writeBuffer.get();
 }
 
 void P2PSession::setNodeId(std::string id)

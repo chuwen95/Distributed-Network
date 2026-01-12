@@ -4,6 +4,8 @@
 
 #include "RandomNumber.h"
 
+#include <random>
+
 using namespace csm::utilities;
 
 int RandomNumber::lcrc(int min, int max)

@@ -5,7 +5,6 @@
 #ifndef STATEMACHINELOG_H
 #define STATEMACHINELOG_H
 
-#include "csm-common/Common.h"
 #include "StateMachineLogConfig.h"
 #include "protocol/packet/Entry.h"
 

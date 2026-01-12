@@ -5,7 +5,8 @@
 #ifndef COPYSTATEMACHINE_STORAGEFACTORY_H
 #define COPYSTATEMACHINE_STORAGEFACTORY_H
 
-#include "csm-common/Common.h"
+#include <memory>
+
 #include "csm-storage/Storage.h"
 
 namespace csm
@@ -17,13 +18,11 @@ namespace csm
         class StorageFactory
         {
         public:
-            using Ptr = std::shared_ptr<StorageFactory>;
-
-            explicit StorageFactory(const StorageType type, const std::string& storagePath);
+            explicit StorageFactory(StorageType type, const std::string& storagePath);
             ~StorageFactory() = default;
 
         public:
-            Storage::Ptr createStorage();
+            std::unique_ptr<Storage> createStorage();
 
         private:
             StorageType m_storageType;

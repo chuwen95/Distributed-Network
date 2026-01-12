@@ -5,8 +5,6 @@
 #ifndef CLUSTERCONFIGURATIONMANAGER_H
 #define CLUSTERCONFIGURATIONMANAGER_H
 
-#include "csm-common/Common.h"
-
 #include "ClusterConfiguration.h"
 
 namespace csm

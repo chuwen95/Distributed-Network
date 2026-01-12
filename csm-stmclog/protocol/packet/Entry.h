@@ -5,7 +5,6 @@
 #ifndef ENTRY_H
 #define ENTRY_H
 
-#include "csm-common/Common.h"
 #include "protocol/pb/entry.pb.h"
 
 namespace csm

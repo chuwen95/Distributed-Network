@@ -4,6 +4,8 @@
 
 #include "P2PServiceInitializer.h"
 
+#include <signal.h>
+
 #include "csm-utilities/Logger.h"
 #include "csm-service/factory/P2PServiceFactory.h"
 #include "csm-packetprocess/packet/PacketRawString.h"

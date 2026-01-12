@@ -5,7 +5,6 @@
 #ifndef COPYSTATEMACHINE_STORAGEINITIALIZER_H
 #define COPYSTATEMACHINE_STORAGEINITIALIZER_H
 
-#include "csm-common/Common.h"
 #include "csm-storage/Storage.h"
 
 namespace csm

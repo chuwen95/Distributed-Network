@@ -5,7 +5,7 @@
 #ifndef TIMETOOLS_H
 #define TIMETOOLS_H
 
-#include "csm-common/Common.h"
+#include <cstdint>
 
 namespace csm
 {
@@ -16,8 +16,6 @@ namespace csm
         class TimeTools
         {
         public:
-            using Ptr = std::shared_ptr<TimeTools>;
-
             TimeTools() = default;
             ~TimeTools() = default;
 

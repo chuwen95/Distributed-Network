@@ -5,7 +5,8 @@
 #ifndef LEADERSTATE_H
 #define LEADERSTATE_H
 
-#include "csm-framework/cluster/Common.h"
+#include <memory>
+#include <vector>
 
 namespace csm
 {

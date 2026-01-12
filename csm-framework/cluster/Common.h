@@ -5,7 +5,8 @@
 #ifndef TOOLS_H
 #define TOOLS_H
 
-#include "csm-common/Common.h"
+#include <string>
+#include <vector>
 
 namespace csm
 {

@@ -5,8 +5,6 @@
 #ifndef TCPNETWORK_PACKETCONCEPT_H
 #define TCPNETWORK_PACKETCONCEPT_H
 
-#include "csm-common/Common.h"
-
 template<typename T>
 concept PacketPtr = requires(T t, char* data, std::size_t size)
 {

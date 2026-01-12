@@ -5,6 +5,9 @@
 #ifndef CLUSTERCONFIGURATION_H
 #define CLUSTERCONFIGURATION_H
 
+#include <map>
+#include <mutex>
+
 #include "csm-framework/cluster/Common.h"
 #include "csm-consensus/csm-raft/node/ClusterNode.h"
 

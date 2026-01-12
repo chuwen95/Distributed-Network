@@ -4,7 +4,8 @@
 
 #include "SessionDataDecoder.h"
 
-#include "csm-packetprocess/concept/PacketConcept.h"
+#include <cstring>
+
 #include "csm-utilities/Logger.h"
 
 using namespace csm::service;
@@ -36,17 +37,20 @@ int SessionDataDecoder::stop()
     return m_decodeWorkers->stop();
 }
 
-void SessionDataDecoder::addSessionData(const SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, const char* data, const std::size_t dataLen)
+void SessionDataDecoder::addSessionData(const SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, const char* data,
+                                        const std::size_t dataLen)
 {
     std::shared_ptr<std::vector<char>> buffer = std::make_shared<std::vector<char>>(data, data + dataLen);
     memcpy(buffer->data(), data, dataLen);
 
-    const auto decode = [this, sessionId, captureSession = std::move(p2pSessionWeakPtr), captureBuffer = std::move(buffer)]()
+    const auto decode = [this, sessionId, captureSession = std::move(p2pSessionWeakPtr), captureBuffer =
+            std::move(buffer)]()
     {
         P2PSession::Ptr p2pSession = captureSession.lock();
         if (nullptr == p2pSession)
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session may disconnected and destoryed, session id: ", sessionId);
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "session may disconnected and destoryed, session id: ",
+                       sessionId);
             return;
         }
 
@@ -58,10 +62,11 @@ void SessionDataDecoder::addSessionData(const SessionId sessionId, P2PSession::W
         std::unique_lock<std::mutex> ulock(p2pSession->readBufferMutex());
 
         // 将数据写入到缓冲区尾部
-        utilities::RingBuffer::Ptr& readBuffer = p2pSession->readBuffer();
+        utilities::RingBuffer* readBuffer = p2pSession->readBuffer();
         if (-1 == writeDataToP2PSessionReadBuffer(p2pSession->sessionId(), readBuffer, captureBuffer))
         {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "write data to buffer failed, session id: ", p2pSession->sessionId(),
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "write data to buffer failed, session id: ",
+                       p2pSession->sessionId(),
                        ", data size: ", captureBuffer->size());
             return;
         }
@@ -98,12 +103,13 @@ void SessionDataDecoder::addSessionData(const SessionId sessionId, P2PSession::W
 }
 
 void SessionDataDecoder::setPacketHandler(
-    std::function<void(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, PacketHeader::Ptr header, PayloadBase::Ptr payload)> handler)
+    std::function<void(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr, PacketHeader::Ptr header,
+                       PayloadBase::Ptr payload)> handler)
 {
     m_packetHandler = std::move(handler);
 }
 
-int SessionDataDecoder::writeDataToP2PSessionReadBuffer(SessionId sessionId, const utilities::RingBuffer::Ptr& readBuffer,
+int SessionDataDecoder::writeDataToP2PSessionReadBuffer(SessionId sessionId, utilities::RingBuffer* readBuffer,
                                                         const std::shared_ptr<std::vector<char>>& buffer)
 {
     int ret = readBuffer->writeData(buffer->data(), buffer->size());
@@ -124,7 +130,7 @@ int SessionDataDecoder::writeDataToP2PSessionReadBuffer(SessionId sessionId, con
     return 0;
 }
 
-PacketHeader::Ptr SessionDataDecoder::decodePacketHeader(const utilities::RingBuffer::Ptr& readBuffer)
+PacketHeader::Ptr SessionDataDecoder::decodePacketHeader(utilities::RingBuffer* readBuffer)
 {
     PacketHeader::Ptr header = std::make_shared<PacketHeader>();
     const std::size_t headerLength = header->headerLength();
@@ -158,7 +164,7 @@ PacketHeader::Ptr SessionDataDecoder::decodePacketHeader(const utilities::RingBu
 }
 
 PayloadBase::Ptr SessionDataDecoder::decodePacketPayload(const PacketHeader::Ptr& header,
-                                                         const utilities::RingBuffer::Ptr& readBuffer)
+                                                         utilities::RingBuffer* readBuffer)
 {
     // 尝试复制包数据
     std::size_t headerLength = header->headerLength();

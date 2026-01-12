@@ -5,7 +5,6 @@
 #ifndef CONSENSUSINITIALIZER_H
 #define CONSENSUSINITIALIZER_H
 
-#include "csm-common/Common.h"
 #include "csm-tool/NodeConfig.h"
 #include "../csm-service/service/P2PService.h"
 #include "csm-stmclog/StateMachineLog.h"

@@ -5,8 +5,6 @@
 #ifndef RPCSERVER_H
 #define RPCSERVER_H
 
-#include "csm-common/Common.h"
-
 namespace csm
 {
 

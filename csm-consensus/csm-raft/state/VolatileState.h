@@ -5,7 +5,8 @@
 #ifndef VOLATILESTATE_H
 #define VOLATILESTATE_H
 
-#include "csm-common/Common.h"
+#include <atomic>
+#include <memory>
 
 namespace csm
 {

@@ -5,8 +5,6 @@
 #ifndef TCPNETWORK_INITIALIZER_H
 #define TCPNETWORK_INITIALIZER_H
 
-#include "csm-common/Common.h"
-
 #include "StorageInitializer.h"
 #include "AppLogInitializer.h"
 #include "P2PServiceInitializer.h"

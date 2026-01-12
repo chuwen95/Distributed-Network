@@ -29,7 +29,7 @@ namespace csm
             // 创建其他模组包处理器
             std::unique_ptr<SessionModuleDataProcessor> createModuleDataProcessor(std::size_t workerNum);
             // 创建路由选择算法 - 距离矢量
-            std::unique_ptr<DistanceVector> createDistanceVector();
+            std::unique_ptr<DistanceVectorImpl> createDistanceVector();
         };
 
     } // service

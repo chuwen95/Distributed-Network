@@ -5,8 +5,6 @@
 #ifndef RAFTMESSAGE_H
 #define RAFTMESSAGE_H
 
-#include "csm-common/Common.h"
-
 #include "protocol/pb/RaftMessage.pb.h"
 
 namespace csm

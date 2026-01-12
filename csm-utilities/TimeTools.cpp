@@ -4,6 +4,9 @@
 
 #include "TimeTools.h"
 
+#include <chrono>
+#include <fstream>
+
 using namespace csm::utilities;
 
 std::uint64_t TimeTools::getCurrentTimestamp()

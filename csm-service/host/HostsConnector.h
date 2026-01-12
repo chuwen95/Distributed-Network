@@ -5,7 +5,6 @@
 #ifndef TCPNETWORK_HOST_H
 #define TCPNETWORK_HOST_H
 
-#include "csm-common/Common.h"
 #include "HostEndPointInfo.h"
 #include "HostsInfoManager.h"
 #include "csm-service/service/P2PSession.h"

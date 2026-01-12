@@ -4,6 +4,8 @@
 
 #include "NodeConfig.h"
 
+#include <filesystem>
+
 #include <json/value.h>
 #include <json/reader.h>
 

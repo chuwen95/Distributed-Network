@@ -1,14 +1,12 @@
 #ifndef ELAPSEDTIME_H
 #define ELAPSEDTIME_H
 
-#include "csm-common/Common.h"
+#include <chrono>
 
 namespace csm
 {
-
     namespace utilities
     {
-
         class ElapsedTime
         {
         public:
@@ -39,23 +37,25 @@ namespace csm
 #ifdef _WIN32
             __int64 getElapsedTimeInMicroSec()
             {
-                return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - m_begin).count();
+                return std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::high_resolution_clock::now() - m_begin).count();
             }
 #else
 
             __int64_t getElapsedTimeInMicroSec()
             {
-                return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - m_begin).count();
+                return std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::high_resolution_clock::now() - m_begin).count();
             }
 
 #endif
 
         private:
-            std::chrono::time_point<std::chrono::high_resolution_clock> m_begin{std::chrono::high_resolution_clock::now()};
+            std::chrono::time_point<std::chrono::high_resolution_clock> m_begin{
+                std::chrono::high_resolution_clock::now()
+            };
         };
-
     }
-
 }
 
 #endif // ELAPSEDTIME_H

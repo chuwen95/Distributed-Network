@@ -5,8 +5,6 @@
 #ifndef RANDOMNUMBER_H
 #define RANDOMNUMBER_H
 
-#include "csm-common/Common.h"
-
 namespace csm
 {
 
@@ -15,12 +13,6 @@ namespace csm
 
         class RandomNumber
         {
-        public:
-            using Ptr = std::shared_ptr<RandomNumber>;
-
-            RandomNumber() = default;
-            ~RandomNumber() = default;
-
         public:
             static int lcrc(int min, int max);
 

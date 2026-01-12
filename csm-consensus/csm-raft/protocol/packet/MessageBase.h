@@ -5,7 +5,6 @@
 #ifndef MESSAGEBASE_H
 #define MESSAGEBASE_H
 
-#include "csm-common/Common.h"
 #include <protocol/pb/RaftMessage.pb.h>
 
 namespace csm

@@ -13,13 +13,13 @@ StorageFactory::StorageFactory(const StorageType storageType, const std::string 
     m_storagePath(storagePath)
 { }
 
-Storage::Ptr StorageFactory::createStorage()
+std::unique_ptr<Storage> StorageFactory::createStorage()
 {
-    Storage::Ptr storage{ nullptr };
+    std::unique_ptr<Storage> storage{ nullptr };
 
     if(StorageType::RocksDB == m_storageType)
     {
-        Storage::Ptr storage = std::make_shared<RocksDBStorage>(m_storagePath);
+        storage = std::make_unique<RocksDBStorage>(m_storagePath);
     }
     else
     {

@@ -5,8 +5,6 @@
 #ifndef RAFTMETADATASTORAGE_H
 #define RAFTMETADATASTORAGE_H
 
-#include "csm-common/Common.h"
-
 #include "csm-storage/Storage.h"
 
 namespace csm

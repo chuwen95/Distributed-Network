@@ -5,7 +5,8 @@
 #ifndef COPYSTATEMACHINE_FILESYSTEMTOOLS_H
 #define COPYSTATEMACHINE_FILESYSTEMTOOLS_H
 
-#include "csm-common/Common.h"
+#include <string>
+#include <filesystem>
 
 namespace csm
 {
@@ -16,8 +17,6 @@ namespace csm
         class FileSystemTools
         {
         public:
-            using Ptr = std::shared_ptr<FileSystemTools>;
-
             FileSystemTools() = default;
             ~FileSystemTools() = default;
 

@@ -4,6 +4,9 @@
 
 #include "Logger.h"
 
+#include <cstring>
+#include <filesystem>
+
 using namespace csm::utilities;
 
 #if 1

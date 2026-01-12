@@ -4,10 +4,12 @@
 
 #include "Acceptor.h"
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+
 #include <google/protobuf/message.h>
 
 #include "P2PSessionFactory.h"
-#include "csm-common/Common.h"
 #include "csm-utilities/Logger.h"
 #include "csm-utilities/Socket.h"
 

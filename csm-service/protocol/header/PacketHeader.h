@@ -5,7 +5,7 @@
 #ifndef TCPNETWORK_PACKETHEADER_H
 #define TCPNETWORK_PACKETHEADER_H
 
-#include "csm-common/Common.h"
+#include <memory>
 
 #include "csm-framework/protocol/Protocol.h"
 #include "csm-service/protocol/common/PacketType.h"
@@ -37,8 +37,8 @@ namespace csm
 
             std::size_t headerLength();
 
-            int encode(char* buffer, const std::size_t length);
-            int decode(const char* buffer, const std::size_t length);
+            int encode(char* buffer, std::size_t length);
+            int decode(const char* buffer, std::size_t length);
 
         private:
             std::uint32_t m_magic{c_magic};

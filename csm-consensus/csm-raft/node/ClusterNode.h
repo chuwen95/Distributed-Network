@@ -5,7 +5,7 @@
 #ifndef CLUSTERNODE_H
 #define CLUSTERNODE_H
 
-#include "csm-common/Common.h"
+#include <memory>
 
 namespace csm
 {
@@ -22,7 +22,7 @@ namespace csm
             virtual ~ClusterNode() = default;
 
         public:
-            virtual void setIsVote(const bool isVote) = 0;
+            virtual void setIsVote(bool isVote) = 0;
             virtual bool isVote() const = 0;
 
         protected:

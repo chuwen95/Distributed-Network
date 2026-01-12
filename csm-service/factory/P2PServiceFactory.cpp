@@ -6,7 +6,7 @@
 
 #include "csm-service/config/P2PServiceConfig.h"
 #include "csm-service/protocol/payload/PayloadFactory.h"
-#include "csm-service/routing_algorithm/distance_vector/DistanceVector.h"
+#include "csm-service/routing_algorithm/distance_vector/DistanceVectorImpl.h"
 #include "csm-service/service/P2PSessionFactory.h"
 #include "csm-service/service/SessionAliveChecker.h"
 #include "csm-service/service/SessionDestroyer.h"
@@ -52,7 +52,7 @@ std::unique_ptr<P2PService> P2PServiceFactory::create()
         std::make_unique<HostsHeartbeatService>(m_nodeConfig->nodeId(), hostsInfoManager.get());
 
     // 路由选择算法
-    std::unique_ptr<DistanceVector> distanceVector = createDistanceVector();
+    std::unique_ptr<DistanceVectorImpl> distanceVector = createDistanceVector();
 
     // 创建TcpServiceConfig
     std::unique_ptr<P2PServiceConfig> serviceConfig = std::make_unique<P2PServiceConfig>(
@@ -80,7 +80,7 @@ std::unique_ptr<SessionModuleDataProcessor> P2PServiceFactory::createModuleDataP
     return std::make_unique<SessionModuleDataProcessor>(normalPacketProcessor);
 }
 
-std::unique_ptr<DistanceVector> P2PServiceFactory::createDistanceVector()
+std::unique_ptr<DistanceVectorImpl> P2PServiceFactory::createDistanceVector()
 {
-    return std::make_unique<DistanceVector>(m_nodeConfig->clusterServerIds());
+    return std::make_unique<DistanceVectorImpl>(m_nodeConfig->clusterServerIds());
 }
