@@ -1,216 +1,54 @@
 //
-// Created by chu on 7/9/25.
+// Created by ivy on 1/8/26.
 //
 
 #include "DistanceVector.h"
 
 #include <algorithm>
+#include <google/protobuf/message.h>
 
-#include "csm-service/protocol/payload/PayloadDistanceDetect.h"
-#include "csm-service/protocol/payload/PayloadDistanceDetectReply.h"
-#include "csm-service/protocol/payload/PayloadDistanceVector.h"
-#include "csm-service/protocol/utilities/PacketEncodeHelper.h"
 #include "csm-utilities/Logger.h"
-#include "csm-utilities/TimeTools.h"
 
 using namespace csm::service;
 
-// 发送距离探测包间隔
-constexpr int c_distanceDetectInterval{100};
-// 向每个节点发送距离探测包间隔
-constexpr int c_nodeDistanceDetectInterval{10};
-
-// 时间转距离量化单位，毫秒
-constexpr int c_timeResolutionMs{200};
-
-DistanceVector::DistanceVector(const NodeIds& nodeIds) : m_neighbours(nodeIds)
+DistanceVector::DistanceVector(const NodeIds& nodeIds)
 {
     std::ranges::for_each(nodeIds, [this](const NodeId& nodeId)
     {
         m_dvInfos[nodeId].distance = c_unreachableDistance;
+        m_neighboursDVInfo[nodeId] = std::unordered_map<NodeId, std::uint32_t>();
     });
 }
 
-int DistanceVector::init()
+csm::NodeIds DistanceVector::neighbours() const
 {
-    const auto expression = [this](std::stop_token st)
+    NodeIds nodeIds;
+    for (const auto& [nodeId, dvInfo] : m_neighboursDVInfo)
     {
-        static int send_distance_detect_time{0};
-
-        if (25 == send_distance_detect_time) //
-        {
-            sendDistanceDetect();
-            send_distance_detect_time = 0;
-        }
-        ++send_distance_detect_time;
-
-        if (true == m_needToSyncDistaceVector)
-        {
-            sendDistanceVector();
-            m_needToSyncDistaceVector = false;
-        }
-    };
-    m_thread = std::make_unique<utilities::Thread>(expression, c_distanceDetectInterval, "dis_vec_algo");
-
-    return 0;
-}
-
-int DistanceVector::start()
-{
-    m_thread->start();
-
-    return 0;
-}
-
-void DistanceVector::stop()
-{
-    m_thread->stop();
-}
-
-void DistanceVector::setPacketSender(std::function<int(const NodeId& nodeId, const std::vector<char>& data)> sender)
-{
-    m_packetSender = std::move(sender);
-}
-
-int DistanceVector::handlePacket(const NodeId& fromNodeId, PacketHeader::Ptr header, PayloadBase::Ptr payload)
-{
-    if (PacketType::PT_DistanceDetect == header->type())
-    {
-        return handleDistanceDetect(fromNodeId, payload);
-    }
-    else if (PacketType::PT_DistanceDetectReply == header->type())
-    {
-        return handleDistanceDetectReply(fromNodeId, payload);
-    }
-    else
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "Received invalid packet type", header->type());
-        return -1;
-    }
-}
-
-void DistanceVector::sendDistanceDetect()
-{
-    // 构造距离探测包
-    PayloadDistanceDetect payloadDistanceDetect;
-    payloadDistanceDetect.setSeq(m_distanceDetectSeq++);
-    payloadDistanceDetect.setTimestamp(utilities::TimeTools::getCurrentTimestamp());
-
-    std::vector<char> buffer =
-        PacketEncodeHelper<PacketType::PT_DistanceDetect, PayloadDistanceDetect>::encode(payloadDistanceDetect);
-    for (const NodeId& nodeId : m_neighbours)
-    {
-        if (-1 == m_packetSender(nodeId, buffer))
-        {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send distance detect failed", ", to nodeId: ",
-                       nodeId);
-            break;
-        }
-
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send distance detect successfully", ", to nodeId: ",
-                   nodeId);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(c_nodeDistanceDetectInterval));
-    }
-}
-
-void DistanceVector::sendDistanceVector()
-{
-    PayloadDistanceVector payloadDistanceVector;
-    for (const auto& [nodeId, nodeInfo] : m_dvInfos)
-    {
-        auto iter = m_neighboursDVInfo.find(nodeInfo.nextHop);
-        if (m_neighboursDVInfo.end() != iter && nodeInfo.distance >= c_unreachableDistance)
-        {
-            payloadDistanceVector.addDistanceInfo(nodeId, c_unreachableDistance);
-        }
-        else
-        {
-            payloadDistanceVector.addDistanceInfo(nodeId, nodeInfo.distance);
-        }
+        nodeIds.push_back(nodeId);
     }
 
-    std::vector<char> buffer =
-        PacketEncodeHelper<PacketType::PT_DistanceVector, PayloadDistanceVector>::encode(payloadDistanceVector);
-    for (const auto& nodeId : m_neighbours)
-    {
-        if (0 != m_packetSender(nodeId, buffer))
-        {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "sync distance vector to node failed, nodeId: ",
-                       nodeId);
-            continue;
-        }
-
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "sync distance vector to node successfully, nodeId: ",
-                   nodeId);
-    }
+    return nodeIds;
 }
 
-int DistanceVector::handleDistanceDetect(const NodeId& fromNodeId, const PayloadBase::Ptr& payload)
+bool DistanceVector::updateNeighbourDistance(const NodeId& peerNodeId, std::uint32_t distance)
 {
-    PayloadDistanceDetect::Ptr payloadDistanceDetect = std::dynamic_pointer_cast<PayloadDistanceDetect>(payload);
-
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "received distance detect from node id: ", fromNodeId);
-
-    // 构造距离探测包
-    PayloadDistanceDetectReply payloadDistanceDetectReply;
-    payloadDistanceDetectReply.setSeq(payloadDistanceDetect->seq());
-    payloadDistanceDetectReply.setElapsedTime(
-        utilities::TimeTools::getCurrentTimestamp() - payloadDistanceDetect->timestamp());
-
-    std::vector<char> buffer =
-        PacketEncodeHelper<PacketType::PT_DistanceDetectReply, PayloadDistanceDetectReply>::encode(
-            payloadDistanceDetectReply);
-    if (nullptr != m_packetSender)
-    {
-        if (0 != m_packetSender(fromNodeId, buffer))
-        {
-            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send distance detect reply failed, send to: ",
-                       fromNodeId);
-            return -1;
-        }
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send distance detect reply successfully, send to: ",
-                   fromNodeId,
-                   ", elapsed time: ", payloadDistanceDetectReply.elapsedTime());
-    }
-
-    return 0;
-}
-
-// 处理邻居发回来的距离探测回应包
-int DistanceVector::handleDistanceDetectReply(const NodeId& fromNodeId, const PayloadBase::Ptr& payload)
-{
-    PayloadDistanceDetectReply::Ptr payloadDistanceDetectReply = std::dynamic_pointer_cast<
-        PayloadDistanceDetectReply>(payload);
-
-    if (payloadDistanceDetectReply->seq() < m_distanceDetectSeq)
-    {
-        LOG->write(utilities::LogType::Log_Warning, FILE_INFO,
-                   "received distance detect reply but seq to old, ignore, from: ", fromNodeId);
-        return 0;
-    }
-
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "received distance detect reply, from: ", fromNodeId,
-               ", elapsed time: ", payloadDistanceDetectReply->elapsedTime());
+    bool isUpdated{false};
 
     std::unique_lock<std::mutex> ulock(x_dvInfos);
 
-    auto iter = m_dvInfos.find(fromNodeId);
+    auto iter = m_dvInfos.find(peerNodeId);
     if (m_dvInfos.end() != iter)
     {
-        int distance = static_cast<int>(payloadDistanceDetectReply->elapsedTime()) / c_timeResolutionMs + 1;
-        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "received distance detect reply, from: ", fromNodeId,
-                   ", elapsed time: ", payloadDistanceDetectReply->elapsedTime(), ", distance: ", distance);
         if (distance != iter->second.distance)
         {
             iter->second.distance = distance;
-            m_needToSyncDistaceVector = true;
+            isUpdated = true;
         }
     }
     else
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "node not found in neighbour map");
-        return -1;
     }
 
     std::ranges::for_each(m_dvInfos, [](const auto& dvInfo)
@@ -219,53 +57,108 @@ int DistanceVector::handleDistanceDetectReply(const NodeId& fromNodeId, const Pa
                    dvInfo.second.distance);
     });
 
-    return 0;
+    return isUpdated;
 }
 
-int DistanceVector::handleDistanceVector(const NodeId& fromNodeId, const PayloadBase::Ptr& payload)
+bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
+                                   const std::vector<std::pair<csm::NodeId, std::uint32_t>>& peerDvInfos)
 {
-    PayloadDistanceVector::Ptr payloadDistanceVector = std::dynamic_pointer_cast<PayloadDistanceVector>(payload);
-
     std::unique_lock<std::mutex> ulock(x_dvInfos);
 
-    bool needSendDistanceVector{false};
-    for (const auto& distanceInfo : payloadDistanceVector->distanceInfos())
+    auto iter = m_neighboursDVInfo.find(peerNodeId);
+    if (m_neighboursDVInfo.end() == iter)
     {
-        for (auto& dvInfo : m_dvInfos)
+        // 邻居间才互相更新距离矢量
+        LOG->write(utilities::LogType::Log_Error, peerNodeId, " is not my neighbour");
+        return false;
+    }
+
+    if (m_dvInfos.end() == m_dvInfos.find(peerNodeId))
+    {
+        LOG->write(utilities::LogType::Log_Error, peerNodeId, " not found distance info");
+        return false;
+    }
+
+    // 刷新邻居距离向量缓存
+    iter->second.clear();
+    for (const auto& peerDvInfo : peerDvInfos)
+    {
+        iter->second.emplace(peerDvInfo.first, peerDvInfo.second);
+    }
+
+    // 根据邻居传过来的距离向量计算更新自己的距离向量表
+    std::uint32_t peerNodeDistance = m_dvInfos[peerNodeId].distance;
+    for (const auto& peerDvInfo : peerDvInfos)
+    {
+        std::uint32_t distance{0};
+        if (false == queryNodeDistanceWithoutLock(peerDvInfo.first, distance))
         {
-            if (dvInfo.first == distanceInfo.first)
+            LOG->write(utilities::LogType::Log_Info, FILE_INFO, "not found distance info");
+
+            m_dvInfos[peerDvInfo.first].distance = peerNodeDistance + peerDvInfo.second;
+            m_dvInfos[peerDvInfo.first].nextHop = peerNodeId;
+        }
+        else
+        {
+            // 如果distance(本节点 -> peerNodeId) + distance(peerNodeId, peerDvInfo.first) < distance(本节点, peerDvInfo.first)
+            if (peerNodeDistance + peerDvInfo.second < distance)
             {
-                std::uint32_t distance{0};
-                if (false == queryNodeDistanceWithoutLock(distanceInfo.first, distance))
-                {
-                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "not found distance info");
-                    break;
-                }
-
-                if (distance + distanceInfo.second < distance)
-                {
-                    dvInfo.second.distance = distanceInfo.second;
-                    dvInfo.second.nextHop = fromNodeId;
-                }
-
-                needSendDistanceVector = true;
+                m_dvInfos[peerDvInfo.first].distance = peerNodeDistance + peerDvInfo.second;
+                m_dvInfos[peerDvInfo.first].nextHop = peerNodeId;
             }
         }
     }
 
-    auto iter = m_neighboursDVInfo.find(fromNodeId);
-    if (m_neighboursDVInfo.end() != iter)
+    return true;
+}
+
+std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfos(const csm::NodeId& peerNodeId) const
+{
+    std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfos;
+
+    for (const auto& [nodeId, dvInfo] : m_dvInfos)
     {
-        iter->second.clear();
-        for (const auto& distanceInfo : payloadDistanceVector->distanceInfos())
+        /*
+         * 如果本节点到某个节点（以A指代）的下一跳是B，但是B到A的距离是不可达，则本节点告诉B，我到A也是不可达
+         */
+        if (dvInfo.nextHop == peerNodeId)
         {
-            iter->second.emplace(distanceInfo.first, distanceInfo.second);
+            auto outIter = m_neighboursDVInfo.find(peerNodeId);
+            if (m_neighboursDVInfo.end() != outIter)
+            {
+                auto inIter = outIter->second.find(nodeId);
+                if (outIter->second.end() != inIter && inIter->second >= c_unreachableDistance)
+                {
+                    dvInfos.emplace_back(nodeId, c_unreachableDistance);
+                }
+                else
+                {
+                    dvInfos.emplace_back(nodeId, dvInfo.distance);
+                }
+            }
+            else
+            {
+                dvInfos.emplace_back(nodeId, dvInfo.distance);
+            }
+        }
+        else
+        {
+            dvInfos.emplace_back(nodeId, dvInfo.distance);
         }
     }
 
-    m_needToSyncDistaceVector = needSendDistanceVector;
+    return dvInfos;
+}
 
-    return 0;
+std::vector<std::tuple<csm::NodeId, csm::NodeId, std::uint32_t>> DistanceVector::dvInfos() const
+{
+    std::vector<std::tuple<NodeId, NodeId, std::uint32_t>> dvInfos;
+    for (const auto& [nodeId, info] : m_dvInfos)
+    {
+        dvInfos.emplace_back(nodeId, info.nextHop, info.distance);
+    }
+
+    return dvInfos;
 }
 
 bool DistanceVector::queryNodeDistanceWithoutLock(const NodeId& nodeId, std::uint32_t& distance)

@@ -1,18 +1,14 @@
 //
-// Created by chu on 7/9/25.
+// Created by ivy on 1/8/26.
 //
 
-#ifndef DISTANCEVECTOR_H
-#define DISTANCEVECTOR_H
+#ifndef COPYSTATEMACHINE_DISTANCEVECTOR_H
+#define COPYSTATEMACHINE_DISTANCEVECTOR_H
 
-#include <memory>
 #include <mutex>
 #include <unordered_map>
 
 #include "csm-framework/cluster/Common.h"
-#include "csm-service/protocol/header/PacketHeader.h"
-#include "csm-service/protocol/payload/PayloadBase.h"
-#include "csm-utilities/Thread.h"
 
 namespace csm
 {
@@ -25,45 +21,26 @@ namespace csm
         class DistanceVector
         {
         public:
-            explicit DistanceVector(const NodeIds& nodes);
-            ~DistanceVector() = default;
+            DistanceVector(const NodeIds& nodeIds);
 
         public:
-            int init();
+            // 获取所有邻居节点
+            NodeIds neighbours() const;
 
-            int start();
+            // 更新与邻居节点的距离
+            bool updateNeighbourDistance(const NodeId& peerNodeId, std::uint32_t distance);
+            // 更新节点距离向量信息
+            bool updateDvInfos(const NodeId& peerNodeId, const std::vector<std::pair<NodeId, std::uint32_t>>& peerDvInfos);
 
-            void stop();
-
-            /**
-             * @brief 设置网络数据包发送器
-             *
-             * @param sender
-             */
-            void setPacketSender(std::function<int(const NodeId& nodeId, const std::vector<char>& data)> sender);
-
-            /**
-             * @brief 处理网络数据包
-             *
-             * @param header
-             * @param payload
-             * @return
-             */
-            int handlePacket(const NodeId& fromNodeId, PacketHeader::Ptr header, PayloadBase::Ptr payload);
+            // 获取针对某个节点的距离向量
+            std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfos(const NodeId& peerNodeId) const;
+            // 获取距离向量信息
+            std::vector<std::tuple<NodeId, NodeId, std::uint32_t>> dvInfos() const;
 
         private:
-            void sendDistanceDetect();
-            void sendDistanceVector();
-
-            int handleDistanceDetect(const NodeId& fromNodeId, const PayloadBase::Ptr& payload);
-            int handleDistanceDetectReply(const NodeId& fromNodeId, const PayloadBase::Ptr& payload);
-            int handleDistanceVector(const NodeId& fromNodeId, const PayloadBase::Ptr& payload);
-
             bool queryNodeDistanceWithoutLock(const NodeId& nodeId, std::uint32_t& distance);
 
         private:
-            std::vector<NodeId> m_neighbours;
-
             struct NodeInfo
             {
                 NodeInfo() = default;
@@ -76,17 +53,13 @@ namespace csm
             std::mutex x_dvInfos;
             std::unordered_map<NodeId, NodeInfo> m_dvInfos;
 
+            // NeighbourNodeId => { TargetNodeId, distance }
             std::unordered_map<NodeId, std::unordered_map<NodeId, std::uint32_t>> m_neighboursDVInfo;
-
-            std::function<int(const NodeId& nodeId, const std::vector<char>& data)> m_packetSender;
-            std::unique_ptr<utilities::Thread> m_thread{nullptr};
-
-            std::uint64_t m_distanceDetectSeq{0};
-            std::atomic_bool m_needToSyncDistaceVector{false};
         };
 
     }
 
 }
 
-#endif //DISTANCEVECTOR_H
+
+#endif //COPYSTATEMACHINE_DISTANCEVECTOR_H
