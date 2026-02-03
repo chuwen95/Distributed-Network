@@ -1,7 +1,8 @@
 # Distributed Network
 
 ## 简介
-1. 分布式网络学习项目，平日空闲时间不太多，偶尔有进展，模块命名借鉴优秀的开源区块链项目fisco-bcos(https://github.com/FISCO-BCOS/FISCO-BCOS.git)
+1. 分布式网络学习项目，平日空闲时间不太多，偶尔有进展
+2. 模块文件夹命名与项目中的一些技术点借鉴学习了优秀的开源区块链项目fisco-bcos(https://github.com/FISCO-BCOS/FISCO-BCOS.git)
 
 ## 基本特性
 1. 网络使用reactor主从模式实现，位于csm-service模块
