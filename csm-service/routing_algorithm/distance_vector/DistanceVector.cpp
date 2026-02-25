@@ -16,6 +16,8 @@ DistanceVector::DistanceVector(const NodeIds& nodeIds)
     std::ranges::for_each(nodeIds, [this](const NodeId& nodeId)
     {
         m_dvInfos[nodeId].distance = c_unreachableDistance;
+        m_dvInfos[nodeId].nextHop = nodeId;
+
         m_neighboursDVInfo[nodeId] = std::unordered_map<NodeId, std::uint32_t>();
     });
 }
@@ -40,10 +42,23 @@ bool DistanceVector::updateNeighbourDistance(const NodeId& peerNodeId, std::uint
     auto iter = m_dvInfos.find(peerNodeId);
     if (m_dvInfos.end() != iter)
     {
-        if (distance != iter->second.distance)
+        if (iter->second.nextHop == peerNodeId)
         {
-            iter->second.distance = distance;
-            isUpdated = true;
+            if (iter->second.distance != distance)
+            {
+                iter->second.distance = distance;
+                isUpdated = true;
+            }
+        }
+        else
+        {
+            if (distance < iter->second.distance)
+            {
+                iter->second.distance = distance;
+                iter->second.nextHop = peerNodeId;
+
+                isUpdated = true;
+            }
         }
     }
     else
@@ -112,12 +127,18 @@ bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
     return true;
 }
 
-std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfos(const csm::NodeId& peerNodeId) const
+std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfo(const csm::NodeId& peerNodeId) const
 {
     std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfos;
 
     for (const auto& [nodeId, dvInfo] : m_dvInfos)
     {
+        // 不需要告知自身到peerNodeId的距离信息，因为peerNodeId不需要计算自己到自己的距离信息
+        if (nodeId == peerNodeId)
+        {
+            continue;
+        }
+
         /*
          * 如果本节点到某个节点（以A指代）的下一跳是B，但是B到A的距离是不可达，则本节点告诉B，我到A也是不可达
          */
@@ -150,12 +171,12 @@ std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfos(const
     return dvInfos;
 }
 
-std::vector<std::tuple<csm::NodeId, csm::NodeId, std::uint32_t>> DistanceVector::dvInfos() const
+std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> DistanceVector::dvInfos() const
 {
-    std::vector<std::tuple<NodeId, NodeId, std::uint32_t>> dvInfos;
-    for (const auto& [nodeId, info] : m_dvInfos)
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos;
+    for (const auto& [nodeId, dvInfo] : m_dvInfos)
     {
-        dvInfos.emplace_back(nodeId, info.nextHop, info.distance);
+        dvInfos.emplace_back(nodeId, dvInfo.distance, dvInfo.nextHop);
     }
 
     return dvInfos;

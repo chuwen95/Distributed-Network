@@ -117,7 +117,7 @@ void DistanceVectorImpl::sendDistanceVector()
     for (const auto& nodeId : neighbours)
     {
         PayloadDistanceVector payloadDistanceVector;
-        auto dvInfos = m_distanceVector.dvInfos(nodeId);
+        auto dvInfos = m_distanceVector.dvInfo(nodeId);
         std::ranges::for_each(dvInfos.begin(), dvInfos.end(), [&payloadDistanceVector](const auto& dvInfo)
         {
             payloadDistanceVector.addDistanceInfo(dvInfo.first, dvInfo.second);

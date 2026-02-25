@@ -14,6 +14,7 @@ namespace csm
     using NodeId = std::string;
     using NodeIds = std::vector<NodeId>;
 
+    const NodeId c_invalidNodeId{};
 }
 
 #endif //TOOLS_H
