@@ -43,6 +43,27 @@ namespace
     }
 }
 
+// 测试目标：当直连更贵，经过邻居更便宜时，选间接路径，并且nextHop正确
+TEST(DistanceVectorTest, PreferIndirectShorterPath)
+{
+    csm::service::DistanceVector A({"B", "C"});
+    csm::service::DistanceVector B({"A", "C"});
+    csm::service::DistanceVector C({"A", "B"});
+
+    A.updateNeighbourDistance("B", 1);
+    A.updateNeighbourDistance("C", 10);
+    B.updateNeighbourDistance("A", 1);
+    B.updateNeighbourDistance("C", 1);
+
+    A.updateDvInfos("B", B.dvInfo("A"));
+
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = A.dvInfos();
+    std::size_t index = nodeIndexInVectorTuple(dvInfos, "C");
+    EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
+    EXPECT_EQ(std::get<1>(dvInfos[index]), 2);
+    EXPECT_EQ(std::get<2>(dvInfos[index]), "B");
+}
+
 TEST(DistanceVectorTest, MainTest)
 {
     // 假设集群中所有的节点是："A", "B", "C", "D", "E"
