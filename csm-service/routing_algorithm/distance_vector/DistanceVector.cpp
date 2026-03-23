@@ -105,8 +105,8 @@ bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
     std::uint32_t peerNodeDistance = m_dvInfos[peerNodeId].distance;
     for (const auto& peerDvInfo : peerDvInfos)
     {
-        std::uint32_t distance{0};
-        if (false == queryNodeDistanceWithoutLock(peerDvInfo.first, distance))
+        std::optional<std::uint32_t> distance = queryNodeDistanceWithoutLock(peerDvInfo.first);
+        if (false == distance.has_value())
         {
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "not found distance info");
 
@@ -116,7 +116,7 @@ bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
         else
         {
             // 如果distance(本节点 -> peerNodeId) + distance(peerNodeId, peerDvInfo.first) < distance(本节点, peerDvInfo.first)
-            if (peerNodeDistance + peerDvInfo.second < distance)
+            if (peerNodeDistance + peerDvInfo.second < distance.value())
             {
                 m_dvInfos[peerDvInfo.first].distance = peerNodeDistance + peerDvInfo.second;
                 m_dvInfos[peerDvInfo.first].nextHop = peerNodeId;
@@ -182,13 +182,24 @@ std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> DistanceVector:
     return dvInfos;
 }
 
-bool DistanceVector::queryNodeDistanceWithoutLock(const NodeId& nodeId, std::uint32_t& distance)
+std::optional<std::uint32_t> DistanceVector::queryNodeDistanceWithoutLock(const NodeId& nodeId)
 {
-    if (m_dvInfos.end() != m_dvInfos.find(nodeId))
+    auto iter = m_dvInfos.find(nodeId);
+    if (m_dvInfos.end() != iter)
     {
-        distance = m_dvInfos[nodeId].distance;
-        return true;
+        return iter->second.distance;
     }
 
-    return false;
+    return std::nullopt;
+}
+
+std::optional<std::pair<std::uint32_t, csm::NodeId>> DistanceVector::distance(const NodeId& target) const
+{
+    auto iter = m_dvInfos.find(target);
+    if (m_dvInfos.end() == iter)
+    {
+        return std::nullopt;
+    }
+
+    return std::make_pair(iter->second.distance, iter->second.nextHop);
 }

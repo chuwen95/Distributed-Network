@@ -6,6 +6,7 @@
 #define COPYSTATEMACHINE_DISTANCEVECTOR_H
 
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 
 #include "csm-framework/cluster/Common.h"
@@ -38,8 +39,10 @@ namespace csm
             // 当前的距离向量表（for unittest）(返回值：目标节点，距离，下一跳)
             std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos() const;
 
+            std::optional<std::pair<std::uint32_t, NodeId>> distance(const NodeId& target) const;
+
         private:
-            bool queryNodeDistanceWithoutLock(const NodeId& nodeId, std::uint32_t& distance);
+            std::optional<std::uint32_t> queryNodeDistanceWithoutLock(const NodeId& nodeId);
 
         private:
             struct NodeInfo
