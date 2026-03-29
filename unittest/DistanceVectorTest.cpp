@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#include "csm-service/protocol/payload/PayloadDistanceVector.h"
 #include "csm-service/routing_algorithm/distance_vector/DistanceVector.h"
 
 namespace
@@ -376,6 +377,12 @@ TEST(DistanceVectorTest, MainTest)
     index = nodeIndexInVectorPair(dvInfoASendToE, "D");
     EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
     EXPECT_EQ(std::get<1>(dvInfoASendToE[index]), csm::service::c_unreachableDistance);
+
+    dvInfos = distanceVectorA.dvInfos();
+    index = nodeIndexInVectorTuple(dvInfos, "D");
+    EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
+    EXPECT_EQ(std::get<1>(dvInfos[index]), csm::service::c_unreachableDistance);
+    EXPECT_EQ(std::get<2>(dvInfos[index]), csm::c_invalidNodeId);
 }
 
 // 测试目标：当直连更贵，经过邻居更便宜时，选间接路径，并且nextHop正确
@@ -460,6 +467,102 @@ TEST(DistanceVectorTest, MultiRoundSpread)
     EXPECT_TRUE(result.has_value());
     EXPECT_EQ(result.value().first, 10);
     EXPECT_EQ(result.value().second, "B");
+}
+
+/*
+ * 测试目标：多轮传播
+ * A连接到B，B连接到C，C连接到E，E连接到D
+ *
+ */
+TEST(DistanceVectorTest, MultiRoundSpread2)
+{
+    // A节点的距离向量
+    csm::NodeIds neighbourNodeIdsForA{"B", "C", "E"};
+    csm::service::DistanceVector distanceVectorA(neighbourNodeIdsForA);
+
+    // 调整与邻居节点的距离
+    distanceVectorA.updateNeighbourDistance("B", 1);
+    distanceVectorA.updateNeighbourDistance("C", 3);
+    distanceVectorA.updateNeighbourDistance("E", 2);
+
+    // B节点的距离向量
+    csm::NodeIds neighbourNodeIdsForB{"A", "C"};
+    csm::service::DistanceVector distanceVectorB(neighbourNodeIdsForB);
+
+    // 调整与邻居节点的距离
+    distanceVectorB.updateNeighbourDistance("A", 1);
+    distanceVectorB.updateNeighbourDistance("C", 2);
+
+    // C节点的距离向量
+    csm::NodeIds neighbourNodeIdsForC{"A", "B", "E"};
+    csm::service::DistanceVector distanceVectorC(neighbourNodeIdsForC);
+
+    // 调整与邻居节点的距离
+    distanceVectorC.updateNeighbourDistance("A", 3);
+    distanceVectorC.updateNeighbourDistance("B", 2);
+    distanceVectorC.updateNeighbourDistance("E", 4);
+
+    // D节点的距离向量
+    csm::NodeIds neighbourNodeIdsForD{"E"};
+    csm::service::DistanceVector distanceVectorD(neighbourNodeIdsForD);
+
+    // 调整与邻居节点的距离
+    distanceVectorD.updateNeighbourDistance("E", 3);
+
+    // E节点的距离向量
+    csm::NodeIds neighbourNodeIdsForE{"A", "C", "D"};
+    csm::service::DistanceVector distanceVectorE(neighbourNodeIdsForE);
+
+    // 调整与邻居节点的距离
+    distanceVectorE.updateNeighbourDistance("A", 2);
+    distanceVectorE.updateNeighbourDistance("C", 4);
+    distanceVectorE.updateNeighbourDistance("D", 3);
+
+    for (int i = 0; i < 5; ++i)
+    {
+        distanceVectorE.updateDvInfos("D", distanceVectorD.dvInfo("E"));
+        distanceVectorC.updateDvInfos("E", distanceVectorE.dvInfo("C"));
+        distanceVectorB.updateDvInfos("C", distanceVectorC.dvInfo("B"));
+        distanceVectorA.updateDvInfos("B", distanceVectorB.dvInfo("A"));
+    }
+
+    std::optional<std::pair<std::uint32_t, csm::NodeId>> result = distanceVectorA.distance("D");
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(result.value().first, 10);
+    EXPECT_EQ(result.value().second, "B");
+}
+
+/*
+ * 测试目标：链路代价上升：如果当前nextHop就是这个邻居，必须更新为更大值
+ */
+TEST(DistanceVectorTest, CostIncreaseMustPropagateWhenUsingThatNextHop)
+{
+    csm::service::DistanceVector distanceVectorA({"B"});
+    csm::service::DistanceVector distanceVectorB({"A", "C"});
+
+    distanceVectorA.updateNeighbourDistance("B", 1);
+    distanceVectorB.updateNeighbourDistance("A", 1);
+    distanceVectorB.updateNeighbourDistance("C", 1);
+
+    // A通过B学到可以到达C，距离为2，nextHop = B
+    distanceVectorA.updateDvInfos("B", distanceVectorB.dvInfo("A"));
+
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dv = distanceVectorA.dvInfos();
+    std::size_t index = nodeIndexInVectorTuple(dv, "C");
+    EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
+    EXPECT_EQ(std::get<1>(dv[index]), 2);
+    EXPECT_EQ(std::get<2>(dv[index]), "B");
+
+    // B -> C 变差
+    distanceVectorB.updateNeighbourDistance("C", 100);
+    // A 更新 B 发过来的距离向量
+    distanceVectorA.updateDvInfos("B", distanceVectorB.dvInfo("A"));
+
+    dv = distanceVectorA.dvInfos();
+    index = nodeIndexInVectorTuple(dv, "C");
+    EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
+    EXPECT_EQ(std::get<1>(dv[index]), 101);
+    EXPECT_EQ(std::get<2>(dv[index]), "B");
 }
 
 int main(int argc, char* argv[])

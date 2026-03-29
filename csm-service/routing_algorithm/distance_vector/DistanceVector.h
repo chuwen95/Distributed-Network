@@ -5,6 +5,7 @@
 #ifndef COPYSTATEMACHINE_DISTANCEVECTOR_H
 #define COPYSTATEMACHINE_DISTANCEVECTOR_H
 
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <unordered_map>
@@ -42,20 +43,20 @@ namespace csm
             std::optional<std::pair<std::uint32_t, NodeId>> distance(const NodeId& target) const;
 
         private:
-            std::optional<std::uint32_t> queryNodeDistanceWithoutLock(const NodeId& nodeId);
-
-        private:
             struct NodeInfo
             {
                 NodeInfo() = default;
                 explicit NodeInfo(NodeId n) : nextHop(std::move(n)) {}
+                explicit NodeInfo(NodeId n, std::uint32_t distance) : nextHop(std::move(n)), distance(distance) {}
 
                 NodeId nextHop{c_invalidNodeId}; // 到达目标节点的下一跳节点
                 std::uint32_t distance{c_unreachableDistance}; // 到达目标节点的距离
             };
+            std::shared_ptr<NodeInfo> queryNodeInfoWithoutLock(const NodeId& nodeId);
 
+        private:
             std::mutex x_dvInfos;
-            std::unordered_map<NodeId, NodeInfo> m_dvInfos;
+            std::unordered_map<NodeId, std::shared_ptr<NodeInfo>> m_dvInfos;
 
             // NeighbourNodeId => { TargetNodeId, distance }
             std::unordered_map<NodeId, std::unordered_map<NodeId, std::uint32_t>> m_neighboursDVInfo;

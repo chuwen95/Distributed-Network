@@ -15,8 +15,8 @@ DistanceVector::DistanceVector(const NodeIds& nodeIds)
 {
     std::ranges::for_each(nodeIds, [this](const NodeId& nodeId)
     {
-        m_dvInfos[nodeId].distance = c_unreachableDistance;
-        m_dvInfos[nodeId].nextHop = nodeId;
+        std::shared_ptr<NodeInfo> nodeInfo = std::make_shared<NodeInfo>(nodeId, c_unreachableDistance);
+        m_dvInfos.emplace(nodeId, nodeInfo);
 
         m_neighboursDVInfo[nodeId] = std::unordered_map<NodeId, std::uint32_t>();
     });
@@ -42,20 +42,20 @@ bool DistanceVector::updateNeighbourDistance(const NodeId& peerNodeId, std::uint
     auto iter = m_dvInfos.find(peerNodeId);
     if (m_dvInfos.end() != iter)
     {
-        if (iter->second.nextHop == peerNodeId)
+        if (iter->second->nextHop == peerNodeId)
         {
-            if (iter->second.distance != distance)
+            if (iter->second->distance != distance)
             {
-                iter->second.distance = distance;
+                iter->second->distance = distance;
                 isUpdated = true;
             }
         }
         else
         {
-            if (distance < iter->second.distance)
+            if (distance < iter->second->distance)
             {
-                iter->second.distance = distance;
-                iter->second.nextHop = peerNodeId;
+                iter->second->distance = distance;
+                iter->second->nextHop = peerNodeId;
 
                 isUpdated = true;
             }
@@ -69,7 +69,7 @@ bool DistanceVector::updateNeighbourDistance(const NodeId& peerNodeId, std::uint
     std::ranges::for_each(m_dvInfos, [](const auto& dvInfo)
     {
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "node id: ", dvInfo.first, ", distance: ",
-                   dvInfo.second.distance);
+                   dvInfo.second->distance);
     });
 
     return isUpdated;
@@ -102,25 +102,39 @@ bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
     }
 
     // 根据邻居传过来的距离向量计算更新自己的距离向量表
-    std::uint32_t peerNodeDistance = m_dvInfos[peerNodeId].distance;
+    std::uint32_t peerNodeDistance = m_dvInfos[peerNodeId]->distance;
     for (const auto& peerDvInfo : peerDvInfos)
     {
-        std::optional<std::uint32_t> distance = queryNodeDistanceWithoutLock(peerDvInfo.first);
-        if (false == distance.has_value())
+        std::shared_ptr<NodeInfo> nodeInfo = queryNodeInfoWithoutLock(peerDvInfo.first);
+        if (nullptr == nodeInfo)
         {
             LOG->write(utilities::LogType::Log_Info, FILE_INFO, "not found distance info");
 
-            m_dvInfos[peerDvInfo.first].distance = peerNodeDistance + peerDvInfo.second;
-            m_dvInfos[peerDvInfo.first].nextHop = peerNodeId;
+            std::shared_ptr<NodeInfo> newNodeInfo = std::make_shared<NodeInfo>(
+                peerNodeId, peerNodeDistance + peerDvInfo.second);
+            m_dvInfos.emplace(peerDvInfo.first, newNodeInfo);
         }
         else
         {
-            // 如果distance(本节点 -> peerNodeId) + distance(peerNodeId, peerDvInfo.first) < distance(本节点, peerDvInfo.first)
-            if (peerNodeDistance + peerDvInfo.second < distance.value())
+            if (nodeInfo->nextHop == peerNodeId)
             {
-                m_dvInfos[peerDvInfo.first].distance = peerNodeDistance + peerDvInfo.second;
-                m_dvInfos[peerDvInfo.first].nextHop = peerNodeId;
+                nodeInfo->distance = peerNodeDistance + peerDvInfo.second;
+                if (nodeInfo->distance > csm::service::c_unreachableDistance)
+                {
+                    nodeInfo->nextHop = csm::c_invalidNodeId;
+                    nodeInfo->distance = csm::service::c_unreachableDistance;
+                }
             }
+            else
+            {
+                // 如果distance(本节点 -> peerNodeId) + distance(peerNodeId, peerDvInfo.first) < distance(本节点, peerDvInfo.first)
+                if (peerNodeDistance + peerDvInfo.second < nodeInfo->distance)
+                {
+                    m_dvInfos[peerDvInfo.first]->distance = peerNodeDistance + peerDvInfo.second;
+                    m_dvInfos[peerDvInfo.first]->nextHop = peerNodeId;
+                }
+            }
+
         }
     }
 
@@ -142,7 +156,7 @@ std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfo(const 
         /*
          * 如果本节点到某个节点（以A指代）的下一跳是B，但是B到A的距离是不可达，则本节点告诉B，我到A也是不可达
          */
-        if (dvInfo.nextHop == peerNodeId)
+        if (dvInfo->nextHop == peerNodeId)
         {
             auto outIter = m_neighboursDVInfo.find(peerNodeId);
             if (m_neighboursDVInfo.end() != outIter)
@@ -154,17 +168,17 @@ std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfo(const 
                 }
                 else
                 {
-                    dvInfos.emplace_back(nodeId, dvInfo.distance);
+                    dvInfos.emplace_back(nodeId, dvInfo->distance);
                 }
             }
             else
             {
-                dvInfos.emplace_back(nodeId, dvInfo.distance);
+                dvInfos.emplace_back(nodeId, dvInfo->distance);
             }
         }
         else
         {
-            dvInfos.emplace_back(nodeId, dvInfo.distance);
+            dvInfos.emplace_back(nodeId, dvInfo->distance);
         }
     }
 
@@ -176,21 +190,21 @@ std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> DistanceVector:
     std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos;
     for (const auto& [nodeId, dvInfo] : m_dvInfos)
     {
-        dvInfos.emplace_back(nodeId, dvInfo.distance, dvInfo.nextHop);
+        dvInfos.emplace_back(nodeId, dvInfo->distance, dvInfo->nextHop);
     }
 
     return dvInfos;
 }
 
-std::optional<std::uint32_t> DistanceVector::queryNodeDistanceWithoutLock(const NodeId& nodeId)
+auto DistanceVector::queryNodeInfoWithoutLock(const NodeId& nodeId) -> std::shared_ptr<NodeInfo>
 {
     auto iter = m_dvInfos.find(nodeId);
     if (m_dvInfos.end() != iter)
     {
-        return iter->second.distance;
+        return iter->second;
     }
 
-    return std::nullopt;
+    return nullptr;
 }
 
 std::optional<std::pair<std::uint32_t, csm::NodeId>> DistanceVector::distance(const NodeId& target) const
@@ -201,5 +215,5 @@ std::optional<std::pair<std::uint32_t, csm::NodeId>> DistanceVector::distance(co
         return std::nullopt;
     }
 
-    return std::make_pair(iter->second.distance, iter->second.nextHop);
+    return std::make_pair(iter->second->distance, iter->second->nextHop);
 }
