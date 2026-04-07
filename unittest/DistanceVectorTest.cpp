@@ -9,7 +9,8 @@
 
 namespace
 {
-    std::size_t nodeIndexInVectorTuple(const std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>>& vec, const csm::NodeId& nodeId)
+    std::size_t nodeIndexInVectorTuple(const std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>>& vec,
+                                       const csm::NodeId& nodeId)
     {
         for (auto iter = vec.begin(); iter != vec.end(); ++iter)
         {
@@ -22,7 +23,8 @@ namespace
         return std::numeric_limits<std::size_t>::max();
     }
 
-    std::size_t nodeIndexInVectorPair(const std::vector<std::pair<csm::NodeId, std::uint32_t>>& vec, const csm::NodeId& nodeId)
+    std::size_t nodeIndexInVectorPair(const std::vector<std::pair<csm::NodeId, std::uint32_t>>& vec,
+                                      const csm::NodeId& nodeId)
     {
         for (auto iter = vec.begin(); iter != vec.end(); ++iter)
         {
@@ -41,6 +43,23 @@ namespace
         std::sort(b.begin(), b.end());
 
         return a == b;
+    }
+
+    void expectPairDistance(const std::vector<std::pair<csm::NodeId, std::uint32_t>>& vec,
+                            const csm::NodeId& nodeId, std::uint32_t distance)
+    {
+        std::size_t index = nodeIndexInVectorPair(vec, nodeId);
+        EXPECT_NE(index, std::numeric_limits<std::size_t>::max()) << "node not found: " << nodeId;
+        EXPECT_EQ(vec[index].second, distance);
+    }
+
+    void expectTupleDistanceAndNextHop(const std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>>& vec,
+                                       const csm::NodeId& nodeId, std::uint32_t distance, const csm::NodeId& nextHop)
+    {
+        std::size_t index = nodeIndexInVectorTuple(vec, nodeId);
+        ASSERT_NE(index, std::numeric_limits<std::size_t>::max()) << "node not found: " << nodeId;
+        EXPECT_EQ(std::get<1>(vec[index]), distance);
+        EXPECT_EQ(std::get<2>(vec[index]), nextHop);
     }
 }
 
@@ -563,6 +582,39 @@ TEST(DistanceVectorTest, CostIncreaseMustPropagateWhenUsingThatNextHop)
     EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
     EXPECT_EQ(std::get<1>(dv[index]), 101);
     EXPECT_EQ(std::get<2>(dv[index]), "B");
+}
+
+/*
+ * 测试目标：在向邻居发送距离向量的时候，如果某个目的地的下一条就是该邻居，根据毒性逆转，需要告诉该邻居我到此
+ * 目的地节点不可达
+ */
+TEST(DistanceVectorTest, PoisonReverse_ShouldAdvertiseUnreachableToNextHopNeighbour)
+{
+    // 拓扑： A --2-- E --1-- D
+    // A学到D的路由后，A到D的nextHop = E，distance = 3
+    csm::service::DistanceVector distanceVectorA({"E"});
+    csm::service::DistanceVector distanceVectorE({"A", "D"});
+    csm::service::DistanceVector distanceVectorD({"E"});
+
+    distanceVectorA.updateNeighbourDistance("E", 2);
+
+    distanceVectorE.updateNeighbourDistance("A", 2);
+    distanceVectorE.updateNeighbourDistance("D", 1);
+
+    distanceVectorD.updateNeighbourDistance("E", 1);
+
+    // E向A通告，A学到了到达可以通过E到达D，距离是3
+    distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    expectTupleDistanceAndNextHop(dvInfos, "D", 3, "E");
+
+    // 确保A发送给E的距离向量符合毒性逆转的规则
+    std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfoASendToE = distanceVectorA.dvInfo("E");
+    EXPECT_EQ(dvInfoASendToE.size(), 1);
+
+    expectPairDistance(dvInfoASendToE, "D", csm::service::c_unreachableDistance);
 }
 
 int main(int argc, char* argv[])

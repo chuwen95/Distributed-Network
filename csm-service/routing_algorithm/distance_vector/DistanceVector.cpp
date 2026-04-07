@@ -154,27 +154,12 @@ std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfo(const 
         }
 
         /*
-         * 如果本节点到某个节点（以A指代）的下一跳是B，但是B到A的距离是不可达，则本节点告诉B，我到A也是不可达
+         * 如果本节点到某个节点（以A指代）的下一跳是B，证明本节点到A的路径是从B这里学到的
+         * 根据毒性逆转规则，本节点告诉B到：我到A不可达
          */
         if (dvInfo->nextHop == peerNodeId)
         {
-            auto outIter = m_neighboursDVInfo.find(peerNodeId);
-            if (m_neighboursDVInfo.end() != outIter)
-            {
-                auto inIter = outIter->second.find(nodeId);
-                if (outIter->second.end() != inIter && inIter->second >= c_unreachableDistance)
-                {
-                    dvInfos.emplace_back(nodeId, c_unreachableDistance);
-                }
-                else
-                {
-                    dvInfos.emplace_back(nodeId, dvInfo->distance);
-                }
-            }
-            else
-            {
-                dvInfos.emplace_back(nodeId, dvInfo->distance);
-            }
+            dvInfos.emplace_back(nodeId, c_unreachableDistance);
         }
         else
         {
