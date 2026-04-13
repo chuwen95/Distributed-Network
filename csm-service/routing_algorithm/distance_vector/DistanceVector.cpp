@@ -46,7 +46,8 @@ bool DistanceVector::updateNeighbourDistance(const NodeId& peerNodeId, std::uint
         {
             if (iter->second->distance != distance)
             {
-                iter->second->distance = distance;
+                iter->second->distance = (distance > c_unreachableDistance ? c_unreachableDistance : distance);
+
                 isUpdated = true;
             }
         }
@@ -141,8 +142,10 @@ bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
     return true;
 }
 
-std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfo(const csm::NodeId& peerNodeId) const
+std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfo(const csm::NodeId& peerNodeId)
 {
+    std::unique_lock<std::mutex> ulock(x_dvInfos);
+
     std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfos;
 
     for (const auto& [nodeId, dvInfo] : m_dvInfos)
@@ -170,8 +173,10 @@ std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfo(const 
     return dvInfos;
 }
 
-std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> DistanceVector::dvInfos() const
+std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> DistanceVector::dvInfos()
 {
+    std::unique_lock<std::mutex> ulock(x_dvInfos);
+
     std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos;
     for (const auto& [nodeId, dvInfo] : m_dvInfos)
     {
@@ -192,8 +197,10 @@ auto DistanceVector::queryNodeInfoWithoutLock(const NodeId& nodeId) -> std::shar
     return nullptr;
 }
 
-std::optional<std::pair<std::uint32_t, csm::NodeId>> DistanceVector::distance(const NodeId& target) const
+std::optional<std::pair<std::uint32_t, csm::NodeId>> DistanceVector::distance(const NodeId& target)
 {
+    std::unique_lock<std::mutex> ulock(x_dvInfos);
+
     auto iter = m_dvInfos.find(target);
     if (m_dvInfos.end() == iter)
     {

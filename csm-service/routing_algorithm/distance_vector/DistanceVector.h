@@ -35,12 +35,12 @@ namespace csm
             bool updateDvInfos(const NodeId& peerNodeId, const std::vector<std::pair<NodeId, std::uint32_t>>& peerDvInfos);
 
             // 获取针对某个节点的距离向量
-            std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfo(const NodeId& peerNodeId) const;
+            std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfo(const NodeId& peerNodeId);
 
             // 当前的距离向量表（for unittest）(返回值：目标节点，距离，下一跳)
-            std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos() const;
+            std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos();
 
-            std::optional<std::pair<std::uint32_t, NodeId>> distance(const NodeId& target) const;
+            std::optional<std::pair<std::uint32_t, NodeId>> distance(const NodeId& target);
 
         private:
             struct NodeInfo

@@ -617,6 +617,169 @@ TEST(DistanceVectorTest, PoisonReverse_ShouldAdvertiseUnreachableToNextHopNeighb
     expectPairDistance(dvInfoASendToE, "D", csm::service::c_unreachableDistance);
 }
 
+/*
+ * 收到非邻居节点的dv更新，应返回false且不改本地表
+ */
+TEST(DistanceVectorTest, UpdateDvInfos_FromNonNeighbour_ShouldReturnFalseAndKeepState)
+{
+    csm::service::DistanceVector distanceVectorA({"B"});
+    distanceVectorA.updateNeighbourDistance("B", 1);
+
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> beforeDvInfos = distanceVectorA.dvInfos();
+    expectTupleDistanceAndNextHop(beforeDvInfos, "B", 1, "B");
+
+    // C不是A的邻居
+    bool result = distanceVectorA.updateDvInfos("C", {{"D", 2}});
+    EXPECT_FALSE(result);
+
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> afterDvInfos = distanceVectorA.dvInfos();
+    EXPECT_TRUE(beforeDvInfos == afterDvInfos);
+}
+
+/*
+ * 收到未知目标节点时，应新增目的地
+ */
+TEST(DistanceVectorTest, UpdateDvInfos_UnknownDestination_ShouldBeLearned)
+{
+    // A只知道邻居B
+    // B告诉A：我还能到X，代价4
+    // A到B代价1
+    // 则A应该学到X, distance=5, nextHop=B
+    csm::service::DistanceVector distanceVectorA({"B"});
+    distanceVectorA.updateNeighbourDistance("B", 1);
+
+    csm::service::DistanceVector distanceVectorB({"A", "E"});
+    distanceVectorB.updateNeighbourDistance("A", 1);
+    distanceVectorB.updateNeighbourDistance("E", 4);
+
+    distanceVectorA.updateDvInfos("B", distanceVectorB.dvInfo("A"));
+
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 2);
+    expectTupleDistanceAndNextHop(dvInfos, "B", 1, "B");
+    expectTupleDistanceAndNextHop(dvInfos, "E", 5, "B");
+}
+
+/*
+ * 空DV更新应该成功，但不改变现有表
+ */
+TEST(DistanceVectorTest, UpdateDvInfos_EmptyVector_ShouldNotChangeState)
+{
+    csm::service::DistanceVector distanceVectorA({"B"});
+    distanceVectorA.updateNeighbourDistance("B", 1);
+
+    auto before = distanceVectorA.dvInfos();
+
+    bool result = distanceVectorA.updateDvInfos("B", {});
+    EXPECT_TRUE(result);
+
+    auto after = distanceVectorA.dvInfos();
+
+    EXPECT_EQ(before, after);
+}
+
+/*
+ * 重复收到相同dv，不应产生额外变化
+ */
+TEST(DistanceVectorTest, UpdateDvInfos_SameInputTwice_ShouldKeepSameRoutingTable)
+{
+    csm::service::DistanceVector distanceVectorA({"B"});
+    csm::service::DistanceVector distanceVectorB({"A", "C"});
+
+    distanceVectorA.updateNeighbourDistance("B", 1);
+
+    distanceVectorB.updateNeighbourDistance("A", 1);
+    distanceVectorB.updateNeighbourDistance("C", 2);
+
+    bool result = distanceVectorA.updateDvInfos("B", distanceVectorB.dvInfo("A"));
+    EXPECT_TRUE(result);
+
+    auto before = distanceVectorA.dvInfos();
+
+    result = distanceVectorA.updateDvInfos("B", distanceVectorB.dvInfo("A"));
+    EXPECT_TRUE(result);
+
+    auto after = distanceVectorA.dvInfos();
+
+    EXPECT_EQ(before, after);
+}
+
+/*
+ * updateNeighbourDistance对非邻居节点应返回false且不插入新项
+ */
+TEST(DistanceVectorTest, UpdateNeighbourDistance_NonNeighbour_ShouldReturnFalseAndKeepState)
+{
+    csm::service::DistanceVector distanceVectorA({"B"});
+    distanceVectorA.updateNeighbourDistance("B", 1);
+
+    csm::service::DistanceVector distanceVectorB({"A", "C"});
+    distanceVectorB.updateNeighbourDistance("A", 1);
+    distanceVectorB.updateNeighbourDistance("C", 2);
+
+    csm::service::DistanceVector distanceVectorC({"B"});
+    distanceVectorC.updateNeighbourDistance("B", 2);
+
+    bool result = distanceVectorA.updateNeighbourDistance("C", 3);
+    EXPECT_FALSE(result);
+}
+
+/*
+ * 邻居距离变得更小，应该更新；变成一样，不应该出问题
+ */
+TEST(DistanceVectorTest, UpdateNeighbourDistance_SmallerOrSameDistance_ShouldBehaveCorrectly)
+{
+    csm::service::DistanceVector distanceVectorA({"B"});
+    bool result = distanceVectorA.updateNeighbourDistance("B", 3);
+    EXPECT_TRUE(result);
+
+    auto dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 1);
+    expectTupleDistanceAndNextHop(dvInfos, "B", 3, "B");
+
+    result = distanceVectorA.updateNeighbourDistance("B", 3);
+    EXPECT_FALSE(result);   // 相同距离，应返回false（返回值为isUpdated）
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 1);
+    expectTupleDistanceAndNextHop(dvInfos, "B", 3, "B");
+
+    result = distanceVectorA.updateNeighbourDistance("B", 1);
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 1);
+    expectTupleDistanceAndNextHop(dvInfos, "B", 1, "B");
+}
+
+/*
+ * 距离达到不可达阈值时，应该按不可达处理
+ */
+TEST(DistanceVectorTest, UpdateNeighbourDistance_UnreachableBoundary_ShouldBeStoreAsUnreachable)
+{
+    csm::service::DistanceVector distanceVectorA({"B"});
+    bool result = distanceVectorA.updateNeighbourDistance("B", 752);
+    EXPECT_TRUE(result);
+
+    auto dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 1);
+
+    expectTupleDistanceAndNextHop(dvInfos, "B", csm::service::c_unreachableDistance, "B");
+}
+
+/*
+ * E-D断链后，A 应把 D 设为不可达
+ */
+TEST(DistanceVectorTest, LinkBreak_EDown_AShouldMarkDUnreachable)
+{
+    // 拓扑初始状态：
+    // A --2-- E --1-- D
+    //
+    // 期望：
+    // 1. 初始时 A 通过 E 学到 D = 3, nextHop = E
+    // 2. 当 E-D 断链后，E 通知 A
+    // 3. A 应把 D 更新为不可达
+}
+
 int main(int argc, char* argv[])
 {
     testing::InitGoogleTest(&argc, argv);
