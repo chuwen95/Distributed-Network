@@ -47,6 +47,10 @@ bool DistanceVector::updateNeighbourDistance(const NodeId& peerNodeId, std::uint
             if (iter->second->distance != distance)
             {
                 iter->second->distance = (distance > c_unreachableDistance ? c_unreachableDistance : distance);
+                if (c_unreachableDistance == iter->second->distance)
+                {
+                    iter->second->nextHop = csm::c_invalidNodeId;
+                }
 
                 isUpdated = true;
             }

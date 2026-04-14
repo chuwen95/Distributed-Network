@@ -45,21 +45,40 @@ namespace
         return a == b;
     }
 
-    void expectPairDistance(const std::vector<std::pair<csm::NodeId, std::uint32_t>>& vec,
+    bool expectPairDistance(const std::vector<std::pair<csm::NodeId, std::uint32_t>>& vec,
                             const csm::NodeId& nodeId, std::uint32_t distance)
     {
         std::size_t index = nodeIndexInVectorPair(vec, nodeId);
-        EXPECT_NE(index, std::numeric_limits<std::size_t>::max()) << "node not found: " << nodeId;
-        EXPECT_EQ(vec[index].second, distance);
+        if (index == std::numeric_limits<std::size_t>::max())
+        {
+            return false;
+        }
+        if (vec[index].second != distance)
+        {
+            return false;
+        }
+
+        return true;
     }
 
-    void expectTupleDistanceAndNextHop(const std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>>& vec,
+    bool expectTupleDistanceAndNextHop(const std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>>& vec,
                                        const csm::NodeId& nodeId, std::uint32_t distance, const csm::NodeId& nextHop)
     {
         std::size_t index = nodeIndexInVectorTuple(vec, nodeId);
-        ASSERT_NE(index, std::numeric_limits<std::size_t>::max()) << "node not found: " << nodeId;
-        EXPECT_EQ(std::get<1>(vec[index]), distance);
-        EXPECT_EQ(std::get<2>(vec[index]), nextHop);
+        if (index == std::numeric_limits<std::size_t>::max())
+        {
+            return false;
+        }
+        if (std::get<1>(vec[index]) != distance)
+        {
+            return false;
+        }
+        if (std::get<2>(vec[index]) != nextHop)
+        {
+            return false;
+        }
+
+        return true;
     }
 }
 
@@ -362,7 +381,7 @@ TEST(DistanceVectorTest, MainTest)
     index = nodeIndexInVectorTuple(dvInfos, "D");
     EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
     EXPECT_EQ(std::get<1>(dvInfos[index]), csm::service::c_unreachableDistance);
-    EXPECT_EQ(std::get<2>(dvInfos[index]), "D");
+    EXPECT_EQ(std::get<2>(dvInfos[index]), csm::c_invalidNodeId);
 
     /* E的距离矢量发生了变化，通知邻居，这里以通知A为例 */
 
@@ -607,14 +626,17 @@ TEST(DistanceVectorTest, PoisonReverse_ShouldAdvertiseUnreachableToNextHopNeighb
     distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
 
     std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
-    expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
-    expectTupleDistanceAndNextHop(dvInfos, "D", 3, "E");
+    bool result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "D", 3, "E");
+    EXPECT_TRUE(result);
 
     // 确保A发送给E的距离向量符合毒性逆转的规则
     std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfoASendToE = distanceVectorA.dvInfo("E");
     EXPECT_EQ(dvInfoASendToE.size(), 1);
 
-    expectPairDistance(dvInfoASendToE, "D", csm::service::c_unreachableDistance);
+    result = expectPairDistance(dvInfoASendToE, "D", csm::service::c_unreachableDistance);
+    EXPECT_TRUE(result);
 }
 
 /*
@@ -626,10 +648,11 @@ TEST(DistanceVectorTest, UpdateDvInfos_FromNonNeighbour_ShouldReturnFalseAndKeep
     distanceVectorA.updateNeighbourDistance("B", 1);
 
     std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> beforeDvInfos = distanceVectorA.dvInfos();
-    expectTupleDistanceAndNextHop(beforeDvInfos, "B", 1, "B");
+    bool result = expectTupleDistanceAndNextHop(beforeDvInfos, "B", 1, "B");
+    EXPECT_TRUE(result);
 
     // C不是A的邻居
-    bool result = distanceVectorA.updateDvInfos("C", {{"D", 2}});
+    result = distanceVectorA.updateDvInfos("C", {{"D", 2}});
     EXPECT_FALSE(result);
 
     std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> afterDvInfos = distanceVectorA.dvInfos();
@@ -656,8 +679,10 @@ TEST(DistanceVectorTest, UpdateDvInfos_UnknownDestination_ShouldBeLearned)
 
     std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 2);
-    expectTupleDistanceAndNextHop(dvInfos, "B", 1, "B");
-    expectTupleDistanceAndNextHop(dvInfos, "E", 5, "B");
+    bool result = expectTupleDistanceAndNextHop(dvInfos, "B", 1, "B");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 5, "B");
+    EXPECT_TRUE(result);
 }
 
 /*
@@ -734,21 +759,24 @@ TEST(DistanceVectorTest, UpdateNeighbourDistance_SmallerOrSameDistance_ShouldBeh
 
     auto dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 1);
-    expectTupleDistanceAndNextHop(dvInfos, "B", 3, "B");
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 3, "B");
+    EXPECT_TRUE(result);
 
     result = distanceVectorA.updateNeighbourDistance("B", 3);
-    EXPECT_FALSE(result);   // 相同距离，应返回false（返回值为isUpdated）
+    EXPECT_FALSE(result); // 相同距离，应返回false（返回值为isUpdated）
 
     dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 1);
-    expectTupleDistanceAndNextHop(dvInfos, "B", 3, "B");
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 3, "B");
+    EXPECT_TRUE(result);
 
     result = distanceVectorA.updateNeighbourDistance("B", 1);
     EXPECT_TRUE(result);
 
     dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 1);
-    expectTupleDistanceAndNextHop(dvInfos, "B", 1, "B");
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 1, "B");
+    EXPECT_TRUE(result);
 }
 
 /*
@@ -763,11 +791,13 @@ TEST(DistanceVectorTest, UpdateNeighbourDistance_UnreachableBoundary_ShouldBeSto
     auto dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 1);
 
-    expectTupleDistanceAndNextHop(dvInfos, "B", csm::service::c_unreachableDistance, "B");
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", csm::service::c_unreachableDistance, csm::c_invalidNodeId);
+    EXPECT_TRUE(result);
 }
 
 /*
  * E-D断链后，A 应把 D 设为不可达
+ * Todo: 需要考虑 A 到 D 不可达后，是否直接从距离向量表中移除D
  */
 TEST(DistanceVectorTest, LinkBreak_EDown_AShouldMarkDUnreachable)
 {
@@ -778,6 +808,49 @@ TEST(DistanceVectorTest, LinkBreak_EDown_AShouldMarkDUnreachable)
     // 1. 初始时 A 通过 E 学到 D = 3, nextHop = E
     // 2. 当 E-D 断链后，E 通知 A
     // 3. A 应把 D 更新为不可达
+    csm::service::DistanceVector distanceVectorA({"E"});
+    bool result = distanceVectorA.updateNeighbourDistance("E", 2);
+    EXPECT_TRUE(result);
+
+    csm::service::DistanceVector distanceVectorE({"A", "D"});
+    result = distanceVectorE.updateNeighbourDistance("A", 2);
+    EXPECT_TRUE(result);
+    result = distanceVectorE.updateNeighbourDistance("D", 1);
+    EXPECT_TRUE(result);
+
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 1);
+
+    result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 2);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "D", 3, "E");
+    EXPECT_TRUE(result);
+
+    result = distanceVectorE.updateNeighbourDistance("D", csm::service::c_unreachableDistance);
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorE.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 2);
+    result = expectTupleDistanceAndNextHop(dvInfos, "A", 2, "A");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "D", csm::service::c_unreachableDistance, csm::c_invalidNodeId);
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 2);
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "D", csm::service::c_unreachableDistance, csm::c_invalidNodeId);
+    EXPECT_TRUE(result);
 }
 
 int main(int argc, char* argv[])
