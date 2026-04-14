@@ -27,12 +27,6 @@ namespace csm
             int init();
 
             /**
-             * @brief   反初始化环形缓冲区
-             * @return
-             */
-            int uninit();
-
-            /**
              * @brief   写入数据到环形缓冲区
              *                  注意本接口是拷贝数据到环形缓冲区中
              * @param data

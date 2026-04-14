@@ -13,25 +13,7 @@ constexpr std::size_t c_reservedSpace{2};
 
 RingBuffer::RingBuffer(std::size_t size) : m_size(size)
 {
-}
-
-int RingBuffer::init()
-{
-    try
-    {
-        m_buffer.resize(m_size);
-    }
-    catch (...)
-    {
-        return -1;
-    }
-
-    return 0;
-}
-
-int RingBuffer::uninit()
-{
-    return 0;
+    m_buffer.resize(m_size);
 }
 
 int RingBuffer::writeData(const char* data, const std::size_t len)
