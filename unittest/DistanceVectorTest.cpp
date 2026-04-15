@@ -853,6 +853,69 @@ TEST(DistanceVectorTest, LinkBreak_EDown_AShouldMarkDUnreachable)
     EXPECT_TRUE(result);
 }
 
+/*
+ * 如果还有备用路径，应该切换到备用路径
+ */
+TEST(DistanceVectorTest, LinkBreak_EDown_AShouldSwitchToBackupPathViaB)
+{
+    // 初始拓扑：
+    // A --2-- E --1-- B
+    // A --5-- D --2-- B
+    //
+    // 初始最短路：A -> E -> B
+    // 备用路径：A -> D -> B
+    //
+    // 当 E-D段路后，A应该切换到B作为D的下一跳，距离变为7
+    csm::service::DistanceVector distanceVectorA({"E", "D"});
+    bool result = distanceVectorA.updateNeighbourDistance("E", 2);
+    EXPECT_TRUE(result);
+    result = distanceVectorA.updateNeighbourDistance("D", 5);
+    EXPECT_TRUE(result);
+
+    csm::service::DistanceVector distanceVectorE({"A", "B"});
+    result = distanceVectorE.updateNeighbourDistance("A", 2);
+    EXPECT_TRUE(result);
+    result = distanceVectorE.updateNeighbourDistance("B", 1);
+    EXPECT_TRUE(result);
+
+    csm::service::DistanceVector distanceVectorD({"A", "B"});
+    result = distanceVectorD.updateNeighbourDistance("A", 5);
+    EXPECT_TRUE(result);
+    result = distanceVectorD.updateNeighbourDistance("B", 2);
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+    EXPECT_TRUE(result);
+    result = distanceVectorA.updateDvInfos("D", distanceVectorD.dvInfo("A"));
+
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 3);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "D", 5, "D");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 3, "E");
+    EXPECT_TRUE(result);
+
+    // E与B断开链接
+    result = distanceVectorE.updateNeighbourDistance("B", csm::service::c_unreachableDistance);
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 3);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "D", 5, "D");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 7, "D");
+    EXPECT_TRUE(result);
+}
+
 int main(int argc, char* argv[])
 {
     testing::InitGoogleTest(&argc, argv);

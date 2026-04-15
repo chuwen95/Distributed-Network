@@ -107,7 +107,7 @@ bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
     }
 
     // 根据邻居传过来的距离向量计算更新自己的距离向量表
-    std::uint32_t peerNodeDistance = m_dvInfos[peerNodeId]->distance;
+    std::uint32_t peerNodeDistance = m_dvInfos[peerNodeId]->distance;   // 本节点到peerNode的距离
     for (const auto& peerDvInfo : peerDvInfos)
     {
         std::shared_ptr<NodeInfo> nodeInfo = queryNodeInfoWithoutLock(peerDvInfo.first);
@@ -128,6 +128,38 @@ bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
                 {
                     nodeInfo->nextHop = csm::c_invalidNodeId;
                     nodeInfo->distance = csm::service::c_unreachableDistance;
+
+                    // 寻找备用路径
+                    // 遍历缓存的邻居们的距离向量，找到目标 peerDvInfo.first 的距离信息
+                    for (const auto& neighbourDvInfo : m_neighboursDVInfo)
+                    {
+                        if (neighbourDvInfo.first == peerNodeId)
+                        {
+                            continue;
+                        }
+
+                        // 查询本节点到该邻居的距离
+                        std::shared_ptr<NodeInfo> neightbourNodeInfo = queryNodeInfoWithoutLock(neighbourDvInfo.first);
+                        if (nullptr == neightbourNodeInfo)
+                        {
+                            continue;
+                        }
+
+                        // 遍历该邻居的距离向量表
+                        for (const auto& singleDvInfo : neighbourDvInfo.second)
+                        {
+                            if (singleDvInfo.first != peerDvInfo.first)
+                            {
+                                continue;
+                            }
+
+                            if (neightbourNodeInfo->distance + singleDvInfo.second < nodeInfo->distance)
+                            {
+                                nodeInfo->distance = neightbourNodeInfo->distance + singleDvInfo.second;
+                                nodeInfo->nextHop = neighbourDvInfo.first;
+                            }
+                        }
+                    }
                 }
             }
             else
