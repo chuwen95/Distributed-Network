@@ -88,7 +88,7 @@ TEST(DistanceVectorTest, MainTest)
 
     // A节点的距离向量
     csm::NodeIds neighbourNodeIdsForA{"B", "C", "E"};
-    csm::service::DistanceVector distanceVectorA(neighbourNodeIdsForA);
+    csm::service::DistanceVector distanceVectorA("A", neighbourNodeIdsForA);
     EXPECT_TRUE(compareNodesElement(neighbourNodeIdsForA, distanceVectorA.neighbours()));
 
     // 调整与邻居节点的距离
@@ -125,7 +125,7 @@ TEST(DistanceVectorTest, MainTest)
 
     // B节点的距离向量
     csm::NodeIds neighbourNodeIdsForB{"A", "C"};
-    csm::service::DistanceVector distanceVectorB(neighbourNodeIdsForB);
+    csm::service::DistanceVector distanceVectorB("B", neighbourNodeIdsForB);
     EXPECT_TRUE(compareNodesElement(neighbourNodeIdsForB, distanceVectorB.neighbours()));
 
     // 调整与邻居节点的距离
@@ -155,7 +155,7 @@ TEST(DistanceVectorTest, MainTest)
 
     // C节点的距离向量
     csm::NodeIds neighbourNodeIdsForC{"A", "B", "E"};
-    csm::service::DistanceVector distanceVectorC(neighbourNodeIdsForC);
+    csm::service::DistanceVector distanceVectorC("C", neighbourNodeIdsForC);
     EXPECT_TRUE(compareNodesElement(neighbourNodeIdsForC, distanceVectorC.neighbours()));
 
     // 调整与邻居节点的距离
@@ -191,7 +191,7 @@ TEST(DistanceVectorTest, MainTest)
 
     // D节点的距离向量
     csm::NodeIds neighbourNodeIdsForD{"E"};
-    csm::service::DistanceVector distanceVectorD(neighbourNodeIdsForD);
+    csm::service::DistanceVector distanceVectorD("D", neighbourNodeIdsForD);
     EXPECT_TRUE(compareNodesElement(neighbourNodeIdsForD, distanceVectorD.neighbours()));
 
     // 调整与邻居节点的距离
@@ -213,7 +213,7 @@ TEST(DistanceVectorTest, MainTest)
 
     // E节点的距离向量
     csm::NodeIds neighbourNodeIdsForE{"A", "C", "D"};
-    csm::service::DistanceVector distanceVectorE(neighbourNodeIdsForE);
+    csm::service::DistanceVector distanceVectorE("E", neighbourNodeIdsForE);
     EXPECT_TRUE(compareNodesElement(neighbourNodeIdsForE, distanceVectorE.neighbours()));
 
     // 调整与邻居节点的距离
@@ -268,7 +268,7 @@ TEST(DistanceVectorTest, MainTest)
     index = nodeIndexInVectorTuple(dvInfos, "C");
     EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
     EXPECT_EQ(std::get<1>(dvInfos[index]), 3);
-    EXPECT_EQ(std::get<2>(dvInfos[index]), "C");
+    EXPECT_EQ(std::get<2>(dvInfos[index]), "B");
 
     index = nodeIndexInVectorTuple(dvInfos, "E");
     EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
@@ -306,7 +306,7 @@ TEST(DistanceVectorTest, MainTest)
     index = nodeIndexInVectorTuple(dvInfos, "C");
     EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
     EXPECT_EQ(std::get<1>(dvInfos[index]), 3);
-    EXPECT_EQ(std::get<2>(dvInfos[index]), "C");
+    EXPECT_EQ(std::get<2>(dvInfos[index]), "B");
 
     index = nodeIndexInVectorTuple(dvInfos, "E");
     EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
@@ -344,7 +344,7 @@ TEST(DistanceVectorTest, MainTest)
     index = nodeIndexInVectorTuple(dvInfos, "C");
     EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
     EXPECT_EQ(std::get<1>(dvInfos[index]), 3);
-    EXPECT_EQ(std::get<2>(dvInfos[index]), "C");
+    EXPECT_EQ(std::get<2>(dvInfos[index]), "B");
 
     index = nodeIndexInVectorTuple(dvInfos, "E");
     EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
@@ -426,9 +426,9 @@ TEST(DistanceVectorTest, MainTest)
 // 测试目标：当直连更贵，经过邻居更便宜时，选间接路径，并且nextHop正确
 TEST(DistanceVectorTest, PreferIndirectShorterPath)
 {
-    csm::service::DistanceVector A({"B", "C"});
-    csm::service::DistanceVector B({"A", "C"});
-    csm::service::DistanceVector C({"A", "B"});
+    csm::service::DistanceVector A("A", {"B", "C"});
+    csm::service::DistanceVector B("B", {"A", "C"});
+    csm::service::DistanceVector C("C", {"A", "B"});
 
     A.updateNeighbourDistance("B", 1);
     A.updateNeighbourDistance("C", 10);
@@ -453,7 +453,7 @@ TEST(DistanceVectorTest, MultiRoundSpread)
 {
     // A节点的距离向量
     csm::NodeIds neighbourNodeIdsForA{"B", "C", "E"};
-    csm::service::DistanceVector distanceVectorA(neighbourNodeIdsForA);
+    csm::service::DistanceVector distanceVectorA("A", neighbourNodeIdsForA);
 
     // 调整与邻居节点的距离
     distanceVectorA.updateNeighbourDistance("B", 1);
@@ -462,7 +462,7 @@ TEST(DistanceVectorTest, MultiRoundSpread)
 
     // B节点的距离向量
     csm::NodeIds neighbourNodeIdsForB{"A", "C"};
-    csm::service::DistanceVector distanceVectorB(neighbourNodeIdsForB);
+    csm::service::DistanceVector distanceVectorB("B", neighbourNodeIdsForB);
 
     // 调整与邻居节点的距离
     distanceVectorB.updateNeighbourDistance("A", 1);
@@ -470,7 +470,7 @@ TEST(DistanceVectorTest, MultiRoundSpread)
 
     // C节点的距离向量
     csm::NodeIds neighbourNodeIdsForC{"A", "B", "E"};
-    csm::service::DistanceVector distanceVectorC(neighbourNodeIdsForC);
+    csm::service::DistanceVector distanceVectorC("C", neighbourNodeIdsForC);
 
     // 调整与邻居节点的距离
     distanceVectorC.updateNeighbourDistance("A", 3);
@@ -479,14 +479,14 @@ TEST(DistanceVectorTest, MultiRoundSpread)
 
     // D节点的距离向量
     csm::NodeIds neighbourNodeIdsForD{"E"};
-    csm::service::DistanceVector distanceVectorD(neighbourNodeIdsForD);
+    csm::service::DistanceVector distanceVectorD("D", neighbourNodeIdsForD);
 
     // 调整与邻居节点的距离
     distanceVectorD.updateNeighbourDistance("E", 3);
 
     // E节点的距离向量
     csm::NodeIds neighbourNodeIdsForE{"A", "C", "D"};
-    csm::service::DistanceVector distanceVectorE(neighbourNodeIdsForE);
+    csm::service::DistanceVector distanceVectorE("E", neighbourNodeIdsForE);
 
     // 调整与邻居节点的距离
     distanceVectorE.updateNeighbourDistance("A", 2);
@@ -516,7 +516,7 @@ TEST(DistanceVectorTest, MultiRoundSpread2)
 {
     // A节点的距离向量
     csm::NodeIds neighbourNodeIdsForA{"B", "C", "E"};
-    csm::service::DistanceVector distanceVectorA(neighbourNodeIdsForA);
+    csm::service::DistanceVector distanceVectorA("A", neighbourNodeIdsForA);
 
     // 调整与邻居节点的距离
     distanceVectorA.updateNeighbourDistance("B", 1);
@@ -525,7 +525,7 @@ TEST(DistanceVectorTest, MultiRoundSpread2)
 
     // B节点的距离向量
     csm::NodeIds neighbourNodeIdsForB{"A", "C"};
-    csm::service::DistanceVector distanceVectorB(neighbourNodeIdsForB);
+    csm::service::DistanceVector distanceVectorB("B", neighbourNodeIdsForB);
 
     // 调整与邻居节点的距离
     distanceVectorB.updateNeighbourDistance("A", 1);
@@ -533,7 +533,7 @@ TEST(DistanceVectorTest, MultiRoundSpread2)
 
     // C节点的距离向量
     csm::NodeIds neighbourNodeIdsForC{"A", "B", "E"};
-    csm::service::DistanceVector distanceVectorC(neighbourNodeIdsForC);
+    csm::service::DistanceVector distanceVectorC("C", neighbourNodeIdsForC);
 
     // 调整与邻居节点的距离
     distanceVectorC.updateNeighbourDistance("A", 3);
@@ -542,14 +542,14 @@ TEST(DistanceVectorTest, MultiRoundSpread2)
 
     // D节点的距离向量
     csm::NodeIds neighbourNodeIdsForD{"E"};
-    csm::service::DistanceVector distanceVectorD(neighbourNodeIdsForD);
+    csm::service::DistanceVector distanceVectorD("D", neighbourNodeIdsForD);
 
     // 调整与邻居节点的距离
     distanceVectorD.updateNeighbourDistance("E", 3);
 
     // E节点的距离向量
     csm::NodeIds neighbourNodeIdsForE{"A", "C", "D"};
-    csm::service::DistanceVector distanceVectorE(neighbourNodeIdsForE);
+    csm::service::DistanceVector distanceVectorE("E", neighbourNodeIdsForE);
 
     // 调整与邻居节点的距离
     distanceVectorE.updateNeighbourDistance("A", 2);
@@ -575,8 +575,8 @@ TEST(DistanceVectorTest, MultiRoundSpread2)
  */
 TEST(DistanceVectorTest, CostIncreaseMustPropagateWhenUsingThatNextHop)
 {
-    csm::service::DistanceVector distanceVectorA({"B"});
-    csm::service::DistanceVector distanceVectorB({"A", "C"});
+    csm::service::DistanceVector distanceVectorA("A", {"B"});
+    csm::service::DistanceVector distanceVectorB("B", {"A", "C"});
 
     distanceVectorA.updateNeighbourDistance("B", 1);
     distanceVectorB.updateNeighbourDistance("A", 1);
@@ -611,9 +611,9 @@ TEST(DistanceVectorTest, PoisonReverse_ShouldAdvertiseUnreachableToNextHopNeighb
 {
     // 拓扑： A --2-- E --1-- D
     // A学到D的路由后，A到D的nextHop = E，distance = 3
-    csm::service::DistanceVector distanceVectorA({"E"});
-    csm::service::DistanceVector distanceVectorE({"A", "D"});
-    csm::service::DistanceVector distanceVectorD({"E"});
+    csm::service::DistanceVector distanceVectorA("A", {"E"});
+    csm::service::DistanceVector distanceVectorE("E", {"A", "D"});
+    csm::service::DistanceVector distanceVectorD("D", {"E"});
 
     distanceVectorA.updateNeighbourDistance("E", 2);
 
@@ -644,7 +644,7 @@ TEST(DistanceVectorTest, PoisonReverse_ShouldAdvertiseUnreachableToNextHopNeighb
  */
 TEST(DistanceVectorTest, UpdateDvInfos_FromNonNeighbour_ShouldReturnFalseAndKeepState)
 {
-    csm::service::DistanceVector distanceVectorA({"B"});
+    csm::service::DistanceVector distanceVectorA("A", {"B"});
     distanceVectorA.updateNeighbourDistance("B", 1);
 
     std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> beforeDvInfos = distanceVectorA.dvInfos();
@@ -668,10 +668,10 @@ TEST(DistanceVectorTest, UpdateDvInfos_UnknownDestination_ShouldBeLearned)
     // B告诉A：我还能到X，代价4
     // A到B代价1
     // 则A应该学到X, distance=5, nextHop=B
-    csm::service::DistanceVector distanceVectorA({"B"});
+    csm::service::DistanceVector distanceVectorA("A", {"B"});
     distanceVectorA.updateNeighbourDistance("B", 1);
 
-    csm::service::DistanceVector distanceVectorB({"A", "E"});
+    csm::service::DistanceVector distanceVectorB("B", {"A", "E"});
     distanceVectorB.updateNeighbourDistance("A", 1);
     distanceVectorB.updateNeighbourDistance("E", 4);
 
@@ -690,13 +690,13 @@ TEST(DistanceVectorTest, UpdateDvInfos_UnknownDestination_ShouldBeLearned)
  */
 TEST(DistanceVectorTest, UpdateDvInfos_EmptyVector_ShouldNotChangeState)
 {
-    csm::service::DistanceVector distanceVectorA({"B"});
+    csm::service::DistanceVector distanceVectorA("A", {"B"});
     distanceVectorA.updateNeighbourDistance("B", 1);
 
     auto before = distanceVectorA.dvInfos();
 
     bool result = distanceVectorA.updateDvInfos("B", {});
-    EXPECT_TRUE(result);
+    EXPECT_FALSE(result);
 
     auto after = distanceVectorA.dvInfos();
 
@@ -708,8 +708,8 @@ TEST(DistanceVectorTest, UpdateDvInfos_EmptyVector_ShouldNotChangeState)
  */
 TEST(DistanceVectorTest, UpdateDvInfos_SameInputTwice_ShouldKeepSameRoutingTable)
 {
-    csm::service::DistanceVector distanceVectorA({"B"});
-    csm::service::DistanceVector distanceVectorB({"A", "C"});
+    csm::service::DistanceVector distanceVectorA("A", {"B"});
+    csm::service::DistanceVector distanceVectorB("B", {"A", "C"});
 
     distanceVectorA.updateNeighbourDistance("B", 1);
 
@@ -722,7 +722,7 @@ TEST(DistanceVectorTest, UpdateDvInfos_SameInputTwice_ShouldKeepSameRoutingTable
     auto before = distanceVectorA.dvInfos();
 
     result = distanceVectorA.updateDvInfos("B", distanceVectorB.dvInfo("A"));
-    EXPECT_TRUE(result);
+    EXPECT_FALSE(result);
 
     auto after = distanceVectorA.dvInfos();
 
@@ -734,14 +734,14 @@ TEST(DistanceVectorTest, UpdateDvInfos_SameInputTwice_ShouldKeepSameRoutingTable
  */
 TEST(DistanceVectorTest, UpdateNeighbourDistance_NonNeighbour_ShouldReturnFalseAndKeepState)
 {
-    csm::service::DistanceVector distanceVectorA({"B"});
+    csm::service::DistanceVector distanceVectorA("A", {"B"});
     distanceVectorA.updateNeighbourDistance("B", 1);
 
-    csm::service::DistanceVector distanceVectorB({"A", "C"});
+    csm::service::DistanceVector distanceVectorB("B", {"A", "C"});
     distanceVectorB.updateNeighbourDistance("A", 1);
     distanceVectorB.updateNeighbourDistance("C", 2);
 
-    csm::service::DistanceVector distanceVectorC({"B"});
+    csm::service::DistanceVector distanceVectorC("C", {"B"});
     distanceVectorC.updateNeighbourDistance("B", 2);
 
     bool result = distanceVectorA.updateNeighbourDistance("C", 3);
@@ -753,7 +753,7 @@ TEST(DistanceVectorTest, UpdateNeighbourDistance_NonNeighbour_ShouldReturnFalseA
  */
 TEST(DistanceVectorTest, UpdateNeighbourDistance_SmallerOrSameDistance_ShouldBehaveCorrectly)
 {
-    csm::service::DistanceVector distanceVectorA({"B"});
+    csm::service::DistanceVector distanceVectorA("A", {"B"});
     bool result = distanceVectorA.updateNeighbourDistance("B", 3);
     EXPECT_TRUE(result);
 
@@ -784,8 +784,8 @@ TEST(DistanceVectorTest, UpdateNeighbourDistance_SmallerOrSameDistance_ShouldBeh
  */
 TEST(DistanceVectorTest, UpdateNeighbourDistance_UnreachableBoundary_ShouldBeStoreAsUnreachable)
 {
-    csm::service::DistanceVector distanceVectorA({"B"});
-    bool result = distanceVectorA.updateNeighbourDistance("B", 752);
+    csm::service::DistanceVector distanceVectorA("A", {"B"});
+    bool result = distanceVectorA.updateNeighbourDistance("B", csm::service::c_unreachableDistance);
     EXPECT_TRUE(result);
 
     auto dvInfos = distanceVectorA.dvInfos();
@@ -797,7 +797,6 @@ TEST(DistanceVectorTest, UpdateNeighbourDistance_UnreachableBoundary_ShouldBeSto
 
 /*
  * E-D断链后，A 应把 D 设为不可达
- * Todo: 需要考虑 A 到 D 不可达后，是否直接从距离向量表中移除D
  */
 TEST(DistanceVectorTest, LinkBreak_EDown_AShouldMarkDUnreachable)
 {
@@ -808,11 +807,11 @@ TEST(DistanceVectorTest, LinkBreak_EDown_AShouldMarkDUnreachable)
     // 1. 初始时 A 通过 E 学到 D = 3, nextHop = E
     // 2. 当 E-D 断链后，E 通知 A
     // 3. A 应把 D 更新为不可达
-    csm::service::DistanceVector distanceVectorA({"E"});
+    csm::service::DistanceVector distanceVectorA("A", {"E"});
     bool result = distanceVectorA.updateNeighbourDistance("E", 2);
     EXPECT_TRUE(result);
 
-    csm::service::DistanceVector distanceVectorE({"A", "D"});
+    csm::service::DistanceVector distanceVectorE("E", {"A", "D"});
     result = distanceVectorE.updateNeighbourDistance("A", 2);
     EXPECT_TRUE(result);
     result = distanceVectorE.updateNeighbourDistance("D", 1);
@@ -855,6 +854,13 @@ TEST(DistanceVectorTest, LinkBreak_EDown_AShouldMarkDUnreachable)
 
 /*
  * 如果还有备用路径，应该切换到备用路径
+ * A --2-- E --1-- B
+ * A --5-- D --2-- B
+ *
+ * 一开始：
+ *     A通过E学到B距离为3，通过D到B为7，所以会选择E作为到B的下一跳
+ * 后来E-B断了：
+ *     A不该继续保留B=3 via E，而应该切换到D作为到B的下一跳，整体距离为7
  */
 TEST(DistanceVectorTest, LinkBreak_EDown_AShouldSwitchToBackupPathViaB)
 {
@@ -866,19 +872,19 @@ TEST(DistanceVectorTest, LinkBreak_EDown_AShouldSwitchToBackupPathViaB)
     // 备用路径：A -> D -> B
     //
     // 当 E-D段路后，A应该切换到B作为D的下一跳，距离变为7
-    csm::service::DistanceVector distanceVectorA({"E", "D"});
+    csm::service::DistanceVector distanceVectorA("A", {"E", "D"});
     bool result = distanceVectorA.updateNeighbourDistance("E", 2);
     EXPECT_TRUE(result);
     result = distanceVectorA.updateNeighbourDistance("D", 5);
     EXPECT_TRUE(result);
 
-    csm::service::DistanceVector distanceVectorE({"A", "B"});
+    csm::service::DistanceVector distanceVectorE("E", {"A", "B"});
     result = distanceVectorE.updateNeighbourDistance("A", 2);
     EXPECT_TRUE(result);
     result = distanceVectorE.updateNeighbourDistance("B", 1);
     EXPECT_TRUE(result);
 
-    csm::service::DistanceVector distanceVectorD({"A", "B"});
+    csm::service::DistanceVector distanceVectorD("D", {"A", "B"});
     result = distanceVectorD.updateNeighbourDistance("A", 5);
     EXPECT_TRUE(result);
     result = distanceVectorD.updateNeighbourDistance("B", 2);
@@ -887,6 +893,7 @@ TEST(DistanceVectorTest, LinkBreak_EDown_AShouldSwitchToBackupPathViaB)
     result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
     EXPECT_TRUE(result);
     result = distanceVectorA.updateDvInfos("D", distanceVectorD.dvInfo("A"));
+    EXPECT_FALSE(result);
 
     std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 3);
@@ -913,6 +920,317 @@ TEST(DistanceVectorTest, LinkBreak_EDown_AShouldSwitchToBackupPathViaB)
     result = expectTupleDistanceAndNextHop(dvInfos, "D", 5, "D");
     EXPECT_TRUE(result);
     result = expectTupleDistanceAndNextHop(dvInfos, "B", 7, "D");
+    EXPECT_TRUE(result);
+}
+
+/*
+ * 备用路径存在，但更晚才收到，也应该能切过去
+ * 对上一个单元测试的补充，防止仅支持“B的备选信息必须提前缓存好“这种半残状态
+ * A --2-- E --1-- B
+ * A --5-- D --2-- B
+ *
+ * 流程变成：
+ *     A先只收到E的通告，学到了B=3 via E
+ *     后来E-B断开并通知A，A到D变为不可达
+ *     后续再收到了D的通告
+ *     A到B的路径应该重新变为可达，B=7 via D
+ */
+TEST(DistanceVectorTest, LinkBreak_EDown_BackupPathArrivesLater_AShouldEventuallySwitchToB)
+{
+    // 初始拓扑：
+    // A --2-- E --1-- B
+    // A --5-- D --2-- B
+    //
+    // 初始最短路：A -> E -> B
+    //
+    // 测试验证：
+    //     即使备用路径不是提前学到的，而是在主路径实效后才收到，
+    //     A最终也应能切换到B=7 via D这条路径
+    //
+    // 当 E-B段路后，A应该切换到D作为B的下一跳，距离变为7
+    csm::service::DistanceVector distanceVectorA("A", {"E", "D"});
+    bool result = distanceVectorA.updateNeighbourDistance("E", 2);
+    EXPECT_TRUE(result);
+    result = distanceVectorA.updateNeighbourDistance("D", 5);
+    EXPECT_TRUE(result);
+
+    csm::service::DistanceVector distanceVectorE("E", {"A", "B"});
+    result = distanceVectorE.updateNeighbourDistance("A", 2);
+    EXPECT_TRUE(result);
+    result = distanceVectorE.updateNeighbourDistance("B", 1);
+    EXPECT_TRUE(result);
+
+    csm::service::DistanceVector distanceVectorD("D", {"A", "B"});
+    result = distanceVectorD.updateNeighbourDistance("A", 5);
+    EXPECT_TRUE(result);
+    result = distanceVectorD.updateNeighbourDistance("B", 2);
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+    EXPECT_TRUE(result);
+
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 3);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "D", 5, "D");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 3, "E");
+    EXPECT_TRUE(result);
+
+    // E与B断开链接
+    result = distanceVectorE.updateNeighbourDistance("B", csm::service::c_unreachableDistance);
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 3);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "D", 5, "D");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", csm::service::c_unreachableDistance, csm::c_invalidNodeId);
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateDvInfos("D", distanceVectorD.dvInfo("A"));
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 3);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "D", 5, "D");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 7, "D");
+    EXPECT_TRUE(result);
+}
+
+/*
+ * 主路径代价上升，但未完全断开，应改用更便宜的备用路径
+ * A --2-- E --1-- B
+ * A --5-- D --2-- B
+ *
+ *     后来E-B的距离变为12
+ *     于是A-B的路线应该变为经过D，距离为7
+ */
+TEST(DistanceVectorTest, CostIncrease_OnPrimaryPath_AShouldSwitchToCheaperBackupPath)
+{
+    csm::service::DistanceVector distanceVectorA("A", {"E", "D"});
+    bool result = distanceVectorA.updateNeighbourDistance("E", 2);
+    EXPECT_TRUE(result);
+    result = distanceVectorA.updateNeighbourDistance("D", 5);
+    EXPECT_TRUE(result);
+
+    csm::service::DistanceVector distanceVectorE("E", {"A", "B"});
+    result = distanceVectorE.updateNeighbourDistance("A", 2);
+    EXPECT_TRUE(result);
+    result = distanceVectorE.updateNeighbourDistance("B", 1);
+    EXPECT_TRUE(result);
+
+    csm::service::DistanceVector distanceVectorD("D", {"A", "B"});
+    result = distanceVectorD.updateNeighbourDistance("A", 5);
+    EXPECT_TRUE(result);
+    result = distanceVectorD.updateNeighbourDistance("B", 2);
+    EXPECT_TRUE(result);
+
+    // A通过E学到B=3 via E
+    result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+    EXPECT_TRUE(result);
+    // A通过D学到B=7 via D
+    result = distanceVectorA.updateDvInfos("D", distanceVectorD.dvInfo("A"));
+    EXPECT_FALSE(result);
+
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 3);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "D", 5, "D");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 3, "E");
+    EXPECT_TRUE(result);
+
+    // E-D链路代价上升
+    result = distanceVectorE.updateNeighbourDistance("B", 7);
+    EXPECT_TRUE(result);
+
+    // 向A通告距离向量
+    result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 3);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "D", 5, "D");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 7, "D");
+    EXPECT_TRUE(result);
+}
+
+/*
+ * 当A到B有两条链路都可达的时候，next hop的选择是稳定的
+ * A --2-- E --5-- B
+ * A --5-- D --2-- B
+ */
+TEST(DistanceVectorTest, TwoDistancePath_AlwaysChooseSamePath)
+{
+    csm::service::DistanceVector distanceVectorA("A", {"E", "D"});
+    bool result = distanceVectorA.updateNeighbourDistance("E", 2);
+    EXPECT_TRUE(result);
+    result = distanceVectorA.updateNeighbourDistance("D", 5);
+    EXPECT_TRUE(result);
+
+    csm::service::DistanceVector distanceVectorE("E", {"A", "B"});
+    result = distanceVectorE.updateNeighbourDistance("A", 2);
+    EXPECT_TRUE(result);
+    result = distanceVectorE.updateNeighbourDistance("B", 5);
+    EXPECT_TRUE(result);
+
+    csm::service::DistanceVector distanceVectorD("D", {"A", "B"});
+    result = distanceVectorD.updateNeighbourDistance("A", 5);
+    EXPECT_TRUE(result);
+    result = distanceVectorD.updateNeighbourDistance("B", 2);
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+    EXPECT_TRUE(result);
+    result = distanceVectorA.updateDvInfos("D", distanceVectorD.dvInfo("A"));
+    EXPECT_TRUE(result);
+    result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+    EXPECT_FALSE(result);
+
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 3);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "D", 5, "D");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 7, "D");
+    EXPECT_TRUE(result);
+}
+
+/*
+ * 链路 down 后再 up，未收到新 DV 前不应该复活旧间接路由
+ * 初始：
+ *     A --2-- E --1-- B
+ * 此时 A 与 E 断链
+ * 随后 A 与 E 恢复链接
+ * A 应丢失 B 的路径，即认为 B 不可达
+ * 当收到 E 的 DV 通告后，才再次认为 B 可达
+ */
+TEST(DistanceVectorTest, LinkUpAfterDown_ShouldNotUseOldDvInfo)
+{
+    csm::service::DistanceVector distanceVectorA("A", {"E"});
+    bool result = distanceVectorA.updateNeighbourDistance("E", 2);
+    EXPECT_TRUE(result);
+
+    csm::service::DistanceVector distanceVectorE("E", {"A", "B"});
+    result = distanceVectorE.updateNeighbourDistance("A", 2);
+    EXPECT_TRUE(result);
+    result = distanceVectorE.updateNeighbourDistance("B", 1);
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+    EXPECT_TRUE(result);
+
+    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 2);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 3, "E");
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateNeighbourDistance("E", csm::service::c_unreachableDistance);
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 2);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", csm::service::c_unreachableDistance, csm::c_invalidNodeId);
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", csm::service::c_unreachableDistance, csm::c_invalidNodeId);
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateNeighbourDistance("E", 2);
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 2);
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", csm::service::c_unreachableDistance, csm::c_invalidNodeId);
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 2);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 3, "E");
+    EXPECT_TRUE(result);
+}
+
+TEST(DistanceVectorTest, DuplicateDvInfo_UseSmaller)
+{
+    csm::service::DistanceVector distanceVectorA("A", {"E"});
+    bool result = distanceVectorA.updateNeighbourDistance("E", 2);
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateDvInfos("E", {{"B", 1}, {"B", 3}});
+    EXPECT_TRUE(result);
+
+    std::vector<std::tuple<csm::NodeId, uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 2);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", 3, "E");
+    EXPECT_TRUE(result);
+}
+
+TEST(DistanceVectorTest, DistanceIllegal)
+{
+    csm::service::DistanceVector distanceVectorA("A", {"E"});
+
+    bool result = distanceVectorA.updateNeighbourDistance("E", 9999);
+    EXPECT_TRUE(result);
+
+    std::vector<std::tuple<csm::NodeId, uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 1);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", csm::service::c_unreachableDistance, csm::c_invalidNodeId);
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateNeighbourDistance("E", 2);
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 1);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+
+    result = distanceVectorA.updateDvInfos("E", {{"B", 9999}});
+    EXPECT_TRUE(result);
+
+    dvInfos = distanceVectorA.dvInfos();
+    EXPECT_EQ(dvInfos.size(), 2);
+
+    result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
+    EXPECT_TRUE(result);
+    result = expectTupleDistanceAndNextHop(dvInfos, "B", csm::service::c_unreachableDistance, csm::c_invalidNodeId);
     EXPECT_TRUE(result);
 }
 

@@ -5,7 +5,6 @@
 #ifndef COPYSTATEMACHINE_DISTANCEVECTOR_H
 #define COPYSTATEMACHINE_DISTANCEVECTOR_H
 
-#include <memory>
 #include <mutex>
 #include <optional>
 #include <unordered_map>
@@ -23,7 +22,7 @@ namespace csm
         class DistanceVector
         {
         public:
-            DistanceVector(const NodeIds& nodeIds);
+            DistanceVector(NodeId selfNodeId, const NodeIds& nodeIds);
 
         public:
             // 获取所有邻居节点
@@ -35,14 +34,20 @@ namespace csm
             bool updateDvInfos(const NodeId& peerNodeId, const std::vector<std::pair<NodeId, std::uint32_t>>& peerDvInfos);
 
             // 获取针对某个节点的距离向量
-            std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfo(const NodeId& peerNodeId);
+            std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfo(const NodeId& peerNodeId) const;
 
             // 当前的距离向量表（for unittest）(返回值：目标节点，距离，下一跳)
-            std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos();
+            std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos() const;
 
-            std::optional<std::pair<std::uint32_t, NodeId>> distance(const NodeId& target);
+            std::optional<std::pair<std::uint32_t, NodeId>> distance(const NodeId& target) const;
 
         private:
+            bool recomputeRoutesWithoutLock();
+            std::uint32_t addDistance(std::uint32_t a, std::uint32_t b);
+
+        private:
+            NodeId m_selfNodeId;
+
             struct NodeInfo
             {
                 NodeInfo() = default;
@@ -52,11 +57,9 @@ namespace csm
                 NodeId nextHop{c_invalidNodeId}; // 到达目标节点的下一跳节点
                 std::uint32_t distance{c_unreachableDistance}; // 到达目标节点的距离
             };
-            std::shared_ptr<NodeInfo> queryNodeInfoWithoutLock(const NodeId& nodeId);
 
-        private:
-            std::mutex x_dvInfos;
-            std::unordered_map<NodeId, std::shared_ptr<NodeInfo>> m_dvInfos;
+            mutable std::mutex x_dvInfos;
+            std::unordered_map<NodeId, NodeInfo> m_dvInfos;
 
             // NeighbourNodeId => { TargetNodeId, distance }
             std::unordered_map<NodeId, std::unordered_map<NodeId, std::uint32_t>> m_neighboursDVInfo;

@@ -23,7 +23,8 @@ constexpr int c_nodeDistanceDetectInterval{10};
 // 时间转距离量化单位，毫秒
 constexpr std::uint32_t c_timeResolutionMs{200};
 
-DistanceVectorImpl::DistanceVectorImpl(const NodeIds& nodeIds) : m_distanceVector(nodeIds)
+DistanceVectorImpl::DistanceVectorImpl(NodeId selfNodeId, const NodeIds& nodeIds) : m_distanceVector(
+    std::move(selfNodeId), nodeIds)
 {
 }
 

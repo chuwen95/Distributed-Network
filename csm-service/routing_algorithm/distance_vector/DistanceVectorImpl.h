@@ -21,7 +21,7 @@ namespace csm
         class DistanceVectorImpl
         {
         public:
-            explicit DistanceVectorImpl(const NodeIds& nodes);
+            explicit DistanceVectorImpl(NodeId selfNodeId, const NodeIds& nodes);
             ~DistanceVectorImpl() = default;
 
         public:

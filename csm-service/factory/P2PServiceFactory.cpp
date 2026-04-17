@@ -82,5 +82,5 @@ std::unique_ptr<SessionModuleDataProcessor> P2PServiceFactory::createModuleDataP
 
 std::unique_ptr<DistanceVectorImpl> P2PServiceFactory::createDistanceVector()
 {
-    return std::make_unique<DistanceVectorImpl>(m_nodeConfig->clusterServerIds());
+    return std::make_unique<DistanceVectorImpl>(m_nodeConfig->nodeId(), m_nodeConfig->clusterServerIds());
 }
