@@ -9,8 +9,9 @@
 
 namespace
 {
-    std::size_t nodeIndexInVectorTuple(const std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>>& vec,
-                                       const csm::NodeId& nodeId)
+    std::size_t nodeIndexInVectorTuple(
+        const std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>>& vec,
+        const csm::NodeId& nodeId)
     {
         for (auto iter = vec.begin(); iter != vec.end(); ++iter)
         {
@@ -23,7 +24,7 @@ namespace
         return std::numeric_limits<std::size_t>::max();
     }
 
-    std::size_t nodeIndexInVectorPair(const std::vector<std::pair<csm::NodeId, std::uint32_t>>& vec,
+    std::size_t nodeIndexInVectorPair(const std::vector<std::pair<csm::NodeId, csm::service::Distance>>& vec,
                                       const csm::NodeId& nodeId)
     {
         for (auto iter = vec.begin(); iter != vec.end(); ++iter)
@@ -45,8 +46,8 @@ namespace
         return a == b;
     }
 
-    bool expectPairDistance(const std::vector<std::pair<csm::NodeId, std::uint32_t>>& vec,
-                            const csm::NodeId& nodeId, std::uint32_t distance)
+    bool expectPairDistance(const std::vector<std::pair<csm::NodeId, csm::service::Distance>>& vec,
+                            const csm::NodeId& nodeId, csm::service::Distance distance)
     {
         std::size_t index = nodeIndexInVectorPair(vec, nodeId);
         if (index == std::numeric_limits<std::size_t>::max())
@@ -61,8 +62,8 @@ namespace
         return true;
     }
 
-    bool expectTupleDistanceAndNextHop(const std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>>& vec,
-                                       const csm::NodeId& nodeId, std::uint32_t distance, const csm::NodeId& nextHop)
+    bool expectTupleDistanceAndNextHop(const std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>>& vec,
+                                       const csm::NodeId& nodeId, csm::service::Distance distance, const csm::NodeId& nextHop)
     {
         std::size_t index = nodeIndexInVectorTuple(vec, nodeId);
         if (index == std::numeric_limits<std::size_t>::max())
@@ -100,7 +101,7 @@ TEST(DistanceVectorTest, MainTest)
     EXPECT_EQ(isUpdated, true);
 
     // 获取A节点当前的距离向量，向量大小应该为3
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 3);
 
     // B应该在向量中
@@ -248,7 +249,7 @@ TEST(DistanceVectorTest, MainTest)
      */
 
     // 确认B告知A的距离向量正确
-    std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfoBSendToA = distanceVectorB.dvInfo("A");
+    std::vector<std::pair<csm::NodeId, csm::service::Distance>> dvInfoBSendToA = distanceVectorB.dvInfo("A");
     EXPECT_EQ(dvInfoBSendToA.size(), 1);
     EXPECT_EQ(dvInfoBSendToA[0].first, "C");
     EXPECT_EQ(dvInfoBSendToA[0].second, 2);
@@ -280,7 +281,7 @@ TEST(DistanceVectorTest, MainTest)
      */
 
     // 确认C告知A的距离向量正确
-    std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfoCSendToA = distanceVectorC.dvInfo("A");
+    std::vector<std::pair<csm::NodeId, csm::service::Distance>> dvInfoCSendToA = distanceVectorC.dvInfo("A");
     EXPECT_EQ(dvInfoCSendToA.size(), 2);
 
     index = nodeIndexInVectorPair(dvInfoCSendToA, "B");
@@ -318,7 +319,7 @@ TEST(DistanceVectorTest, MainTest)
      */
 
     // 确认E告知A的距离向量正确
-    std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfoESendToA = distanceVectorE.dvInfo("A");
+    std::vector<std::pair<csm::NodeId, csm::service::Distance>> dvInfoESendToA = distanceVectorE.dvInfo("A");
     EXPECT_EQ(dvInfoESendToA.size(), 2);
 
     index = nodeIndexInVectorPair(dvInfoESendToA, "C");
@@ -401,7 +402,7 @@ TEST(DistanceVectorTest, MainTest)
     distanceVectorA.updateDvInfos("E", dvInfoESendToA);
 
     // 根据毒性逆转，假如A要向E同步距离矢量，A应该告诉E自己到D的距离是不可达
-    std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfoASendToE = distanceVectorA.dvInfo("E");
+    std::vector<std::pair<csm::NodeId, csm::service::Distance>> dvInfoASendToE = distanceVectorA.dvInfo("E");
     EXPECT_EQ(dvInfoASendToE.size(), 3);
 
     index = nodeIndexInVectorPair(dvInfoASendToE, "B");
@@ -437,7 +438,7 @@ TEST(DistanceVectorTest, PreferIndirectShorterPath)
 
     A.updateDvInfos("B", B.dvInfo("A"));
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = A.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> dvInfos = A.dvInfos();
     std::size_t index = nodeIndexInVectorTuple(dvInfos, "C");
     EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
     EXPECT_EQ(std::get<1>(dvInfos[index]), 2);
@@ -501,7 +502,7 @@ TEST(DistanceVectorTest, MultiRoundSpread)
         distanceVectorE.updateDvInfos("D", distanceVectorD.dvInfo("E"));
     }
 
-    std::optional<std::pair<std::uint32_t, csm::NodeId>> result = distanceVectorA.distance("D");
+    std::optional<std::pair<csm::service::Distance, csm::NodeId>> result = distanceVectorA.distance("D");
     EXPECT_TRUE(result.has_value());
     EXPECT_EQ(result.value().first, 10);
     EXPECT_EQ(result.value().second, "B");
@@ -564,7 +565,7 @@ TEST(DistanceVectorTest, MultiRoundSpread2)
         distanceVectorA.updateDvInfos("B", distanceVectorB.dvInfo("A"));
     }
 
-    std::optional<std::pair<std::uint32_t, csm::NodeId>> result = distanceVectorA.distance("D");
+    std::optional<std::pair<csm::service::Distance, csm::NodeId>> result = distanceVectorA.distance("D");
     EXPECT_TRUE(result.has_value());
     EXPECT_EQ(result.value().first, 10);
     EXPECT_EQ(result.value().second, "B");
@@ -585,7 +586,7 @@ TEST(DistanceVectorTest, CostIncreaseMustPropagateWhenUsingThatNextHop)
     // A通过B学到可以到达C，距离为2，nextHop = B
     distanceVectorA.updateDvInfos("B", distanceVectorB.dvInfo("A"));
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dv = distanceVectorA.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> dv = distanceVectorA.dvInfos();
     std::size_t index = nodeIndexInVectorTuple(dv, "C");
     EXPECT_NE(index, std::numeric_limits<std::size_t>::max());
     EXPECT_EQ(std::get<1>(dv[index]), 2);
@@ -625,14 +626,14 @@ TEST(DistanceVectorTest, PoisonReverse_ShouldAdvertiseUnreachableToNextHopNeighb
     // E向A通告，A学到了到达可以通过E到达D，距离是3
     distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
     bool result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
     EXPECT_TRUE(result);
     result = expectTupleDistanceAndNextHop(dvInfos, "D", 3, "E");
     EXPECT_TRUE(result);
 
     // 确保A发送给E的距离向量符合毒性逆转的规则
-    std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfoASendToE = distanceVectorA.dvInfo("E");
+    std::vector<std::pair<csm::NodeId, csm::service::Distance>> dvInfoASendToE = distanceVectorA.dvInfo("E");
     EXPECT_EQ(dvInfoASendToE.size(), 1);
 
     result = expectPairDistance(dvInfoASendToE, "D", csm::service::c_unreachableDistance);
@@ -647,7 +648,7 @@ TEST(DistanceVectorTest, UpdateDvInfos_FromNonNeighbour_ShouldReturnFalseAndKeep
     csm::service::DistanceVector distanceVectorA("A", {"B"});
     distanceVectorA.updateNeighbourDistance("B", 1);
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> beforeDvInfos = distanceVectorA.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> beforeDvInfos = distanceVectorA.dvInfos();
     bool result = expectTupleDistanceAndNextHop(beforeDvInfos, "B", 1, "B");
     EXPECT_TRUE(result);
 
@@ -655,7 +656,7 @@ TEST(DistanceVectorTest, UpdateDvInfos_FromNonNeighbour_ShouldReturnFalseAndKeep
     result = distanceVectorA.updateDvInfos("C", {{"D", 2}});
     EXPECT_FALSE(result);
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> afterDvInfos = distanceVectorA.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> afterDvInfos = distanceVectorA.dvInfos();
     EXPECT_TRUE(beforeDvInfos == afterDvInfos);
 }
 
@@ -677,7 +678,7 @@ TEST(DistanceVectorTest, UpdateDvInfos_UnknownDestination_ShouldBeLearned)
 
     distanceVectorA.updateDvInfos("B", distanceVectorB.dvInfo("A"));
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 2);
     bool result = expectTupleDistanceAndNextHop(dvInfos, "B", 1, "B");
     EXPECT_TRUE(result);
@@ -817,7 +818,7 @@ TEST(DistanceVectorTest, LinkBreak_EDown_AShouldMarkDUnreachable)
     result = distanceVectorE.updateNeighbourDistance("D", 1);
     EXPECT_TRUE(result);
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 1);
 
     result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
@@ -895,7 +896,7 @@ TEST(DistanceVectorTest, LinkBreak_EDown_AShouldSwitchToBackupPathViaB)
     result = distanceVectorA.updateDvInfos("D", distanceVectorD.dvInfo("A"));
     EXPECT_FALSE(result);
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 3);
 
     result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
@@ -969,7 +970,7 @@ TEST(DistanceVectorTest, LinkBreak_EDown_BackupPathArrivesLater_AShouldEventuall
     result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
     EXPECT_TRUE(result);
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 3);
 
     result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
@@ -1045,7 +1046,7 @@ TEST(DistanceVectorTest, CostIncrease_OnPrimaryPath_AShouldSwitchToCheaperBackup
     result = distanceVectorA.updateDvInfos("D", distanceVectorD.dvInfo("A"));
     EXPECT_FALSE(result);
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 3);
 
     result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
@@ -1106,7 +1107,7 @@ TEST(DistanceVectorTest, TwoDistancePath_AlwaysChooseSamePath)
     result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
     EXPECT_FALSE(result);
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 3);
 
     result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");
@@ -1141,7 +1142,7 @@ TEST(DistanceVectorTest, LinkUpAfterDown_ShouldNotUseOldDvInfo)
     result = distanceVectorA.updateDvInfos("E", distanceVectorE.dvInfo("A"));
     EXPECT_TRUE(result);
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
+    std::vector<std::tuple<csm::NodeId, csm::service::Distance, csm::NodeId>> dvInfos = distanceVectorA.dvInfos();
     EXPECT_EQ(dvInfos.size(), 2);
 
     result = expectTupleDistanceAndNextHop(dvInfos, "E", 2, "E");

@@ -16,8 +16,8 @@ namespace csm
 
     namespace service
     {
-
-        const std::uint32_t c_unreachableDistance{750};
+        using Distance = std::uint32_t;
+        constexpr Distance c_unreachableDistance{750};
 
         class DistanceVector
         {
@@ -29,21 +29,21 @@ namespace csm
             NodeIds neighbours() const;
 
             // 更新与邻居节点的距离
-            bool updateNeighbourDistance(const NodeId& peerNodeId, std::uint32_t distance);
+            bool updateNeighbourDistance(const NodeId& peerNodeId, Distance distance);
             // 更新节点距离向量信息
-            bool updateDvInfos(const NodeId& peerNodeId, const std::vector<std::pair<NodeId, std::uint32_t>>& peerDvInfos);
+            bool updateDvInfos(const NodeId& peerNodeId, const std::vector<std::pair<NodeId, Distance>>& peerDvInfos);
 
             // 获取针对某个节点的距离向量
-            std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfo(const NodeId& peerNodeId) const;
+            std::vector<std::pair<csm::NodeId, Distance>> dvInfo(const NodeId& peerNodeId) const;
 
             // 当前的距离向量表（for unittest）(返回值：目标节点，距离，下一跳)
-            std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos() const;
+            std::vector<std::tuple<csm::NodeId, Distance, csm::NodeId>> dvInfos() const;
 
-            std::optional<std::pair<std::uint32_t, NodeId>> distance(const NodeId& target) const;
+            std::optional<std::pair<Distance, NodeId>> distance(const NodeId& target) const;
 
         private:
             bool recomputeRoutesWithoutLock();
-            std::uint32_t addDistance(std::uint32_t a, std::uint32_t b);
+            Distance addDistance(Distance a, Distance b);
 
         private:
             NodeId m_selfNodeId;
@@ -52,17 +52,17 @@ namespace csm
             {
                 NodeInfo() = default;
                 explicit NodeInfo(NodeId n) : nextHop(std::move(n)) {}
-                explicit NodeInfo(NodeId n, std::uint32_t distance) : nextHop(std::move(n)), distance(distance) {}
+                explicit NodeInfo(NodeId n, Distance distance) : nextHop(std::move(n)), distance(distance) {}
 
                 NodeId nextHop{c_invalidNodeId}; // 到达目标节点的下一跳节点
-                std::uint32_t distance{c_unreachableDistance}; // 到达目标节点的距离
+                Distance distance{c_unreachableDistance}; // 到达目标节点的距离
             };
 
             mutable std::mutex x_dvInfos;
             std::unordered_map<NodeId, NodeInfo> m_dvInfos;
 
             // NeighbourNodeId => { TargetNodeId, distance }
-            std::unordered_map<NodeId, std::unordered_map<NodeId, std::uint32_t>> m_neighboursDVInfo;
+            std::unordered_map<NodeId, std::unordered_map<NodeId, Distance>> m_neighboursDVInfo;
         };
 
     }

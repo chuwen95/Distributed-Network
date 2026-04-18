@@ -16,7 +16,7 @@ DistanceVector::DistanceVector(NodeId nodeId, const NodeIds& nodeIds) : m_selfNo
     std::ranges::for_each(nodeIds, [this](const NodeId& nodeId)
     {
         m_dvInfos.emplace(nodeId, NodeInfo());
-        m_neighboursDVInfo[nodeId] = std::unordered_map<NodeId, std::uint32_t>();
+        m_neighboursDVInfo[nodeId] = std::unordered_map<NodeId, Distance>();
     });
 }
 
@@ -31,7 +31,7 @@ csm::NodeIds DistanceVector::neighbours() const
     return nodeIds;
 }
 
-bool DistanceVector::updateNeighbourDistance(const NodeId& peerNodeId, std::uint32_t distance)
+bool DistanceVector::updateNeighbourDistance(const NodeId& peerNodeId, Distance distance)
 {
     if (peerNodeId == m_selfNodeId || peerNodeId == c_invalidNodeId)
     {
@@ -80,7 +80,7 @@ bool DistanceVector::updateNeighbourDistance(const NodeId& peerNodeId, std::uint
 }
 
 bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
-                                   const std::vector<std::pair<csm::NodeId, std::uint32_t>>& peerDvInfos)
+                                   const std::vector<std::pair<csm::NodeId, Distance>>& peerDvInfos)
 {
     if (peerNodeId == m_selfNodeId || peerNodeId == c_invalidNodeId)
     {
@@ -136,7 +136,7 @@ bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
     return recomputeRoutesWithoutLock();
 }
 
-std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfo(const csm::NodeId& peerNodeId) const
+std::vector<std::pair<csm::NodeId, Distance>> DistanceVector::dvInfo(const csm::NodeId& peerNodeId) const
 {
     if (peerNodeId == m_selfNodeId)
     {
@@ -145,7 +145,7 @@ std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfo(const 
 
     std::unique_lock<std::mutex> ulock(x_dvInfos);
 
-    std::vector<std::pair<csm::NodeId, std::uint32_t>> dvInfos;
+    std::vector<std::pair<csm::NodeId, Distance>> dvInfos;
 
     for (const auto& [nodeId, dvInfo] : m_dvInfos)
     {
@@ -172,11 +172,11 @@ std::vector<std::pair<csm::NodeId, std::uint32_t>> DistanceVector::dvInfo(const 
     return dvInfos;
 }
 
-std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> DistanceVector::dvInfos() const
+std::vector<std::tuple<csm::NodeId, Distance, csm::NodeId>> DistanceVector::dvInfos() const
 {
     std::unique_lock<std::mutex> ulock(x_dvInfos);
 
-    std::vector<std::tuple<csm::NodeId, std::uint32_t, csm::NodeId>> dvInfos;
+    std::vector<std::tuple<csm::NodeId, Distance, csm::NodeId>> dvInfos;
     for (const auto& [nodeId, dvInfo] : m_dvInfos)
     {
         dvInfos.emplace_back(nodeId, dvInfo.distance, dvInfo.nextHop);
@@ -206,7 +206,7 @@ bool DistanceVector::recomputeRoutesWithoutLock()
     for (const NodeId& targetNodeId : targetNodes)
     {
         NodeId bestNextHop{c_invalidNodeId};
-        std::uint32_t bestDistance{c_unreachableDistance};
+        Distance bestDistance{c_unreachableDistance};
 
         // 遍历本节点存储的邻居的距离向量
         for (const auto& [neighbourNodeId, neighbourDvInfo] : m_neighboursDVInfo)
@@ -222,7 +222,7 @@ bool DistanceVector::recomputeRoutesWithoutLock()
                 continue;
             }
 
-            std::uint32_t distance;
+            Distance distance;
             if (neighbourNodeId == targetNodeId)
             {
                 distance = neighbourNodeInfoIter->second.distance;
@@ -279,14 +279,14 @@ bool DistanceVector::recomputeRoutesWithoutLock()
     return isUpdated;
 }
 
-std::uint32_t DistanceVector::addDistance(std::uint32_t a, std::uint32_t b)
+Distance DistanceVector::addDistance(Distance a, Distance b)
 {
     if (a >= c_unreachableDistance || b >= c_unreachableDistance)
     {
         return c_unreachableDistance;
     }
 
-    std::uint32_t result = a + b;
+    Distance result = a + b;
     if (result > c_unreachableDistance)
     {
         result = c_unreachableDistance;
@@ -295,7 +295,7 @@ std::uint32_t DistanceVector::addDistance(std::uint32_t a, std::uint32_t b)
     return result;
 }
 
-std::optional<std::pair<std::uint32_t, csm::NodeId>> DistanceVector::distance(const NodeId& target) const
+std::optional<std::pair<Distance, csm::NodeId>> DistanceVector::distance(const NodeId& target) const
 {
     std::unique_lock<std::mutex> ulock(x_dvInfos);
 
