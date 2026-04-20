@@ -12,9 +12,6 @@ namespace csm
         public:
             using Ptr = std::shared_ptr<ElapsedTime>;
 
-            ElapsedTime() = default;
-            ~ElapsedTime() = default;
-
         public:
             void update()
             {
@@ -22,15 +19,17 @@ namespace csm
             }
 
             //获取秒
-            double getElapsedTimeInSec()
+            std::uint64_t getElapsedTimeInSec()
             {
-                return getElapsedTimeInMicroSec() * 0.000001;
+                return std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::high_resolution_clock::now() - m_begin).count();
             }
 
             //获取毫秒
-            double getElapsedTimeInMilliSec()
+            std::uint64_t getElapsedTimeInMilliSec()
             {
-                return getElapsedTimeInMicroSec() * 0.001;
+                return std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::high_resolution_clock::now() - m_begin).count();
             }
 
             //获取微秒

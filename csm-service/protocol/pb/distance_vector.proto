@@ -22,5 +22,6 @@ message DistanceInfo
 
 message DistanceVector
 {
-    repeated DistanceInfo distanceVector = 1;
+    uint64 seq = 1;
+    repeated DistanceInfo distanceVector = 2;
 }

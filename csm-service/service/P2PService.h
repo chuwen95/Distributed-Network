@@ -9,7 +9,6 @@
 
 namespace csm
 {
-
     namespace service
     {
         // 作为节点启动，需要service模块全内容和host模块，节点相互连接
@@ -25,11 +24,12 @@ namespace csm
 
             int stop();
 
-            void registerModulePacketHandler(protocol::ModuleID moduleId, ModulePacketHandler packetHander);
+            void registerModulePacketHandler(csm::protocol::ModuleID moduleId, ModulePacketHandler packetHander);
 
-            int boardcastModuleMessage(protocol::ModuleID moduleId, const std::vector<char>& data);
+            int boardcastModuleMessage(csm::protocol::ModuleID moduleId, const std::vector<char>& data);
 
-            int sendModuleMessageByNodeId(const NodeId& nodeId, protocol::ModuleID moduleId, const std::vector<char>& data);
+            int sendModuleMessageByNodeId(const NodeId& nodeId, csm::protocol::ModuleID moduleId,
+                                          const std::vector<char>& data);
 
         private:
             int initServer();
@@ -51,7 +51,7 @@ namespace csm
              * @return
              */
             void disconnectClient(const HostEndPointInfo& hostEndPointInfo, const std::string& id,
-                                 int flag, const SessionId& sessionId);
+                                  int flag, const SessionId& sessionId);
 
         private:
             int m_fd{-1};
@@ -60,9 +60,7 @@ namespace csm
 
             std::unique_ptr<P2PServiceConfig> m_serviceConfig;
         };
-
     }
-
 }
 
 #endif //COPYSTATEMACHINE_NODEP2PSERVICE_H

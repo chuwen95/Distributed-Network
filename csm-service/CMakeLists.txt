@@ -31,6 +31,10 @@ find_package(jsoncpp CONFIG REQUIRED)
 FILE(GLOB_RECURSE SOURCES *.cpp)
 FILE(GLOB_RECURSE HEADERS *.h)
 
-add_library(service ${SOURCES} ${PROTOBUF_SRCS} ${HEADERS})
+add_library(service ${SOURCES} ${PROTOBUF_SRCS} ${HEADERS}
+        routing_algorithm/distance_vector/DistanceVectorServiceFactory.cpp
+        routing_algorithm/distance_vector/DistanceVectorServiceFactory.h
+        routing_algorithm/distance_vector/DistanceVectorServiceInterface.h
+        routing_algorithm/distance_vector/DistanceVectorCommon.h)
 target_link_libraries(service PUBLIC utilities tools readerwriterqueue JsonCpp::JsonCpp protobuf::libprotobuf)
 target_include_directories(service SYSTEM BEFORE PUBLIC ${readerwriterqueue_SOURCE_DIR} ${proto_output_path})

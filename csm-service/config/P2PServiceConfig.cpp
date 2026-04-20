@@ -18,7 +18,7 @@ P2PServiceConfig::P2PServiceConfig(tool::NodeConfig* nodeConfig, std::unique_ptr
                                       std::unique_ptr<HostsInfoManager> hostsInfoManager,
                                       std::unique_ptr<HostsConnector> hostsConnector,
                                       std::unique_ptr<HostsHeartbeatService> hostHeartbeatService,
-                                      std::unique_ptr<DistanceVectorImpl> distanceVector)
+                                      std::unique_ptr<DistanceVectorServiceInterface> distanceVector)
     : m_nodeConfig(nodeConfig), m_listenner(std::move(listenner)),
       m_acceptor(std::move(acceptor)), m_sessionAliveChecker(std::move(sessionAliveChecker)),
       m_slaveReactorPool(std::move(slaveReactorPool)),
@@ -97,18 +97,18 @@ HostsHeartbeatService* P2PServiceConfig::hostsHeartbeatService()
     return m_hostsHeartbeatService.get();
 }
 
-DistanceVectorImpl* P2PServiceConfig::distanceVector()
+DistanceVectorServiceInterface* P2PServiceConfig::distanceVector()
 {
     return m_distanceVector.get();
 }
 
-void P2PServiceConfig::registerModulePacketHandler(const protocol::ModuleID moduleId, ModulePacketHandler modulePacketHandler)
+void P2PServiceConfig::registerModulePacketHandler(const csm::protocol::ModuleID moduleId, ModulePacketHandler modulePacketHandler)
 {
     std::unique_lock<std::mutex> ulock(x_modulePacketHandler);
     m_modulePacketHandler[moduleId] = std::move(modulePacketHandler);
 }
 
-int P2PServiceConfig::modulePacketHandler(const protocol::ModuleID moduleId, ModulePacketHandler& modulePacketHandler)
+int P2PServiceConfig::modulePacketHandler(const csm::protocol::ModuleID moduleId, ModulePacketHandler& modulePacketHandler)
 {
     std::unique_lock<std::mutex> ulock(x_modulePacketHandler);
 

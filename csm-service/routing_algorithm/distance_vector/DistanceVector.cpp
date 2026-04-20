@@ -38,8 +38,6 @@ bool DistanceVector::updateNeighbourDistance(const NodeId& peerNodeId, Distance 
         return false;
     }
 
-    std::unique_lock<std::mutex> ulock(x_dvInfos);
-
     auto iter = m_dvInfos.find(peerNodeId);
     if (m_dvInfos.end() == iter)
     {
@@ -87,8 +85,6 @@ bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
         return false;
     }
 
-    std::unique_lock<std::mutex> ulock(x_dvInfos);
-
     auto iter = m_neighboursDVInfo.find(peerNodeId);
     if (m_neighboursDVInfo.end() == iter)
     {
@@ -107,7 +103,7 @@ bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
     iter->second.clear();
     for (const auto& peerDvInfo : peerDvInfos)
     {
-        if (m_selfNodeId == peerNodeId)
+        if (m_selfNodeId == peerDvInfo.first)
         {
             // 这个if本来不会进，但是在一次单元测试中，
             // A --2-- E --1-- B
@@ -143,8 +139,6 @@ std::vector<std::pair<csm::NodeId, Distance>> DistanceVector::dvInfo(const csm::
         return {};
     }
 
-    std::unique_lock<std::mutex> ulock(x_dvInfos);
-
     std::vector<std::pair<csm::NodeId, Distance>> dvInfos;
 
     for (const auto& [nodeId, dvInfo] : m_dvInfos)
@@ -174,8 +168,6 @@ std::vector<std::pair<csm::NodeId, Distance>> DistanceVector::dvInfo(const csm::
 
 std::vector<std::tuple<csm::NodeId, Distance, csm::NodeId>> DistanceVector::dvInfos() const
 {
-    std::unique_lock<std::mutex> ulock(x_dvInfos);
-
     std::vector<std::tuple<csm::NodeId, Distance, csm::NodeId>> dvInfos;
     for (const auto& [nodeId, dvInfo] : m_dvInfos)
     {
@@ -297,8 +289,6 @@ Distance DistanceVector::addDistance(Distance a, Distance b)
 
 std::optional<std::pair<Distance, csm::NodeId>> DistanceVector::distance(const NodeId& target) const
 {
-    std::unique_lock<std::mutex> ulock(x_dvInfos);
-
     auto iter = m_dvInfos.find(target);
     if (m_dvInfos.end() == iter)
     {

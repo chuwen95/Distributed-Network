@@ -11,17 +11,18 @@
 
 #include "csm-framework/cluster/Common.h"
 
+#include "DistanceVectorCommon.h"
+
 namespace csm
 {
 
     namespace service
     {
-        using Distance = std::uint32_t;
-        constexpr Distance c_unreachableDistance{750};
 
         class DistanceVector
         {
         public:
+            DistanceVector() = default;
             DistanceVector(NodeId selfNodeId, const NodeIds& nodeIds);
 
         public:
@@ -58,7 +59,6 @@ namespace csm
                 Distance distance{c_unreachableDistance}; // 到达目标节点的距离
             };
 
-            mutable std::mutex x_dvInfos;
             std::unordered_map<NodeId, NodeInfo> m_dvInfos;
 
             // NeighbourNodeId => { TargetNodeId, distance }

@@ -22,6 +22,9 @@ namespace csm
             using Ptr = std::shared_ptr<PayloadDistanceVector>;
 
         public:
+            void setSeq(std::uint64_t seq);
+            std::uint64_t seq() const;
+
             std::vector<std::pair<NodeId, std::uint32_t>> distanceInfos() const;
             void addDistanceInfo(const NodeId& key, std::uint32_t value);
         };

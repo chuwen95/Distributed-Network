@@ -6,6 +6,16 @@
 
 using namespace csm::service;
 
+void PayloadDistanceVector::setSeq(const std::uint64_t seq)
+{
+    m_protoPacket.set_seq(seq);
+}
+
+std::uint64_t PayloadDistanceVector::seq() const
+{
+    return m_protoPacket.seq();
+}
+
 std::vector<std::pair<csm::NodeId, std::uint32_t>> PayloadDistanceVector::distanceInfos() const
 {
     std::vector<std::pair<csm::NodeId, std::uint32_t>> distanceInfos;

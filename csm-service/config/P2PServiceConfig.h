@@ -6,7 +6,9 @@
 #define TCPNETWORK_P2PSERVICECONFIG_H
 
 #include "csm-tool/NodeConfig.h"
+
 #include "csm-utilities/SelectListenner.h"
+
 #include "csm-service/service/Acceptor.h"
 #include "csm-service/service/SessionAliveChecker.h"
 #include "csm-service/service/SessionDispatcher.h"
@@ -20,7 +22,7 @@
 #include "csm-service/host/HostsInfoManager.h"
 #include "csm-service/host/HostsHeartbeatService.h"
 
-#include "csm-service/routing_algorithm/distance_vector/DistanceVectorImpl.h"
+#include "csm-service/routing_algorithm/distance_vector/DistanceVectorServiceInterface.h"
 
 namespace csm
 {
@@ -45,7 +47,7 @@ namespace csm
                                       std::unique_ptr<HostsInfoManager> hostsInfoManager,
                                       std::unique_ptr<HostsConnector> hostsConnector,
                                       std::unique_ptr<HostsHeartbeatService> hostHeartbeatService,
-                                      std::unique_ptr<DistanceVectorImpl> distanceVector);
+                                      std::unique_ptr<DistanceVectorServiceInterface> distanceVector);
             ~P2PServiceConfig() = default;
 
         public:
@@ -68,10 +70,10 @@ namespace csm
             HostsConnector* hostsConnector();
             HostsHeartbeatService* hostsHeartbeatService();
 
-            DistanceVectorImpl* distanceVector();
+            DistanceVectorServiceInterface* distanceVector();
 
-            void registerModulePacketHandler(protocol::ModuleID moduleId, ModulePacketHandler modulePacketHandler);
-            int modulePacketHandler(protocol::ModuleID moduleId, ModulePacketHandler& modulePacketHandler);
+            void registerModulePacketHandler(csm::protocol::ModuleID moduleId, ModulePacketHandler modulePacketHandler);
+            int modulePacketHandler(csm::protocol::ModuleID moduleId, ModulePacketHandler& modulePacketHandler);
 
         private:
             tool::NodeConfig* m_nodeConfig;
@@ -93,10 +95,10 @@ namespace csm
             std::unique_ptr<HostsConnector> m_hostsConnector;
             std::unique_ptr<HostsHeartbeatService> m_hostsHeartbeatService;
 
-            std::unique_ptr<DistanceVectorImpl> m_distanceVector;
+            std::unique_ptr<DistanceVectorServiceInterface> m_distanceVector;
 
             std::mutex x_modulePacketHandler;
-            std::map<protocol::ModuleID, ModulePacketHandler> m_modulePacketHandler;
+            std::map<csm::protocol::ModuleID, ModulePacketHandler> m_modulePacketHandler;
         };
 
     } // service
