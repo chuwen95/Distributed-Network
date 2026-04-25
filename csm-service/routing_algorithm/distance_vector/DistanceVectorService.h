@@ -34,8 +34,6 @@ namespace csm
             ~DistanceVectorService() override = default;
 
         public:
-            int init() override;
-
             void start() override;
 
             void stop() override;
@@ -63,6 +61,12 @@ namespace csm
             void sendDistanceVector();
 
         private:
+            struct DistanceDetectEvent
+            {
+                NodeId fromNodeId;
+                PayloadDistanceDetect::Ptr payloadDistanceDetect;
+            };
+
             struct DistanceDetectReplyEvent
             {
                 NodeId fromNodeId;
@@ -87,16 +91,24 @@ namespace csm
             template <class... Ts>
             Overloaded(Ts...) -> Overloaded<Ts...>;
 
-            int handleDistanceDetect(NodeId fromNodeId, PayloadDistanceDetect::Ptr payload);
+            int handleDistanceDetect(DistanceDetectEvent event);
             int handleDistanceDetectReply(DistanceDetectReplyEvent event);
             int handleDistanceVector(DistanceVectorEvent event);
+
+            void initDistanceDetectSeqInfo();
+            void initEventHandler();
 
         private:
             std::atomic<std::shared_ptr<const DistanceVector>> m_distanceVector;
 
             utilities::ElapsedTime m_elapsedTime;
 
-            std::int64_t m_distanceDetectSeq{0};
+            struct DistanceDetectSendReplyInfo
+            {
+                std::uint64_t sendSeq{0};
+                std::uint64_t receivedSeq{0};
+            };
+            std::unordered_map<NodeId, DistanceDetectSendReplyInfo> m_neighbourDistanceDetectSeqInfo;
             std::function<int(const NodeId& nodeId, const std::vector<char>& data)> m_packetSender;
 
             moodycamel::BlockingConcurrentQueue<Event> m_eventQueue;

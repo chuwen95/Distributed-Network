@@ -13,6 +13,7 @@ using namespace csm::service;
 
 DistanceVector::DistanceVector(NodeId nodeId, const NodeIds& nodeIds) : m_selfNodeId(std::move(nodeId))
 {
+    m_dvInfos[nodeId] = NodeInfo(nodeId, 0);
     std::ranges::for_each(nodeIds, [this](const NodeId& nodeId)
     {
         m_dvInfos.emplace(nodeId, NodeInfo());
@@ -125,7 +126,10 @@ bool DistanceVector::updateDvInfos(const NodeId& peerNodeId,
                 singleNeighbourDvInfoIter->second = peerDvInfo.second;
             }
         }
-        iter->second.emplace(peerDvInfo.first, peerDvInfo.second);
+        else
+        {
+            iter->second.emplace(peerDvInfo.first, peerDvInfo.second);
+        }
     }
 
     // 全量重算距离向量表

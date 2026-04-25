@@ -23,14 +23,18 @@ namespace csm
 
         class DistanceVectorServiceInterface
         {
-            public:
+        public:
             virtual ~DistanceVectorServiceInterface() = default;
 
         public:
-            virtual int init() = 0;
-
+            /**
+             * @brief 启动距离向量服务
+             */
             virtual void start() = 0;
 
+            /**
+             * @brief 停止距离向量服务
+             */
             virtual void stop() = 0;
 
             /**
@@ -49,6 +53,12 @@ namespace csm
              */
             virtual int handlePacket(NodeId fromNodeId, PacketHeader::Ptr header, PayloadBase::Ptr payload) = 0;
 
+            /**
+             * @brief 查询目标节点路由
+             *
+             * @param targetNodeId
+             * @return
+             */
             virtual std::optional<std::pair<Distance, NodeId>> queryRoute(const NodeId& targetNodeId) = 0;
         };
     }

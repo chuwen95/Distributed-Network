@@ -20,37 +20,16 @@ constexpr std::uint32_t c_nodeDistanceDetectInterval{10};
 
 // 时间转距离量化单位，毫秒
 constexpr std::uint32_t c_timeResolutionMs{200};
+// 距离探测未回应次数阈值，大于该阈值判定邻居不可达
+constexpr std::uint32_t c_distanceDetectLostThreshold{3};
 
 DistanceVectorService::DistanceVectorService(NodeId selfNodeId, NodeIds nodeIds)
 {
     m_distanceVector.store(std::make_shared<DistanceVector>(std::move(selfNodeId), std::move(nodeIds)),
                            std::memory_order_release);
-}
 
-int DistanceVectorService::init()
-{
-    const auto expression = [this](std::stop_token st)
-    {
-        static std::uint64_t timeInterval{c_timeResolutionMs};
-        if (timeInterval >= c_distanceDetectInterval) //
-        {
-            sendDistanceDetect();
-            m_elapsedTime.update();
-        }
-        timeInterval = m_elapsedTime.getElapsedTimeInMilliSec();
-
-        Event event;
-        if (true == m_eventQueue.try_dequeue(event))
-        {
-            std::visit(Overloaded{
-                           [this](DistanceDetectReplyEvent event) { return handleDistanceDetectReply(std::move(event));},
-                           [this](DistanceVectorEvent event) { return handleDistanceVector(std::move(event)); }
-                       }, std::move(event));
-        }
-    };
-    m_thread = std::make_unique<utilities::Thread>(expression, c_distanceDetectInterval, "dis_vec_algo");
-
-    return 0;
+    initDistanceDetectSeqInfo();
+    initEventHandler();
 }
 
 void DistanceVectorService::start()
@@ -74,7 +53,7 @@ int DistanceVectorService::handlePacket(NodeId fromNodeId, PacketHeader::Ptr hea
     if (PacketType::PT_DistanceDetect == header->type())
     {
         PayloadDistanceDetect::Ptr payloadDistanceDetect = std::dynamic_pointer_cast<PayloadDistanceDetect>(payload);
-        return handleDistanceDetect(std::move(fromNodeId), std::move(payloadDistanceDetect));
+        return handleDistanceDetect(DistanceDetectEvent(std::move(fromNodeId), std::move(payloadDistanceDetect)));
     }
     else if (PacketType::PT_DistanceDetectReply == header->type())
     {
@@ -105,13 +84,6 @@ std::optional<std::pair<Distance, csm::NodeId>> DistanceVectorService::queryRout
 
 void DistanceVectorService::sendDistanceDetect()
 {
-    // 构造距离探测包
-    PayloadDistanceDetect payloadDistanceDetect;
-    payloadDistanceDetect.setSeq(m_distanceDetectSeq++);
-    payloadDistanceDetect.setTimestamp(utilities::TimeTools::getCurrentTimestamp());
-    std::vector<char> buffer =
-        PacketEncodeHelper<PacketType::PT_DistanceDetect, PayloadDistanceDetect>::encode(payloadDistanceDetect);
-
     // 单写者（worker thread） + 多读者模型：
     // m_distanceVector 仅允许在事件处理线程中更新，其他线程只读。
     std::shared_ptr<const DistanceVector> distanceVector = m_distanceVector.load(std::memory_order_acquire);
@@ -119,6 +91,31 @@ void DistanceVectorService::sendDistanceDetect()
     NodeIds neighbours = distanceVector->neighbours();
     for (const NodeId& nodeId : neighbours)
     {
+        auto neighbourIter = m_neighbourDistanceDetectSeqInfo.find(nodeId);
+        assert(m_neighbourDistanceDetectSeqInfo.end() != neighbourIter);
+
+        std::uint64_t lostCount = neighbourIter->second.sendSeq - neighbourIter->second.receivedSeq;
+        if (lostCount > c_distanceDetectLostThreshold)
+        {
+            LOG->write(utilities::LogType::Log_Warning, FILE_INFO,
+                       "If no distance detection response packets are received after three consecutive attempts, "
+                       "it is assumed that the neighbor is currently unreachable.");
+
+            std::shared_ptr<DistanceVector> mutableDistanceVector = std::make_shared<DistanceVector>(
+                *m_distanceVector.load(std::memory_order_acquire));
+            mutableDistanceVector->updateNeighbourDistance(nodeId, c_unreachableDistance);
+            m_distanceVector.store(std::move(mutableDistanceVector), std::memory_order_release);
+
+            continue;
+        }
+
+        // 构造距离探测包
+        PayloadDistanceDetect payloadDistanceDetect;
+        payloadDistanceDetect.setSeq(neighbourIter->second.sendSeq++);
+        payloadDistanceDetect.setTimestamp(utilities::TimeTools::getCurrentTimestamp());
+        std::vector<char> buffer =
+            PacketEncodeHelper<PacketType::PT_DistanceDetect, PayloadDistanceDetect>::encode(payloadDistanceDetect);
+
         if (-1 == m_packetSender(nodeId, buffer))
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send distance detect failed", ", to nodeId: ",
@@ -163,11 +160,12 @@ void DistanceVectorService::sendDistanceVector()
     }
 }
 
-int DistanceVectorService::handleDistanceDetect(NodeId fromNodeId, PayloadDistanceDetect::Ptr payload)
+int DistanceVectorService::handleDistanceDetect(DistanceDetectEvent event)
 {
-    PayloadDistanceDetect::Ptr payloadDistanceDetect = std::dynamic_pointer_cast<PayloadDistanceDetect>(payload);
+    PayloadDistanceDetect::Ptr payloadDistanceDetect = std::dynamic_pointer_cast<PayloadDistanceDetect>(
+        event.payloadDistanceDetect);
 
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "received distance detect from node id: ", fromNodeId);
+    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "received distance detect from node id: ", event.fromNodeId);
 
     // 构造距离探测包
     PayloadDistanceDetectReply payloadDistanceDetectReply;
@@ -180,14 +178,14 @@ int DistanceVectorService::handleDistanceDetect(NodeId fromNodeId, PayloadDistan
             payloadDistanceDetectReply);
     if (nullptr != m_packetSender)
     {
-        if (0 != m_packetSender(fromNodeId, buffer))
+        if (0 != m_packetSender(event.fromNodeId, buffer))
         {
             LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send distance detect reply failed, send to: ",
-                       fromNodeId);
+                       event.fromNodeId);
             return -1;
         }
         LOG->write(utilities::LogType::Log_Info, FILE_INFO, "send distance detect reply successfully, send to: ",
-                   fromNodeId,
+                   event.fromNodeId,
                    ", elapsed time: ", payloadDistanceDetectReply.elapsedTime());
     }
 
@@ -197,12 +195,24 @@ int DistanceVectorService::handleDistanceDetect(NodeId fromNodeId, PayloadDistan
 // 处理邻居发回来的距离探测回应包
 int DistanceVectorService::handleDistanceDetectReply(DistanceDetectReplyEvent event)
 {
-    if (event.payloadDistanceDetectReply->seq() < m_distanceDetectSeq - 1)
+    auto neighbourIter = m_neighbourDistanceDetectSeqInfo.find(event.fromNodeId);
+    if (m_neighbourDistanceDetectSeqInfo.end() == neighbourIter)
+    {
+        LOG->write(utilities::LogType::Log_Warning, FILE_INFO,
+            "The source node of the distance vector probe response packet is not in this node's neighbor list.");
+        return -1;
+    }
+
+    // 判断距离向量回应包的seq是否太旧
+    if (event.payloadDistanceDetectReply->seq() <= neighbourIter->second.receivedSeq)
     {
         LOG->write(utilities::LogType::Log_Warning, FILE_INFO,
                    "received distance detect reply but seq to old, ignore, from: ", event.fromNodeId);
         return 0;
     }
+
+    // 记录最新收到的距离向量回应包的seq
+    neighbourIter->second.receivedSeq = event.payloadDistanceDetectReply->seq();
 
     LOG->write(utilities::LogType::Log_Info, FILE_INFO, "received distance detect reply, from: ", event.fromNodeId,
                ", elapsed time: ", event.payloadDistanceDetectReply->elapsedTime());
@@ -248,4 +258,40 @@ int DistanceVectorService::handleDistanceVector(DistanceVectorEvent event)
     }
 
     return result;
+}
+
+void DistanceVectorService::initDistanceDetectSeqInfo()
+{
+    std::ranges::for_each(m_distanceVector.load(std::memory_order_relaxed)->neighbours(), [this](const NodeId& nodeId)
+    {
+        m_neighbourDistanceDetectSeqInfo[nodeId] = DistanceDetectSendReplyInfo();
+    });
+}
+
+void DistanceVectorService::initEventHandler()
+{
+    const auto expression = [this](std::stop_token st)
+    {
+        static std::uint64_t timeInterval{c_timeResolutionMs};
+        if (timeInterval >= c_distanceDetectInterval) //
+        {
+            sendDistanceDetect();
+            m_elapsedTime.update();
+        }
+        timeInterval = m_elapsedTime.getElapsedTimeInMilliSec();
+
+        Event event;
+        if (true == m_eventQueue.try_dequeue(event))
+        {
+            std::visit(Overloaded{
+                           [this](DistanceDetectEvent event) { return handleDistanceDetect(std::move(event)); },
+                           [this](DistanceDetectReplyEvent event)
+                           {
+                               return handleDistanceDetectReply(std::move(event));
+                           },
+                           [this](DistanceVectorEvent event) { return handleDistanceVector(std::move(event)); }
+                       }, std::move(event));
+        }
+    };
+    m_thread = std::make_unique<utilities::Thread>(expression, c_distanceDetectInterval, "dis_vec_algo");
 }

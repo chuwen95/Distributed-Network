@@ -812,13 +812,6 @@ int P2PService::initClient()
 
 int P2PService::initDistanceVector()
 {
-    if (0 != m_serviceConfig->distanceVector()->init())
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "init distance vector failed");
-        return -1;
-    }
-    LOG->write(utilities::LogType::Log_Info, FILE_INFO, "init distance vector successfully");
-
     m_serviceConfig->distanceVector()->setPacketSender(
         [this](const std::string& nodeId, const std::vector<char>& data) -> int {
             SessionId sessionId;
