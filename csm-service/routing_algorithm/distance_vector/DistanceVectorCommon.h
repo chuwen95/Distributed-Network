@@ -7,7 +7,17 @@
 
 #include <cstdint>
 
-using Distance = std::uint32_t;
-constexpr Distance c_unreachableDistance{750};
+namespace csm
+{
+
+    namespace service
+    {
+
+        using Distance = std::uint32_t;
+        constexpr Distance c_unreachableDistance{750};
+
+    }
+
+}
 
 #endif //COPYSTATEMACHINE_DISTANCEVECTORCOMMON_H

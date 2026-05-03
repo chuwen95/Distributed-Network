@@ -23,6 +23,11 @@ constexpr std::uint32_t c_timeResolutionMs{200};
 // 距离探测未回应次数阈值，大于该阈值判定邻居不可达
 constexpr std::uint32_t c_distanceDetectLostThreshold{3};
 
+// 最小距离向量发送间隔
+constexpr std::uint32_t c_minDistanceVectorSendInterval{200};
+// 距离向量发送间隔
+constexpr std::uint32_t c_normalDistanceVectorSendInterval{30 * 1000};
+
 DistanceVectorService::DistanceVectorService(NodeId selfNodeId, NodeIds nodeIds)
 {
     m_distanceVector.store(std::make_shared<DistanceVector>(std::move(selfNodeId), std::move(nodeIds)),
@@ -78,7 +83,6 @@ int DistanceVectorService::handlePacket(NodeId fromNodeId, PacketHeader::Ptr hea
 std::optional<std::pair<Distance, csm::NodeId>> DistanceVectorService::queryRoute(const NodeId& targetNodeId)
 {
     std::shared_ptr<const DistanceVector> distanceVector = m_distanceVector.load(std::memory_order_acquire);
-
     return distanceVector->distance(targetNodeId);
 }
 
@@ -233,7 +237,7 @@ int DistanceVectorService::handleDistanceDetectReply(DistanceDetectReplyEvent ev
 
     if (result)
     {
-        sendDistanceVector();
+        m_isEventTriggerDistanceVectorBoardcast = true;
     }
 
     return result;
@@ -254,7 +258,7 @@ int DistanceVectorService::handleDistanceVector(DistanceVectorEvent event)
 
     if (result)
     {
-        sendDistanceVector();
+        m_isEventTriggerDistanceVectorBoardcast = true;
     }
 
     return result;
@@ -272,13 +276,28 @@ void DistanceVectorService::initEventHandler()
 {
     const auto expression = [this](std::stop_token st)
     {
-        static std::uint64_t timeInterval{c_timeResolutionMs};
-        if (timeInterval >= c_distanceDetectInterval) //
+        static std::uint64_t detectTimeInterval{c_distanceDetectInterval};
+        if (detectTimeInterval >= c_distanceDetectInterval) //
         {
             sendDistanceDetect();
-            m_elapsedTime.update();
+            m_distanceDetectElapsedTime.update();
         }
-        timeInterval = m_elapsedTime.getElapsedTimeInMilliSec();
+        detectTimeInterval = m_distanceDetectElapsedTime.getElapsedTimeInMilliSec();
+
+        if (true == m_isEventTriggerDistanceVectorBoardcast)
+        {
+            if (m_distanceVectorElapsedTime.getElapsedTimeInMilliSec() >= c_minDistanceVectorSendInterval)
+            {
+                sendDistanceVector();
+            }
+        }
+        else
+        {
+            if (m_distanceDetectElapsedTime.getElapsedTimeInMilliSec() >= c_normalDistanceVectorSendInterval)
+            {
+                sendDistanceVector();
+            }
+        }
 
         Event event;
         if (true == m_eventQueue.try_dequeue(event))

@@ -101,7 +101,10 @@ namespace csm
         private:
             std::atomic<std::shared_ptr<const DistanceVector>> m_distanceVector;
 
-            utilities::ElapsedTime m_elapsedTime;
+            utilities::ElapsedTime m_distanceDetectElapsedTime;
+
+            bool m_isEventTriggerDistanceVectorBoardcast{false};
+            utilities::ElapsedTime m_distanceVectorElapsedTime;
 
             struct DistanceDetectSendReplyInfo
             {
