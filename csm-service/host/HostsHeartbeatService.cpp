@@ -34,7 +34,7 @@ int HostsHeartbeatService::init()
             std::uint64_t curTimestamp = utilities::TimeTools::getCurrentTimestamp();
             if (curTimestamp - host.second.second >= c_heartbeatInterval)
             {
-                std::vector<char> buffer = PacketEncodeHelper<PacketType::PT_HeartBeat, std::nullopt_t>::encode();
+                std::shared_ptr<std::vector<char>> buffer = PacketEncodeHelper<PacketType::PT_HeartBeat, std::nullopt_t>::encode();
                 if (nullptr != m_heartBeatSender)
                 {
                     SessionId sessionId;
@@ -75,7 +75,7 @@ int HostsHeartbeatService::stop()
     return 0;
 }
 
-void HostsHeartbeatService::registerHeartbeatSender(std::function<int(const int, const std::vector<char>&)> heartbeatSender)
+void HostsHeartbeatService::registerHeartbeatSender(std::function<int(const int, std::shared_ptr<std::vector<char>>)> heartbeatSender)
 {
     m_heartBeatSender = std::move(heartbeatSender);
 }

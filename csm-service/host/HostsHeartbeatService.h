@@ -28,12 +28,12 @@ namespace csm
 
             int stop();
 
-            void registerHeartbeatSender(std::function<int(const int fd, const std::vector<char>& data)>);
+            void registerHeartbeatSender(std::function<int(const int fd, std::shared_ptr<std::vector<char>> data)>);
 
         private:
             std::string m_hostId;
             HostsInfoManager* m_hostInfoManager;
-            std::function<int(const int fd, const std::vector<char>& data)> m_heartBeatSender;
+            std::function<int(int fd, std::shared_ptr<std::vector<char>> data)> m_heartBeatSender;
 
             std::unique_ptr<utilities::Thread> m_thread;
         };

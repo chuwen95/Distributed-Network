@@ -23,10 +23,8 @@
 
 namespace csm
 {
-
     namespace service
     {
-
         class DistanceVectorService : public DistanceVectorServiceInterface
         {
         public:
@@ -43,7 +41,8 @@ namespace csm
              *
              * @param sender
              */
-            void setPacketSender(std::function<int(const NodeId& nodeId, const std::vector<char>& data)> sender) override;
+            void setPacketSender(
+                std::function<int(const NodeId& nodeId, std::shared_ptr<std::vector<char>> data)> sender) override;
 
             /**
              * @brief 处理网络数据包
@@ -111,15 +110,14 @@ namespace csm
                 std::uint64_t sendSeq{0};
                 std::uint64_t receivedSeq{0};
             };
+
             std::unordered_map<NodeId, DistanceDetectSendReplyInfo> m_neighbourDistanceDetectSeqInfo;
-            std::function<int(const NodeId& nodeId, const std::vector<char>& data)> m_packetSender;
+            std::function<int(const NodeId& nodeId, std::shared_ptr<std::vector<char>> data)> m_packetSender;
 
             moodycamel::BlockingConcurrentQueue<Event> m_eventQueue;
             std::unique_ptr<utilities::Thread> m_thread{nullptr};
         };
-
     }
-
 }
 
 #endif //DISTANCEVECTOR_H

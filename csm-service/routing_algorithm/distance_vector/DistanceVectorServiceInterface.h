@@ -17,10 +17,8 @@
 
 namespace csm
 {
-
     namespace service
     {
-
         class DistanceVectorServiceInterface
         {
         public:
@@ -42,7 +40,8 @@ namespace csm
              *
              * @param sender
              */
-            virtual void setPacketSender(std::function<int(const NodeId& nodeId, const std::vector<char>& data)> sender) = 0;
+            virtual void setPacketSender(
+                std::function<int(const NodeId& nodeId, std::shared_ptr<std::vector<char>> data)> sender) = 0;
 
             /**
              * @brief 处理网络数据包

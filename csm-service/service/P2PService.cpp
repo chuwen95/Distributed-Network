@@ -310,7 +310,7 @@ void P2PService::registerModulePacketHandler(csm::protocol::ModuleID moduleId, M
 
 int P2PService::boardcastModuleMessage(csm::protocol::ModuleID moduleId, const std::vector<char>& data)
 {
-    std::vector<char> buffer = PacketEncodeHelper<PacketType::PT_ModuleMessage, std::vector<char>>::encode(moduleId, data);
+    std::shared_ptr<std::vector<char>> buffer = PacketEncodeHelper<PacketType::PT_ModuleMessage, std::vector<char>>::encode(moduleId, data);
 
     // 发送给所有在线的节点
     std::vector<std::pair<std::string, SessionId>> allOnlineHosts = m_serviceConfig->hostsInfoManager()->getAllHosts();
@@ -328,7 +328,7 @@ int P2PService::boardcastModuleMessage(csm::protocol::ModuleID moduleId, const s
 int P2PService::sendModuleMessageByNodeId(const NodeId& nodeId, csm::protocol::ModuleID moduleId,
                                           const std::vector<char>& data)
 {
-    std::vector<char> buffer = PacketEncodeHelper<PacketType::PT_ModuleMessage, std::vector<char>>::encode(moduleId, data);
+    std::shared_ptr<std::vector<char>> buffer = PacketEncodeHelper<PacketType::PT_ModuleMessage, std::vector<char>>::encode(moduleId, data);
 
     SessionId sessionId;
     if (0 != m_serviceConfig->hostsInfoManager()->getSessionId(nodeId, sessionId))
@@ -469,14 +469,14 @@ int P2PService::initServer()
 
             p2pSession->refreshHeartbeat();
 
-            std::vector<char> buffer = PacketEncodeHelper<PacketType::PT_HeartBeatReply, std::nullopt_t>::encode();
+            std::shared_ptr<std::vector<char>> buffer = PacketEncodeHelper<PacketType::PT_HeartBeatReply, std::nullopt_t>::encode();
             int ret = sendData(sessionId, buffer);
             if (0 != ret)
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send heartbeat reply ret: ", ret, ", session id: ",
                            sessionId);
             }
-            LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "send heartbeat rely successfully, size: ", buffer.size());
+            LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "send heartbeat rely successfully, size: ", buffer->size());
 
             return ret;
         });
@@ -554,7 +554,7 @@ int P2PService::initClient()
             clientInfoPacket.setPeerHost(p2pSession->peerHostEndPointInfo().host());
             clientInfoPacket.setNodeId(m_serviceConfig->nodeConfig()->nodeId());
 
-            std::vector<char> buffer = PacketEncodeHelper<PacketType::PT_ClientInfo, PayloadClientInfo>::encode(clientInfoPacket);
+            std::shared_ptr<std::vector<char>> buffer = PacketEncodeHelper<PacketType::PT_ClientInfo, PayloadClientInfo>::encode(clientInfoPacket);
             int ret = sendData(p2pSession->sessionId(), buffer);
             if (0 != ret)
             {
@@ -629,7 +629,7 @@ int P2PService::initClient()
             clientInfoReply.setNodeId(m_serviceConfig->nodeConfig()->nodeId());
             clientInfoReply.setResult(replyResult);
 
-            std::vector<char> buffer =
+            std::shared_ptr<std::vector<char>> buffer =
                 PacketEncodeHelper<PacketType::PT_ClientInfoReply, PayloadClientInfoReply>::encode(clientInfoReply);
             if (-1 == sendData(sessionId, buffer))
             {
@@ -795,7 +795,7 @@ int P2PService::initClient()
 
     // 注册心跳发送回调
     m_serviceConfig->hostsHeartbeatService()->registerHeartbeatSender(
-        [this](const SessionId& sessionId, const std::vector<char>& data) {
+        [this](const SessionId& sessionId, std::shared_ptr<std::vector<char>> data) {
             if (0 != sendData(sessionId, data))
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send heartbeat failed, to session id: ", sessionId);
@@ -813,7 +813,7 @@ int P2PService::initClient()
 int P2PService::initDistanceVector()
 {
     m_serviceConfig->distanceVector()->setPacketSender(
-        [this](const std::string& nodeId, const std::vector<char>& data) -> int {
+        [this](const std::string& nodeId, std::shared_ptr<std::vector<char>> data) -> int {
             SessionId sessionId;
             if (0 != m_serviceConfig->hostsInfoManager()->getSessionId(nodeId, sessionId))
             {
@@ -839,7 +839,7 @@ P2PSession::Ptr P2PService::getP2PSession(SessionId sessionId)
     return slaveReactor->getP2PSession(sessionId);
 }
 
-int P2PService::sendData(const SessionId sessionId, const std::vector<char>& data)
+int P2PService::sendData(const SessionId sessionId, std::shared_ptr<std::vector<char>> data)
 {
     int slaveReactorIndex = m_serviceConfig->sessionDispatcher()->getSlaveReactorIndexBySessionId(sessionId);
     if (-1 == slaveReactorIndex)

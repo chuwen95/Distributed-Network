@@ -5,6 +5,7 @@
 #ifndef TCPSERVER_SLAVEREACTOR_H
 #define TCPSERVER_SLAVEREACTOR_H
 
+#include <queue>
 #include <shared_mutex>
 
 #include "csm-utilities/Thread.h"
@@ -12,10 +13,8 @@
 
 namespace csm
 {
-
     namespace service
     {
-
         class SlaveReactor
         {
         public:
@@ -66,9 +65,9 @@ namespace csm
              * @param size 数据大小
              * @return
              */
-            int sendData(SessionId sessionId, const std::vector<char>& data);
+            int sendData(SessionId sessionId, std::shared_ptr<std::vector<char>> data);
 
-            int sendData(P2PSession::Ptr p2pSession, const std::vector<char>& data);
+            int sendData(P2PSession::Ptr p2pSession, std::shared_ptr<std::vector<char>> data);
 
             /**
              * 将fd从SlaveReactor中移除
@@ -82,6 +81,11 @@ namespace csm
         private:
             void disconnectSession(const P2PSession::Ptr& p2pSession);
 
+            void handleSendTasks();
+            void handleSend(const P2PSession::Ptr& p2pSession, const std::shared_ptr<std::vector<char>>& data);
+
+            int createSendTaskEpollFd();
+
         private:
             // SlaveReactor的id
             int m_reactorId;
@@ -91,8 +95,6 @@ namespace csm
 
             std::unique_ptr<utilities::Thread> m_thread;
 
-            // 用于退出的fd
-            int m_exitFd;
             // epfd
             int m_epfd{-1};
             std::vector<char> m_recvBuffer;
@@ -101,14 +103,22 @@ namespace csm
             std::function<void(SessionId sessionId, P2PSession::WPtr p2pSessionWeakPtr)> m_disconnectHandler;
             // 收到数据后对数据进行处理的回调
             std::function<void(SessionId sessionId,
-                               P2PSession::WPtr p2pSessionWeakPtr, const char* data, std::size_t dataLen)> m_sessionDataHandler;
+                               P2PSession::WPtr p2pSessionWeakPtr, const char* data,
+                               std::size_t dataLen)> m_sessionDataHandler;
 
-            // 多个线程同时写入待发送的数据，需要加锁
-            std::mutex x_writeBuffer;
+            struct SendTask
+            {
+                SendTask(P2PSession::Ptr p, std::shared_ptr<std::vector<char>> d) : p2pSession(p), data(d) {}
+
+                P2PSession::Ptr p2pSession;
+                std::shared_ptr<std::vector<char>> data;
+            };
+
+            std::mutex x_sendTasks;
+            std::queue<SendTask> m_sendTasks;
+            int m_sendTaskWakeupFd;
         };
-
     }
-
 }
 
 #endif //TCPSERVER_SLAVEREACTOR_H

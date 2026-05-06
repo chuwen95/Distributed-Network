@@ -40,7 +40,7 @@ namespace csm
 
             P2PSession::Ptr getP2PSession(SessionId sessionId);
 
-            int sendData(std::uint64_t fd, const std::vector<char>& data);
+            int sendData(std::uint64_t fd, std::shared_ptr<std::vector<char>> data);
 
             /**
              * 断开客户端

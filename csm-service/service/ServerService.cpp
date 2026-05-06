@@ -377,14 +377,14 @@ int ServerService::initServer()
             SlaveReactor* slaveReactor = m_serviceConfig->slaveReactorPool()->slaveReactor(p2pSession->slaveReactorIndex());
             assert(nullptr != slaveReactor);
 
-            std::vector<char> buffer = PacketEncodeHelper<PacketType::PT_HeartBeatReply, std::nullopt_t>::encode();
+            std::shared_ptr<std::vector<char>> buffer = PacketEncodeHelper<PacketType::PT_HeartBeatReply, std::nullopt_t>::encode();
             int ret = slaveReactor->sendData(p2pSession, buffer);
             if (0 != ret)
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "send heartbeat reply ret: ", ret, ", session id: ",
                            sessionId);
             }
-            LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "send heartbeat rely successfully, size: ", buffer.size());
+            LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "send heartbeat rely successfully, size: ", buffer->size());
 
             return ret;
         });

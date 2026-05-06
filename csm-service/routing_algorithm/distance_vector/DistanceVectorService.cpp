@@ -48,7 +48,7 @@ void DistanceVectorService::stop()
 }
 
 void DistanceVectorService::setPacketSender(
-    std::function<int(const NodeId& nodeId, const std::vector<char>& data)> sender)
+    std::function<int(const NodeId& nodeId, std::shared_ptr<std::vector<char>> data)> sender)
 {
     m_packetSender = std::move(sender);
 }
@@ -117,7 +117,7 @@ void DistanceVectorService::sendDistanceDetect()
         PayloadDistanceDetect payloadDistanceDetect;
         payloadDistanceDetect.setSeq(neighbourIter->second.sendSeq++);
         payloadDistanceDetect.setTimestamp(utilities::TimeTools::getCurrentTimestamp());
-        std::vector<char> buffer =
+        std::shared_ptr<std::vector<char>> buffer =
             PacketEncodeHelper<PacketType::PT_DistanceDetect, PayloadDistanceDetect>::encode(payloadDistanceDetect);
 
         if (-1 == m_packetSender(nodeId, buffer))
@@ -150,7 +150,7 @@ void DistanceVectorService::sendDistanceVector()
             payloadDistanceVector.addDistanceInfo(dvInfo.first, dvInfo.second);
         });
 
-        std::vector<char> buffer =
+        std::shared_ptr<std::vector<char>> buffer =
             PacketEncodeHelper<PacketType::PT_DistanceVector, PayloadDistanceVector>::encode(payloadDistanceVector);
         if (0 != m_packetSender(nodeId, buffer))
         {
@@ -177,7 +177,7 @@ int DistanceVectorService::handleDistanceDetect(DistanceDetectEvent event)
     payloadDistanceDetectReply.setElapsedTime(
         utilities::TimeTools::getCurrentTimestamp() - payloadDistanceDetect->timestamp());
 
-    std::vector<char> buffer =
+    std::shared_ptr<std::vector<char>> buffer =
         PacketEncodeHelper<PacketType::PT_DistanceDetectReply, PayloadDistanceDetectReply>::encode(
             payloadDistanceDetectReply);
     if (nullptr != m_packetSender)

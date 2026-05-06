@@ -7,6 +7,7 @@
 #include <shared_mutex>
 #include <cstring>
 #include <cassert>
+#include <google/protobuf/message.h>
 
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
@@ -28,6 +29,7 @@ SlaveReactor::SlaveReactor(const int reactorId) : m_reactorId(reactorId)
 
 SlaveReactor::~SlaveReactor()
 {
+    utilities::Socket::close(m_sendTaskWakeupFd);
     utilities::Socket::close(m_epfd);
 }
 
@@ -41,25 +43,11 @@ int SlaveReactor::init()
     }
     LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "create epoll fd successfully, fd: ", m_epfd);
 
-    // 创建用于退出的事件套接字
-    m_exitFd = eventfd(0, EFD_NONBLOCK);
-    if (-1 == m_exitFd)
+    // 创建退出时唤醒epoll_wait的fd 和 有发送任务入队时唤醒epoll_wait的fd
+    if (0 != createSendTaskEpollFd())
     {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "create eventfd failed, errno: ", errno, ", ",
-                   strerror(errno));
         return -1;
     }
-    LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "create eventfd successfully, m_exitFd: ", m_exitFd);
-
-    struct epoll_event event;
-    event.events = EPOLLIN;
-    if (-1 == epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_exitFd, &event))
-    {
-        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add exit event fd to epoll failed, errno: ", errno, ", ",
-                   strerror(errno));
-        return -1;
-    }
-    LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "add exit event fd to epoll successfully");
 
     const auto expression = [this](const std::stop_token& st)
     {
@@ -81,6 +69,8 @@ int SlaveReactor::init()
         {
         }
 
+        handleSendTasks();
+
         for (int i = 0; i < nready; ++i)
         {
             SessionId sessionId = ev[i].data.u64;
@@ -88,10 +78,10 @@ int SlaveReactor::init()
             if (nullptr == p2pSession)
             {
                 LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client may be offline, session id: ", sessionId);
-                continue;;
+                continue;
             }
 
-            // error
+            // error,
             if (ev[i].events & EPOLLERR || // 文件描述符发生错误
                 ev[i].events & EPOLLHUP) // 文件描述符被挂断
             {
@@ -141,59 +131,57 @@ int SlaveReactor::init()
                 utilities::RingBuffer* writeBuffer = p2pSession->writeBuffer();
                 assert(0 != writeBuffer->dataLength());
 
-                x_writeBuffer.lock();
-
-                char* data{nullptr};
-                std::size_t length{0};
-                int ret = writeBuffer->getContinuousData(data, length);
-                assert(-1 != ret);
-
-                int sendLen = send(p2pSession->fd(), data, length, 0);
-                if (sendLen == length)
+                while (writeBuffer->dataLength() > 0)
                 {
-                    writeBuffer->decreaseUsedSpace(sendLen);
-                    x_writeBuffer.unlock();
+                    char* data{nullptr};
+                    std::size_t length{0};
+                    int ret = writeBuffer->getContinuousData(data, length);
+                    assert(-1 != ret);
 
-                    struct epoll_event ev;
-                    memset(&ev, 0, sizeof(struct epoll_event));
-                    ev.events = EPOLLIN | EPOLLET;
-                    ev.data.u64 = sessionId;
-                    epoll_ctl(m_epfd, EPOLL_CTL_MOD, p2pSession->fd(), &ev);
-
-                    LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
-                               "send data successfully, remove epollout event, session id: ", sessionId, ", sendlen: ",
-                               sendLen);
-                }
-                else if (sendLen < length)
-                {
-                    writeBuffer->decreaseUsedSpace(sendLen);
-                    x_writeBuffer.unlock();
-
-                    LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "sendLen less then data length, session id: ",
-                               sessionId,
-                               ", sendlen: ", sendLen);
-                }
-                else if (-1 == sendLen)
-                {
-                    x_writeBuffer.unlock();
-
-                    if (EAGAIN == errno || EWOULDBLOCK == errno)
+                    ssize_t sendLen{0};
+                    while (sendLen < length)
                     {
-                        // 这种情况理应不会发生
-                        LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "sendLen = -1, session id: ", sessionId,
-                                   ", errno: ",
-                                   errno, ", ",
-                                   strerror(errno));
-                    }
-                    else if (ECONNRESET == errno || EPIPE == errno)
-                    {
-                        // 表明对端断开连接
-                        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client maybe offline, session id: ",
-                                   sessionId,
-                                   ", errno: ", errno,
-                                   ", ", strerror(errno));
+                        ssize_t n = send(p2pSession->fd(), data, length, 0);
+                        if (n > 0)
+                        {
+                            writeBuffer->decreaseUsedSpace(n);
+                            sendLen += n;
 
-                        disconnectSession(p2pSession);
+                            struct epoll_event ev;
+                            memset(&ev, 0, sizeof(struct epoll_event));
+                            ev.events = EPOLLIN | EPOLLET;
+                            ev.data.u64 = sessionId;
+                            epoll_ctl(m_epfd, EPOLL_CTL_MOD, p2pSession->fd(), &ev);
+
+                            LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
+                                       "send data successfully, remove epollout event, session id: ", sessionId,
+                                       ", sendlen: ", n);
+                        }
+                        else if (-1 == n)
+                        {
+                            if (EAGAIN == errno || EWOULDBLOCK == errno)
+                            {
+                                struct epoll_event ev;
+                                memset(&ev, 0, sizeof(struct epoll_event));
+                                ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
+                                ev.data.u64 = sessionId;
+                                epoll_ctl(m_epfd, EPOLL_CTL_MOD, p2pSession->fd(), &ev);
+
+                                LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
+                                           "send data successfully, remove epollout event, session id: ", sessionId,
+                                           ", sendlen: ", n);
+                            }
+                            else if (ECONNRESET == errno || EPIPE == errno)
+                            {
+                                // 表明对端断开连接
+                                LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client maybe offline, session id: ",
+                                           sessionId,
+                                           ", errno: ", errno,
+                                           ", ", strerror(errno));
+
+                                disconnectSession(p2pSession);
+                            }
+                        }
                     }
                 }
             }
@@ -218,10 +206,7 @@ int SlaveReactor::stop()
     m_thread->stop();
 
     std::uint64_t num{1};
-    write(m_exitFd, &num, sizeof(std::uint64_t));
-
-    close(m_exitFd);
-    close(m_epfd);
+    write(m_sendTaskWakeupFd, &num, sizeof(std::uint64_t));
 
     return 0;
 }
@@ -269,7 +254,7 @@ void SlaveReactor::setSessionDataHandler(
     m_sessionDataHandler = std::move(handler);
 }
 
-int SlaveReactor::sendData(const SessionId sessionId, const std::vector<char>& data)
+int SlaveReactor::sendData(const SessionId sessionId, std::shared_ptr<std::vector<char>> data)
 {
     LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "m_id: ", m_reactorId, ", session id: ", sessionId);
     // 获取对应的writeBuffer
@@ -283,9 +268,21 @@ int SlaveReactor::sendData(const SessionId sessionId, const std::vector<char>& d
     return sendData(p2pSession, data);
 }
 
-int SlaveReactor::sendData(P2PSession::Ptr p2pSession, const std::vector<char>& data)
+int SlaveReactor::sendData(P2PSession::Ptr p2pSession, std::shared_ptr<std::vector<char>> data)
 {
-    if (data.size() > c_p2pSessionWriteBufferSize)
+    if (nullptr == p2pSession)
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "p2pSession is nullptr");
+        return -1;
+    }
+
+    if (nullptr == data)
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "data is nullptr");
+        return -1;
+    }
+
+    if (data->size() > c_p2pSessionWriteBufferSize)
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "data size must less than session write buffer size");
         return -1;
@@ -299,78 +296,12 @@ int SlaveReactor::sendData(P2PSession::Ptr p2pSession, const std::vector<char>& 
     }
 
     {
-        x_writeBuffer.lock();
-
-        utilities::RingBuffer* writeBuffer = p2pSession->writeBuffer();
-        if (0 == writeBuffer->dataLength())
-        {
-            int sendLen = send(p2pSession->fd(), data.data(), data.size(), 0);
-            if (sendLen == data.size())
-            {
-                x_writeBuffer.unlock();
-                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "send data successfully, session id: ",
-                           p2pSession->sessionId(),
-                           ", sendlen: ", sendLen);
-                return 0;
-            }
-            else if (sendLen < data.size())
-            {
-                // 拷贝数据到缓冲区，此时缓冲区应该为空，不应该出现返回值为-1放不进去的情况，如果出现，表明代码逻辑错误
-                assert(-1 != writeBuffer->writeData(data.data() + sendLen, data.size() - sendLen));
-                writeBuffer->increaseUsedSpace(data.size() - sendLen);
-
-                x_writeBuffer.unlock();
-
-                struct epoll_event ev;
-                memset(&ev, 0, sizeof(struct epoll_event));
-                ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
-                ev.data.u64 = p2pSession->sessionId();
-                epoll_ctl(m_epfd, EPOLL_CTL_MOD, p2pSession->fd(), &ev);
-
-                LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
-                           "sendLen < size, write remain data to buffer successfully and wait for epollout, remain data size: ",
-                           data.size() - sendLen, ", session id: ", p2pSession->sessionId());
-            }
-            else if (-1 == sendLen)
-            {
-                x_writeBuffer.unlock();
-
-                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "send data successfully, session id: ",
-                           p2pSession->sessionId(),
-                           ", sendlen: ", sendLen);
-                // 如果发送缓冲区中还有数据，但数据直接send完，表明无需等待EPOLLOUT事件
-                if (EAGAIN == errno || EWOULDBLOCK == errno)
-                [[likely]]
-                {
-                    struct epoll_event ev;
-                    memset(&ev, 0, sizeof(struct epoll_event));
-                    ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
-                    ev.data.fd = p2pSession->sessionId();
-                    epoll_ctl(m_epfd, EPOLL_CTL_MOD, p2pSession->fd(), &ev);
-
-                    LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
-                               "socket write kernel buffer full, wait for epollout, session id: ",
-                               p2pSession->sessionId());
-                }
-                else if (ECONNRESET == errno || EPIPE == errno)
-                [[unlikely]]
-                {
-                    // 表明对端断开连接
-                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client maybe offline, session id: ",
-                               p2pSession->sessionId(),
-                               ", errno: ", errno,
-                               ", ", strerror(errno));
-
-                    if (nullptr != m_disconnectHandler) [[likely]]
-                    {
-                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add fd to session destoryer, session id: ",
-                                   p2pSession->sessionId());
-                        m_disconnectHandler(p2pSession->sessionId(), p2pSession);
-                    }
-                }
-            }
-        }
+        std::unique_lock<std::mutex> ulock(x_sendTasks);
+        m_sendTasks.emplace(p2pSession, data);
     }
+
+    uint64_t one{1};
+    write(m_sendTaskWakeupFd, &one, sizeof(one));
 
     return 0;
 }
@@ -413,4 +344,124 @@ void SlaveReactor::disconnectSession(const P2PSession::Ptr& p2pSession)
         P2PSession::WPtr p2pSessionWeakPtr = p2pSession;
         m_disconnectHandler(p2pSession->sessionId(), p2pSessionWeakPtr);
     }
+}
+
+void SlaveReactor::handleSendTasks()
+{
+    std::queue<SendTask> sendTasks;
+    {
+        std::unique_lock<std::mutex> ulock(x_sendTasks);
+        m_sendTasks.swap(sendTasks);
+    }
+
+    while (false == sendTasks.empty())
+    {
+        SendTask task = std::move(sendTasks.front());
+        sendTasks.pop();
+
+        handleSend(task.p2pSession, task.data);
+    }
+}
+
+void SlaveReactor::handleSend(const P2PSession::Ptr& p2pSession, const std::shared_ptr<std::vector<char>>& data)
+{
+    if (true == p2pSession->isWaitingDisconnect())
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "P2PSession is waiting for disconnect, session id: ",
+                   p2pSession->sessionId());
+        return;
+    }
+
+    utilities::RingBuffer* writeBuffer = p2pSession->writeBuffer();
+    if (0 != writeBuffer->dataLength()) // 发送缓冲区中有数据，新到的数据不能抢在缓冲区中的数据前发送，需要排在后面发送
+    {
+        if (data->size() > writeBuffer->space())
+        {
+            LOG->write(utilities::LogType::Log_Error, FILE_INFO, "data size more than send buffer space");
+            return;
+        }
+
+        // 拷贝数据到缓冲区，此时缓冲区应该为空，不应该出现返回值为-1放不进去的情况，如果出现，表明代码逻辑错误
+        int ret = writeBuffer->writeData(data->data(), data->size());
+        assert(-1 != ret);
+        writeBuffer->increaseUsedSpace(data->size());
+    }
+    else
+    {
+        ssize_t sendLen{0};
+        while (sendLen < data->size())
+        {
+            ssize_t n = send(p2pSession->fd(), data->data() + sendLen, data->size() - sendLen, 0);
+            if (n > 0)
+            {
+                sendLen += n;
+            }
+            else if (-1 == n)
+            {
+                LOG->write(utilities::LogType::Log_Debug, FILE_INFO, "send data successfully, session id: ",
+                           p2pSession->sessionId(),
+                           ", sendlen: ", sendLen);
+                // 如果发送缓冲区中还有数据，但数据直接send完，表明无需等待EPOLLOUT事件
+                if (EAGAIN == errno || EWOULDBLOCK == errno) [[likely]]
+                {
+                    // 拷贝数据到缓冲区，此时缓冲区应该为空，不应该出现返回值为-1放不进去的情况，如果出现，表明代码逻辑错误
+                    int ret = writeBuffer->writeData(data->data() + sendLen, data->size() - sendLen);
+                    assert(-1 != ret);
+                    writeBuffer->increaseUsedSpace(data->size() - sendLen);
+
+                    struct epoll_event ev;
+                    memset(&ev, 0, sizeof(struct epoll_event));
+                    ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
+                    ev.data.u64 = p2pSession->sessionId();
+                    epoll_ctl(m_epfd, EPOLL_CTL_MOD, p2pSession->fd(), &ev);
+
+                    LOG->write(utilities::LogType::Log_Debug, FILE_INFO,
+                               "socket write kernel buffer full, wait for epollout, session id: ",
+                               p2pSession->sessionId());
+                }
+                else if (ECONNRESET == errno || EPIPE == errno) [[unlikely]]
+                {
+                    // 表明对端断开连接
+                    LOG->write(utilities::LogType::Log_Error, FILE_INFO, "client maybe offline, session id: ",
+                               p2pSession->sessionId(),
+                               ", errno: ", errno,
+                               ", ", strerror(errno));
+
+                    if (nullptr != m_disconnectHandler) [[likely]]
+                    {
+                        LOG->write(utilities::LogType::Log_Info, FILE_INFO, "add fd to session destoryer, session id: ",
+                                   p2pSession->sessionId());
+                        m_disconnectHandler(p2pSession->sessionId(), p2pSession);
+                    }
+                }
+                break;
+            }
+        }
+    }
+}
+
+int SlaveReactor::createSendTaskEpollFd()
+{
+    // 创建用于退出的事件套接字
+    m_sendTaskWakeupFd = eventfd(0, EFD_NONBLOCK);
+    if (-1 == m_sendTaskWakeupFd)
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "create eventfd failed, errno: ", errno, ", ",
+                   strerror(errno));
+        return -1;
+    }
+    LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "create eventfd successfully, m_sendTaskWakeupFd: ",
+               m_sendTaskWakeupFd);
+
+    struct epoll_event event;
+    event.events = EPOLLIN;
+    if (-1 == epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_sendTaskWakeupFd, &event))
+    {
+        LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add exit event fd to epoll failed, errno: ", errno, ", ",
+                   strerror(errno));
+        return -1;
+    }
+    LOG->write(utilities::LogType::Log_Trace, FILE_INFO, "add exit event fd to epoll successfully");
+
+    return 0;
 }
