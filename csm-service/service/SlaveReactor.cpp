@@ -73,6 +73,11 @@ int SlaveReactor::init()
 
         for (int i = 0; i < nready; ++i)
         {
+            if (m_sendTaskWakeupFd == ev[i].data.u64)
+            {
+                continue;
+            }
+
             SessionId sessionId = ev[i].data.u64;
             P2PSession::Ptr p2pSession = getP2PSession(sessionId);
             if (nullptr == p2pSession)
@@ -361,6 +366,9 @@ void SlaveReactor::handleSendTasks()
 
         handleSend(task.p2pSession, task.data);
     }
+
+    uint64_t value;
+    read(m_sendTaskWakeupFd, &value, sizeof(value));
 }
 
 void SlaveReactor::handleSend(const P2PSession::Ptr& p2pSession, const std::shared_ptr<std::vector<char>>& data)
@@ -442,7 +450,7 @@ void SlaveReactor::handleSend(const P2PSession::Ptr& p2pSession, const std::shar
 
 int SlaveReactor::createSendTaskEpollFd()
 {
-    // 创建用于退出的事件套接字
+    // 创建有发送任务时唤醒epoll_wait
     m_sendTaskWakeupFd = eventfd(0, EFD_NONBLOCK);
     if (-1 == m_sendTaskWakeupFd)
     {
@@ -455,6 +463,7 @@ int SlaveReactor::createSendTaskEpollFd()
 
     struct epoll_event event;
     event.events = EPOLLIN;
+    event.data.u64 = m_sendTaskWakeupFd;
     if (-1 == epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_sendTaskWakeupFd, &event))
     {
         LOG->write(utilities::LogType::Log_Error, FILE_INFO, "add exit event fd to epoll failed, errno: ", errno, ", ",

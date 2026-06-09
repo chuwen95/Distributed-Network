@@ -14,5 +14,9 @@
 1. [网络模块关键点介绍及UML类图](./resources/network_module_instruction/网络模块关键点解析.md)
 2. [关于处理重复连接的握手协议介绍](./resources/two_node_one_connection/关于处理重复连接的握手协议介绍.md)
 
+## 问题分析记录
+### CPU占用高问题 - Commit ID: 30982f7ba14acf210af118e11aff0a551417861e
+1. [用来唤醒epoll_wait的send fd write后未read](./resources/问题分析/CPU占用分析/CPU占用分析.md)
+
 ## Todo
 1. 增加树形拓扑，优化节点消息广播效率
